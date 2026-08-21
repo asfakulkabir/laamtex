@@ -1,0 +1,55 @@
+📦 OUTfitt – cPanel Upload Guide
+==================================
+
+1.  EXPORT LOCAL DATABASE
+--------------------------
+    Open phpMyAdmin (or use mysqldump):
+        mysqldump -u root -p outfitt > outfitt.sql
+
+2.  UPLOAD FILES TO cPanel
+--------------------------
+    - Login to cPanel → File Manager → public_html (or a subfolder)
+    - Upload all project files (drag & drop or use "Upload" button)
+    - OR use FTP (FileZilla etc.) to transfer all files
+
+3.  SET UP DATABASE ON cPanel
+--------------------------
+    - cPanel → MySQL Databases → Create a new database + user
+    - Import outfitt.sql into the new database via phpMyAdmin
+
+4.  UPDATE .env FILE
+--------------------------
+    Rename .env.example → .env and edit:
+
+        DB_DATABASE=your_cpanel_db_name
+        DB_USERNAME=your_cpanel_db_user
+        DB_PASSWORD=your_cpanel_db_password
+        APP_URL=https://yourdomain.com
+
+5.  GENERATE APP KEY & CACHE
+--------------------------
+    SSH into cPanel (if available) or use "Terminal":
+
+        php artisan key:generate
+        php artisan config:cache
+        php artisan route:cache
+        php artisan view:cache
+        php artisan storage:link
+
+    (If SSH is not available, generate APP_KEY locally, put it in .env on cPanel,
+     upload .env, then re-run the cache commands above if possible.)
+
+6.  SET CORRECT PERMISSIONS
+--------------------------
+    chmod -R 755 storage bootstrap/cache
+    chmod -R 775 storage
+
+7.  POINT DOCUMENT ROOT (Optional)
+--------------------------
+    If your domain root should point to the public/ folder:
+        - cPanel → "Document Root" setting → select /public_html/public
+
+8.  DONE
+--------------------------
+    Visit your domain and check if the site runs.
+    Admin panel: /admin
