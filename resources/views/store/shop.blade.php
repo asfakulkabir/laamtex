@@ -15,7 +15,7 @@ fbq('track', 'Search', {
 @endsection
 
 @section('content')
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 md:py-12">
     
     <div x-data="{ filterOpen: false }" class="grid grid-cols-1 lg:grid-cols-4 gap-8">
         
@@ -89,7 +89,7 @@ fbq('track', 'Search', {
         </aside>
 
         <!-- Main Product Grid -->
-        <main class="lg:col-span-3 space-y-6">
+        <main class="lg:col-span-3 space-y-2 md:space-y-4 lg:space-y-6">
             
             <!-- Filters & Sorting bar -->
             <div class="bg-white border border-gray-150 p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -129,11 +129,11 @@ fbq('track', 'Search', {
             </div>
 
             <!-- Products Grid -->
-            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+            <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
                 @forelse($products as $product)
                     @include('store.partials.product-card', ['product' => $product])
                 @empty
-                    <div class="col-span-full py-16 text-center text-gray-400 bg-white border border-gray-150 rounded-2xl">
+                    <div class="col-span-full py-8 md:py-16 text-center text-gray-400 bg-white border border-gray-150 rounded-2xl">
                         <svg class="w-16 h-16 text-purple-200 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>

@@ -80,22 +80,6 @@ fbq('track', 'ViewContent', {
                 @endif
             </div>
 
-            <!-- Stock -->
-            <div class="pt-1 md:pt-2">
-                @if($product->product_type === 'simple')
-                    @if($product->stock_quantity > 0)
-                        <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 bg-green-50 text-green-700 rounded-full border border-green-200">✅ স্টকে আছে</span>
-                    @else
-                        <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 bg-red-50 text-red-700 rounded-full border border-red-200">❌ স্টক আউট</span>
-                    @endif
-                @else
-                    <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full border"
-                          :class="variationStock > 0 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'"
-                          x-text="stockStatusText">
-                    </span>
-                @endif
-            </div>
-
             <!-- Short Description -->
             @if($product->short_description)
                 <div class="text-base text-gray-600 leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-purple-600 [&_a]:underline p-2 bg-gray-100 border border-slate-500 rounded-md">{!! $product->short_description !!}</div>
@@ -193,6 +177,22 @@ fbq('track', 'ViewContent', {
                 @endif
             </form>
 
+            <!-- Stock -->
+            <div class="pt-3 md:pt-4">
+                @if($product->product_type === 'simple')
+                    @if($product->stock_quantity > 0)
+                        <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 bg-green-50 text-green-700 rounded-full border border-green-200">✅ স্টকে আছে</span>
+                    @else
+                        <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 bg-red-50 text-red-700 rounded-full border border-red-200">❌ স্টক আউট</span>
+                    @endif
+                @else
+                    <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full border"
+                          :class="variationStock > 0 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'"
+                          x-text="stockStatusText">
+                    </span>
+                @endif
+            </div>
+
             <!-- WhatsApp Contact -->
             @php
                 $whatsappNumber = App\Models\Setting::getValue('whatsapp_number', '');
@@ -245,7 +245,7 @@ fbq('track', 'ViewContent', {
     @if($relatedProducts->count() > 0)
         <section class="mt-8 md:mt-16 border-t border-gray-200 pt-6 md:pt-12 space-y-4 md:space-y-6">
             <h2 class="text-lg md:text-2xl font-extrabold text-gray-900 text-center">আরও দেখুন</h2>
-            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+            <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
                 @foreach($relatedProducts as $rel)
                     @include('store.partials.product-card', ['product' => $rel])
                 @endforeach

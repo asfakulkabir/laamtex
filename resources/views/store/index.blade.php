@@ -47,30 +47,25 @@
     @endif
 
     <!-- Featured Categories -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-10">
-        <div class="text-center space-y-2">
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 md:py-6 lg:py-8">
+        <div class="text-center space-y-2 mb-4 md:mb-6 lg:mb-10">
             <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900">Shop by Category</h2>
-            <p class="text-sm text-gray-500">Find exactly what you're looking for.</p>
         </div>
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div class="flex flex-wrap justify-center items-center gap-3 md:gap-4 max-w-2xl mx-auto">
             @foreach($featuredCategories as $cat)
-                <a href="{{ route('shop', ['category' => $cat->slug]) }}" class="group relative block bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300">
-                    <div class="aspect-[4/3] bg-gray-100 overflow-hidden">
+                <a href="{{ route('shop', ['category' => $cat->slug]) }}" class="group flex flex-col w-[23%] md:w-[11%] bg-white border border-gray-200 rounded-md overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+                    <div class="relative aspect-square bg-gray-100 overflow-hidden w-full">
                         @if($cat->image)
                             <img src="{{ asset('storage/' . $cat->image) }}" alt="{{ $cat->name }}"
-                                 class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                                 class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
                         @else
                             <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-pink-100">
                                 <span class="text-4xl font-extrabold text-purple-300/60">{{ substr($cat->name, 0, 1) }}</span>
                             </div>
                         @endif
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                        <div class="absolute bottom-0 left-0 right-0 p-4">
-                            <h4 class="font-bold text-white text-sm group-hover:text-purple-50 transition">{{ $cat->name }}</h4>
-                            @if($cat->group_name)
-                                <p class="text-[10px] text-white/70 font-semibold uppercase tracking-wider">{{ $cat->group_name }}</p>
-                            @endif
-                        </div>
+                    </div>
+                    <div class="px-3 py-2 text-center">
+                        <h4 class="font-bold text-gray-900 text-xs sm:text-sm truncate">{{ $cat->name }}</h4>
                     </div>
                 </a>
             @endforeach
@@ -79,7 +74,7 @@
 
     <!-- Featured Products -->
     @if($featuredProducts->count() > 0)
-        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-6 md:py-10">
+        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 pb-4 md:pb-6 2xl:pb-8">
             <div class="flex justify-between items-end">
                 <div class="space-y-1">
                     <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900">Featured Additions</h2>
@@ -88,7 +83,7 @@
                 <a href="{{ route('shop') }}" class="text-sm font-bold text-purple-600 hover:text-primary">See All Products →</a>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+            <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
                 @foreach($featuredProducts as $product)
                     @include('store.partials.product-card', ['product' => $product])
                 @endforeach
@@ -103,7 +98,7 @@
             <p class="text-sm text-gray-500">Be the first to secure our fresh collections.</p>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+        <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             @foreach($latestProducts as $product)
                 @include('store.partials.product-card', ['product' => $product])
             @endforeach

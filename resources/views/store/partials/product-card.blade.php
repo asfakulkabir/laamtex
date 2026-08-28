@@ -30,9 +30,9 @@
     </div>
 
     <!-- Details -->
-    <div class="p-6 flex flex-col flex-grow space-y-3">
+    <div class="p-3 sm:p-4 lg:p-5 flex flex-col flex-grow space-y-1.5 sm:space-y-2">
         <!-- Category name -->
-        <p class="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest truncate">
+        <p class="text-[9px] sm:text-[10px] text-gray-400 font-extrabold uppercase tracking-widest truncate">
             @if($product->categories->count() > 0)
                 {{ $product->categories->first()->name }}
             @else
@@ -41,7 +41,7 @@
         </p>
 
         <!-- Product Name -->
-        <h3 class="font-bold text-gray-900 group-hover:text-purple-600 transition truncate text-base">
+        <h3 class="font-semibold text-gray-900 group-hover:text-purple-600 transition line-clamp-2 text-[13px] sm:text-sm lg:text-[15px] leading-snug">
             @if($product->slug)
                 <a href="{{ route('product.detail', $product->slug) }}">
                     <span class="absolute inset-0 z-0"></span>
@@ -52,18 +52,18 @@
             @endif
         </h3>
 
-        <!-- Price -->
-        <div class="flex-grow flex items-end">
-            @if($product->sale_price !== null)
-                <div class="flex items-baseline space-x-2">
-                    <span class="font-bold text-purple-600 text-lg">৳{{ number_format($product->sale_price, 2) }}</span>
-                    <span class="text-xs text-gray-400 line-through">৳{{ number_format($product->regular_price, 2) }}</span>
-                </div>
-            @elseif($product->regular_price !== null)
-                <span class="font-bold text-purple-600 text-lg">৳{{ number_format($product->regular_price, 2) }}</span>
-            @else
-                <span class="text-xs text-gray-400 italic">Options Available</span>
-            @endif
-        </div>
+    <!-- Price -->
+    <div class="flex-grow flex items-end">
+        @if($product->sale_price !== null)
+            <div class="flex items-baseline space-x-1.5">
+                <span class="font-bold text-purple-600 text-sm sm:text-base lg:text-lg">৳{{ number_format($product->sale_price, 2) }}</span>
+                <span class="text-[10px] sm:text-xs text-gray-400 line-through">৳{{ number_format($product->regular_price, 2) }}</span>
+            </div>
+        @elseif($product->regular_price !== null)
+            <span class="font-bold text-purple-600 text-sm sm:text-base lg:text-lg">৳{{ number_format($product->regular_price, 2) }}</span>
+        @else
+            <span class="text-xs text-gray-400 italic">Options Available</span>
+        @endif
+    </div>
     </div>
 </div>
