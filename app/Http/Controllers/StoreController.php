@@ -401,6 +401,7 @@ class StoreController extends Controller
                 'customer_address'    => $request->customer_address,
                 'delivery_charge_id'  => $delivery->id,
                 'total_amount'        => $totalAmount,
+                'total'               => $totalAmount,
                 'status'              => 'processing',
                 'is_sent_to_steadfast'=> false,
                 'is_notification_sent'=> false,

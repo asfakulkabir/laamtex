@@ -48,12 +48,9 @@
 
     <!-- Featured Categories -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 md:py-6 lg:py-8">
-        <div class="text-center space-y-2 mb-4 md:mb-6 lg:mb-10">
-            <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight text-gray-900">Shop by Category</h2>
-        </div>
-        <div class="flex flex-wrap justify-center items-center gap-3 md:gap-4 max-w-2xl mx-auto">
+        <div class="flex flex-wrap gap-1 lg:gap-4 justify-center items-center">
             @foreach($featuredCategories as $cat)
-                <a href="{{ route('shop', ['category' => $cat->slug]) }}" class="group flex flex-col w-[23%] md:w-[11%] bg-white border border-gray-200 rounded-md overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+                <a href="{{ route('shop', ['category' => $cat->slug]) }}" class="group flex flex-col  border bg-white border-gray-200 rounded-md overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 w-1/4 md:w-1/6 lg:w-24">
                     <div class="relative aspect-square bg-gray-100 overflow-hidden w-full">
                         @if($cat->image)
                             <img src="{{ asset('storage/' . $cat->image) }}" alt="{{ $cat->name }}"
@@ -64,8 +61,8 @@
                             </div>
                         @endif
                     </div>
-                    <div class="px-3 py-2 text-center">
-                        <h4 class="font-bold text-gray-900 text-xs sm:text-sm truncate">{{ $cat->name }}</h4>
+                    <div class="py-2 text-center">
+                        <h4 class="text-gray-900 text-xs sm:text-sm truncate">{{ $cat->name }}</h4>
                     </div>
                 </a>
             @endforeach

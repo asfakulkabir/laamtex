@@ -159,6 +159,7 @@ class OrderController extends Controller
                     'payment_method' => $data['payment_method'] ?? 'Cash on Delivery',
                     'bkash_trx_id' => $data['bkash_trx_id'] ?? null,
                     'total_amount' => $data['total_amount'] ?? 0,
+                    'total' => $data['total_amount'] ?? 0,
                     'status' => $data['status'] ?? 'processing',
                     'is_sent_to_steadfast' => filter_var($data['is_sent_to_steadfast'] ?? false, FILTER_VALIDATE_BOOLEAN),
                     'is_notification_sent' => filter_var($data['is_notification_sent'] ?? false, FILTER_VALIDATE_BOOLEAN),

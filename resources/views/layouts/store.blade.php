@@ -123,7 +123,7 @@
 <body class="bg-gradient-to-br from-rose-50 via-gray-50 to-pink-100 text-gray-800 flex flex-col min-h-screen">
 
     <!-- Header / Navbar -->
-    <header x-data="{ menuOpen: false }" class="bg-white/95 backdrop-blur-md sticky top-0 z-40 border-b border-purple-500 shadow-sm">
+    <header x-data="{ menuOpen: false, openCat: null }" class="bg-white/95 backdrop-blur-md sticky top-0 z-40 border-b border-purple-500 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-20">
                 
@@ -214,9 +214,18 @@
                     <a href="{{ route('shop') }}" class="px-3 py-2 rounded-lg text-gray-600 hover:text-purple-600 hover:bg-purple-50 transition-colors {{ request()->routeIs('shop') ? 'text-purple-600 bg-purple-50' : '' }}">Shop</a>
                     @foreach($parentCats as $cat)
                         <div class="space-y-1">
-                            <a href="{{ route('shop', ['category' => $cat->slug]) }}" class="block px-3 py-2 rounded-lg text-gray-600 hover:text-purple-600 hover:bg-purple-50 transition-colors {{ request()->input('category') === $cat->slug ? 'text-purple-600 bg-purple-50' : '' }}">{{ $cat->name }}</a>
+                            <div class="flex items-center justify-between">
+                                <a href="{{ route('shop', ['category' => $cat->slug]) }}" class="flex-1 px-3 py-2 rounded-lg text-gray-600 hover:text-purple-600 hover:bg-purple-50 transition-colors {{ request()->input('category') === $cat->slug ? 'text-purple-600 bg-purple-50' : '' }}">{{ $cat->name }}</a>
+                                @if($cat->children->count() > 0)
+                                    <button @click="openCat = openCat === {{ $cat->id }} ? null : {{ $cat->id }}" class="ml-1 p-2 text-gray-400 hover:text-purple-600 transition-colors" aria-label="Toggle {{ $cat->name }} subcategories">
+                                        <svg :class="openCat === {{ $cat->id }} ? 'rotate-180' : ''" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                    </button>
+                                @endif
+                            </div>
                             @if($cat->children->count() > 0)
-                                <div class="pl-6 space-y-1">
+                                <div x-show="openCat === {{ $cat->id }}" class="pl-6 space-y-1">
                                     @foreach($cat->children as $child)
                                         <a href="{{ route('shop', ['category' => $child->slug]) }}" class="block px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition-colors">{{ $child->name }}</a>
                                     @endforeach
@@ -379,84 +388,71 @@
 
                             <!-- Content / Item List -->
                             <div class="flex-1 overflow-y-auto px-6 py-6 space-y-4">
-                                @php
-                                    $sideCartItems = session('cart', []);
-                                @endphp
-                                @if(count($sideCartItems) > 0)
-                                    <div class="space-y-4">
-                                        @foreach($sideCartItems as $key => $item)
-                                            <div class="flex items-start bg-white border border-gray-100 rounded-xl p-3 gap-3 shadow-sm">
-                                                <!-- Image -->
-                                                <div class="w-16 h-16 bg-gray-50 border border-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                                                    @if($item['image'])
-                                                        <img src="{{ Storage::url($item['image']) }}" alt="{{ $item['name'] }}" class="w-full h-full object-cover">
-                                                    @else
-                                                        <div class="w-full h-full flex items-center justify-center text-purple-300 bg-purple-50">
-                                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                                            </svg>
-                                                        </div>
-                                                    @endif
-                                                </div>
-                                                
-                                                <!-- Details -->
-                                                <div class="flex-grow space-y-1">
-                                                    <h4 class="font-bold text-gray-900 text-xs truncate max-w-[180px]">{{ $item['name'] }}</h4>
-                                                    @if($item['variation_details'])
-                                                        <p class="text-[10px] font-semibold text-purple-600">{{ $item['variation_details'] }}</p>
-                                                    @endif
-                                                    <div class="flex items-center justify-between mt-2">
-                                                        <!-- Quantity controls -->
-                                                        <div class="flex items-center border border-gray-200 rounded overflow-hidden bg-gray-50">
-                                                            <button type="button" @click="updateQty('{{ $key }}', {{ $item['quantity'] - 1 }})" class="px-1.5 py-0.5 text-gray-500 hover:bg-gray-100 text-xs">-</button>
-                                                            <span class="px-2 text-xs font-bold text-gray-950">{{ $item['quantity'] }}</span>
-                                                            <button type="button" @click="updateQty('{{ $key }}', {{ $item['quantity'] + 1 }})" class="px-1.5 py-0.5 text-gray-500 hover:bg-gray-100 text-xs">+</button>
-                                                        </div>
-                                                        <!-- Price -->
-                                                        <span class="text-xs font-bold text-gray-950">৳{{ number_format($item['price'] * $item['quantity'], 2) }}</span>
-                                                    </div>
-                                                </div>
-
-                                                <!-- Remove button -->
-                                                <button type="button" @click="removeItem('{{ $key }}')" class="text-pink-600 hover:text-pink-700 transition flex-shrink-0">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                <div class="space-y-4" x-show="count > 0">
+                                    <template x-for="item in items" :key="item.key">
+                                        <div class="flex items-start bg-white border border-gray-100 rounded-xl p-3 gap-3 shadow-sm">
+                                            <!-- Image -->
+                                            <div class="w-16 h-16 bg-gray-50 border border-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                                                <img x-show="item.image" :src="item.image" :alt="item.name" class="w-full h-full object-cover">
+                                                <div x-show="!item.image" class="w-full h-full flex items-center justify-center text-purple-300 bg-purple-50">
+                                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                                     </svg>
-                                                </button>
+                                                </div>
                                             </div>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    <div class="flex flex-col items-center justify-center py-20 space-y-4 text-center">
-                                        <div class="w-16 h-16 bg-purple-50 rounded-full flex items-center justify-center">
-                                            <svg class="w-8 h-8 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                                            </svg>
+
+                                            <!-- Details -->
+                                            <div class="flex-grow space-y-1">
+                                                <h4 class="font-bold text-gray-900 text-xs truncate max-w-[180px]" x-text="item.name"></h4>
+                                                <p class="text-[10px] font-semibold text-purple-600" x-show="item.variation_details" x-text="item.variation_details"></p>
+                                                <div class="flex items-center justify-between mt-2">
+                                                    <!-- Quantity controls -->
+                                                    <div class="flex items-center border border-gray-200 rounded overflow-hidden bg-gray-50">
+                                                        <button type="button" @click="updateQty(item.key, item.quantity - 1)" class="px-1.5 py-0.5 text-gray-500 hover:bg-gray-100 text-xs">-</button>
+                                                        <span class="px-2 text-xs font-bold text-gray-950" x-text="item.quantity"></span>
+                                                        <button type="button" @click="updateQty(item.key, item.quantity + 1)" class="px-1.5 py-0.5 text-gray-500 hover:bg-gray-100 text-xs">+</button>
+                                                    </div>
+                                                    <!-- Price -->
+                                                    <span class="text-xs font-bold text-gray-950" x-text="money(item.price * item.quantity)"></span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Remove button -->
+                                            <button type="button" @click="removeItem(item.key)" class="text-pink-600 hover:text-pink-700 transition flex-shrink-0">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                </svg>
+                                            </button>
                                         </div>
-                                        <div class="text-sm font-semibold text-gray-400">Your cart is empty</div>
+                                    </template>
+                                </div>
+                                <div class="flex flex-col items-center justify-center py-20 space-y-4 text-center" x-show="count === 0">
+                                    <div class="w-16 h-16 bg-purple-50 rounded-full flex items-center justify-center">
+                                        <svg class="w-8 h-8 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                                        </svg>
                                     </div>
-                                @endif
+                                    <div class="text-sm font-semibold text-gray-400">Your cart is empty</div>
+                                </div>
                             </div>
 
                             <!-- Footer -->
-                            @if(count($sideCartItems) > 0)
-                                <div class="border-t border-gray-150 px-6 py-6 bg-gray-50 space-y-4">
-                                    <div class="flex justify-between items-baseline font-bold text-gray-955">
-                                        <span>Subtotal</span>
-                                        <span class="text-purple-600 text-lg">৳{{ number_format(array_sum(array_map(fn($item) => $item['price'] * $item['quantity'], $sideCartItems)), 2) }}</span>
-                                    </div>
-                                    <p class="text-[10px] text-gray-400">Shipping and taxes calculated at checkout.</p>
-                                    
-                                    <div class="space-y-2">
-                                        <a href="{{ route('checkout') }}" class="block w-full text-center py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-primary hover:to-pink-600 text-white rounded-lg font-bold tracking-wide transition shadow-md">
-                                            Checkout Now
-                                        </a>
-                                        <a href="{{ route('cart') }}" class="block w-full text-center py-2 text-xs font-bold text-purple-600 hover:text-primary uppercase tracking-wider">
-                                            View Full Cart
-                                        </a>
-                                    </div>
+                            <div x-show="count > 0" class="border-t border-gray-150 px-6 py-6 bg-gray-50 space-y-4">
+                                <div class="flex justify-between items-baseline font-bold text-gray-900">
+                                    <span>Subtotal</span>
+                                    <span class="text-purple-600 text-lg" x-text="money(subtotal)"></span>
                                 </div>
-                            @endif
+                                <p class="text-[10px] text-gray-400">Shipping and taxes calculated at checkout.</p>
+
+                                <div class="space-y-2">
+                                    <a href="{{ route('checkout') }}" class="block w-full text-center py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-primary hover:to-pink-600 text-white rounded-lg font-bold tracking-wide transition shadow-md">
+                                        Checkout Now
+                                    </a>
+                                    <a href="{{ route('cart') }}" class="block w-full text-center py-2 text-xs font-bold text-purple-600 hover:text-primary uppercase tracking-wider">
+                                        View Full Cart
+                                    </a>
+                                </div>
+                            </div>
 
                         </div>
                     </div>
@@ -467,50 +463,97 @@
     </div>
 
     <script>
+        @php
+            $sideCartPrepared = [];
+            foreach (session('cart', []) as $cartKey => $cartItem) {
+                $sideCartPrepared[] = [
+                    'key' => $cartKey,
+                    'name' => $cartItem['name'],
+                    'image' => $cartItem['image'] ? Storage::url($cartItem['image']) : null,
+                    'variation_details' => $cartItem['variation_details'] ?? null,
+                    'price' => (float) $cartItem['price'],
+                    'quantity' => (int) $cartItem['quantity'],
+                ];
+            }
+        @endphp
+
         document.addEventListener('alpine:init', () => {
             Alpine.data('sideCart', () => ({
                 isOpen: false,
-                
+                items: @json($sideCartPrepared),
+
                 open() {
-                    console.log('Cart opening...');
                     this.isOpen = true;
                 },
                 close() {
-                    console.log('Cart closing...');
                     this.isOpen = false;
+                },
+                get count() {
+                    return this.items.length;
+                },
+                get subtotal() {
+                    return this.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                },
+                money(n) {
+                    return '\u09F3' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                },
+                refreshBadge() {
+                    const badge = document.getElementById('cart-badge');
+                    if (badge) {
+                        badge.textContent = this.count;
+                        badge.classList.toggle('hidden', this.count === 0);
+                    }
                 },
                 async updateQty(key, qty) {
                     if (qty < 1) return;
+                    const item = this.items.find(i => i.key === key);
+                    if (!item) return;
+                    const previous = item.quantity;
+                    item.quantity = qty;
+
                     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-                    const response = await fetch('{{ route("cart.update") }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': csrfToken,
-                        },
-                        body: JSON.stringify({ key, quantity: qty }),
-                    });
-                    const data = await response.json();
-                    if (data.success) {
-                        window.location.search = '?open_cart=1';
-                    } else {
-                        alert(data.message || 'Cannot update quantity.');
+                    try {
+                        const response = await fetch('{{ route("cart.update") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                            },
+                            body: JSON.stringify({ key, quantity: qty }),
+                        });
+                        const data = await response.json();
+                        if (!data.success) {
+                            item.quantity = previous;
+                            this.refreshBadge();
+                            alert(data.message || 'Cannot update quantity.');
+                        }
+                    } catch (e) {
+                        item.quantity = previous;
+                        this.refreshBadge();
+                        alert('Cannot update quantity.');
                     }
                 },
                 async removeItem(key) {
                     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-                    const response = await fetch('{{ route("cart.remove") }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': csrfToken,
-                            'X-Requested-With': 'XMLHttpRequest',
-                        },
-                        body: JSON.stringify({ key }),
-                    });
-                    const data = await response.json();
-                    if (data.success) {
-                        window.location.search = '?open_cart=1';
+                    try {
+                        const response = await fetch('{{ route("cart.remove") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: JSON.stringify({ key }),
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.items = this.items.filter(i => i.key !== key);
+                            this.refreshBadge();
+                        } else {
+                            alert(data.message || 'Cannot remove item.');
+                        }
+                    } catch (e) {
+                        alert('Cannot remove item.');
                     }
                 }
             }));

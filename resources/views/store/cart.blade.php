@@ -41,10 +41,10 @@
                         <div class="flex flex-col items-center space-y-2">
                             <div class="flex items-center bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
                                 <button type="button" class="cart-qty-btn px-2.5 py-1.5 text-gray-600 hover:bg-gray-150 focus:outline-none text-sm"
-                                        data-key="{{ $key }}" data-action="decrease">-</button>
+                                        data-key="{{ $key }}" data-action="decrease" data-item-id="{{ md5($key) }}">-</button>
                                 <span class="px-3 py-1.5 text-sm font-bold text-gray-900 qty-display" id="qty-{{ md5($key) }}">{{ $item['quantity'] }}</span>
                                 <button type="button" class="cart-qty-btn px-2.5 py-1.5 text-gray-600 hover:bg-gray-150 focus:outline-none text-sm"
-                                        data-key="{{ $key }}" data-action="increase">+</button>
+                                        data-key="{{ $key }}" data-action="increase" data-item-id="{{ md5($key) }}">+</button>
                             </div>
                             
                             <!-- Line Total -->
@@ -136,8 +136,8 @@
         btn.addEventListener('click', async function() {
             const key = this.dataset.key;
             const action = this.dataset.action;
-            const itemId = md5(key);
-            const qtySpan = document.getElementById(`qty-${CSS.escape(itemId)}`);
+            const itemId = this.dataset.itemId;
+            const qtySpan = document.getElementById(`qty-${itemId}`);
             let currentQty = parseInt(qtySpan.textContent);
             let newQty = action === 'increase' ? currentQty + 1 : Math.max(1, currentQty - 1);
 
@@ -199,11 +199,6 @@
         });
     });
 
-    // Simple md5 proxy with fallback (we use hash derived from key as DOM id)
-    function md5(str) {
-        // We are using the server-rendered hashed IDs, so we don't need client-side md5.
-        // This is a placeholder. The actual IDs are passed via server and stored as data attributes.
-        return str;
-    }
+    
 </script>
-@endsectionon
+@endsection

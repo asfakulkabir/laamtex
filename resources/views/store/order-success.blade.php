@@ -16,7 +16,7 @@ fbq('track', 'Purchase', @json($pixelPurchase));
 
     <!-- Success Banner -->
     <div class="text-center space-y-5 pb-10">
-        <div class="w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-500 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-pink-500/20">
+        <div class="w-20 h-20 bg-gradient-to-r from-emerald-600 to-green-800 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-emerald-900/20">
             <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
             </svg>
@@ -35,13 +35,13 @@ fbq('track', 'Purchase', @json($pixelPurchase));
     <div class="bg-white border border-gray-100 rounded-2xl shadow-md overflow-hidden">
 
         <!-- Invoice Header -->
-        <div class="bg-gradient-to-r from-purple-900 to-indigo-950 px-8 py-6 flex justify-between items-center text-white">
+        <div class="bg-gradient-to-r from-emerald-950 to-green-900 px-8 py-6 flex justify-between items-center text-white">
             <div>
-                <h1 class="text-2xl font-bold text-white">OutFitt</h1>
+                <h1 class="text-2xl font-bold text-white">{{ site_name() }}</h1>
             </div>
             <div class="text-right text-xs space-y-0.5">
-                <p class="font-extrabold uppercase tracking-widest text-pink-300">Order Receipt</p>
-                <p class="text-purple-200/70">{{ $order->created_at->format('d M Y, h:i A') }}</p>
+                <p class="font-extrabold uppercase tracking-widest text-green-300">Order Receipt</p>
+                <p class="text-green-200/70">{{ $order->created_at->format('d M Y, h:i A') }}</p>
             </div>
         </div>
 
@@ -137,7 +137,7 @@ fbq('track', 'Purchase', @json($pixelPurchase));
     <!-- CTA Buttons -->
     <div class="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-6 pt-4">
         <a href="{{ route('home') }}" class="px-8 py-3 bg-white border-2 border-purple-200 hover:border-purple-400 text-purple-600 font-bold rounded-full text-center transition">Back to Home</a>
-        <a href="{{ route('shop') }}" class="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-primary hover:to-pink-600 text-white font-bold rounded-full shadow-lg shadow-pink-500/15 text-center transition">Continue Shopping</a>
+        <a href="{{ route('shop') }}" class="px-8 py-3 bg-gradient-to-r from-emerald-700 to-green-900 hover:from-emerald-600 hover:to-green-800 text-white font-bold rounded-full shadow-lg shadow-emerald-900/15 text-center transition">Continue Shopping</a>
     </div>
 </div>
 @endsection
