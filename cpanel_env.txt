@@ -1,4 +1,4 @@
-APP_NAME=Outfitt
+APP_NAME=laamtex
 APP_ENV=local
 APP_KEY=base64:KZONRF/0Qd5mYAAJ4vHMmjORbATBZSvayz8HB3MJw/Y=
 APP_DEBUG=true

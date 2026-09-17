@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Home Slider - Outfitt')
+@section('title', 'Home Slider - laamtex')
 @section('page_title', 'Home Page Slider')
 
 @section('content')

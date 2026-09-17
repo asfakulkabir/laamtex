@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Dashboard Overview - Outfitt')
+@section('title', 'Dashboard Overview - laamtex')
 @section('page_title', 'Dashboard')
 
 @section('content')

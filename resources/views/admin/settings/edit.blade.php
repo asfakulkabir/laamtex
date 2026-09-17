@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Settings - Outfitt')
+@section('title', 'Settings - laamtex')
 @section('page_title', 'Settings')
 
 @section('content')
@@ -232,7 +232,7 @@
                     <input type="text" id="site_name" name="site_name"
                            value="{{ old('site_name', $siteName) }}"
                            class="w-full bg-slate-800/60 border border-fuchsia-700/40 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600"
-                           placeholder="Outfitt">
+                           placeholder="laamtex">
                     <p class="text-base text-fuchsia-300/50 mt-1">Used in the header, footer, page titles, and copyright notice.</p>
                     @error('site_name')
                         <span class="text-base text-red-500 mt-1 block">{{ $message }}</span>
@@ -275,6 +275,26 @@
                     </div>
                     <p class="text-base text-fuchsia-300/50 mt-1">Replaces the primary color (purple-700) across the website. No rebuild needed.</p>
                     @error('primary_color')
+                        <span class="text-base text-red-500 mt-1 block">{{ $message }}</span>
+                    @enderror
+                </div>
+                <div>
+                    <label for="accent_color" class="block text-base font-bold uppercase tracking-wider text-fuchsia-300 mb-2">
+                        Accent Color (Links)
+                    </label>
+                    <div class="flex items-center gap-3">
+                        <input type="color" id="accent_color_picker" name="accent_color"
+                               value="{{ old('accent_color', $accentColor) }}"
+                               class="w-16 h-12 rounded-lg bg-slate-800/60 border border-fuchsia-700/40 p-1 cursor-pointer"
+                               oninput="document.getElementById('accent_color_hex').value = this.value">
+                        <input type="text" id="accent_color_hex"
+                               value="{{ old('accent_color', $accentColor) }}"
+                               oninput="if(/^#[0-9a-fA-F]{6}$/.test(this.value)) document.getElementById('accent_color_picker').value = this.value"
+                               class="flex-1 bg-slate-800/60 border border-fuchsia-700/40 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600"
+                               placeholder="{{ $primaryColor }}">
+                    </div>
+                    <p class="text-base text-fuchsia-300/50 mt-1">Used for link highlights and hover accents. Leave blank to match the primary color.</p>
+                    @error('accent_color')
                         <span class="text-base text-red-500 mt-1 block">{{ $message }}</span>
                     @enderror
                 </div>

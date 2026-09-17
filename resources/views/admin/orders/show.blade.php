@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', "Order Details #{$order->id} - Outfitt")
+@section('title', "Order Details #{$order->id} - laamtex")
 @section('page_title', "Order Details #{$order->id}")
 
 @section('content')

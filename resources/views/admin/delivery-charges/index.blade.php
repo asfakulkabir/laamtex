@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Shipping Delivery Charges - Outfitt')
+@section('title', 'Shipping Delivery Charges - laamtex')
 @section('page_title', 'Shipping Zones & Rates')
 
 @section('content')

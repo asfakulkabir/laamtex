@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Manage Categories - Outfitt')
+@section('title', 'Manage Categories - laamtex')
 @section('page_title', 'Categories Management')
 
 @section('content')

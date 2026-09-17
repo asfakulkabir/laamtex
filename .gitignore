@@ -1,5 +1,6 @@
 /.phpunit.cache
 /node_modules
+.DS_Store
 /public/build
 /public/hot
 /public/storage

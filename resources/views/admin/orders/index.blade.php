@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Manage Orders - Outfitt')
+@section('title', 'Manage Orders - laamtex')
 @section('page_title', 'Orders Management')
 
 @section('content')

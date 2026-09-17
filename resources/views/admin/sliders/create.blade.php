@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Add Slider Image - Outfitt')
+@section('title', 'Add Slider Image - laamtex')
 @section('page_title', 'Add Slider Image')
 
 @section('content')

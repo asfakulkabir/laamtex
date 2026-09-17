@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Add Shipping Zone - Outfitt')
+@section('title', 'Add Shipping Zone - laamtex')
 @section('page_title', 'Add Shipping Zone')
 
 @section('content')

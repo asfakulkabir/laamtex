@@ -91,8 +91,8 @@ class DatabaseSeeder extends Seeder
             'product_type' => 'variable',
             'is_active' => true,
             'is_featured' => true,
-            'seo_title' => 'Casual Summer Dress - Pink & Purple Floral Dress | Outfitt',
-            'meta_description' => 'Buy Casual Summer Dress at Outfitt. Soft, breathable pink and purple tiered floral dress with flutter sleeves, perfect for summer outings.',
+            'seo_title' => 'Casual Summer Dress - Pink & Purple Floral Dress | laamtex',
+            'meta_description' => 'Buy Casual Summer Dress at laamtex. Soft, breathable pink and purple tiered floral dress with flutter sleeves, perfect for summer outings.',
         ]);
         $product1->categories()->sync([$women->id, $dresses->id]);
 
@@ -159,8 +159,8 @@ class DatabaseSeeder extends Seeder
             'product_type' => 'variable',
             'is_active' => true,
             'is_featured' => false,
-            'seo_title' => "Classic Men's White Shirt | Outfitt",
-            'meta_description' => 'Shop our Classic Men\'s Shirt at Outfitt. 100% premium cotton white button-down, sharp tailoring and wrinkle resistant.',
+            'seo_title' => "Classic Men's White Shirt | laamtex",
+            'meta_description' => 'Shop our Classic Men\'s Shirt at laamtex. 100% premium cotton white button-down, sharp tailoring and wrinkle resistant.',
         ]);
         $product2->categories()->sync([$men->id, $shirts->id]);
 
@@ -209,8 +209,8 @@ class DatabaseSeeder extends Seeder
             'stock_quantity' => 15,
             'is_active' => true,
             'is_featured' => true,
-            'seo_title' => 'Purple Saffiano Leather Handbag - Gold Hardware | Outfitt',
-            'meta_description' => 'Buy Purple Leather Handbag at Outfitt. Premium scratch-resistant saffiano leather handbag with gold-tone hardware and adjustable strap.',
+            'seo_title' => 'Purple Saffiano Leather Handbag - Gold Hardware | laamtex',
+            'meta_description' => 'Buy Purple Leather Handbag at laamtex. Premium scratch-resistant saffiano leather handbag with gold-tone hardware and adjustable strap.',
         ]);
         $product3->categories()->sync([$accessories->id]);
 
@@ -236,8 +236,8 @@ class DatabaseSeeder extends Seeder
             'stock_quantity' => 25,
             'is_active' => true,
             'is_featured' => false,
-            'seo_title' => 'Pink Mulberry Silk Scarf - Hand Rolled Edges | Outfitt',
-            'meta_description' => 'Shop Pink Silk Scarf at Outfitt. 100% mulberry silk scarf, lightweight, soft, pastel pink.',
+            'seo_title' => 'Pink Mulberry Silk Scarf - Hand Rolled Edges | laamtex',
+            'meta_description' => 'Shop Pink Silk Scarf at laamtex. 100% mulberry silk scarf, lightweight, soft, pastel pink.',
         ]);
         $product4->categories()->sync([$accessories->id]);
     }

@@ -11,10 +11,11 @@ class SettingController extends Controller
 {
     public function edit()
     {
-        $siteName = Setting::getValue('site_name', 'Outfitt');
+        $siteName = Setting::getValue('site_name', 'laamtex');
         $siteDescription = Setting::getValue('site_description', '');
         $siteLogo = Setting::getValue('site_logo', '');
         $primaryColor = Setting::getValue('primary_color', '#7c3aed');
+        $accentColor = Setting::getValue('accent_color', '');
         $notificationEmails = Setting::getValue('order_notification_emails', '');
         $metaPixelId = Setting::getValue('meta_pixel_id', '');
         $metaConversionApiToken = Setting::getValue('meta_conversion_api_token', '');
@@ -31,6 +32,7 @@ class SettingController extends Controller
             'siteDescription',
             'siteLogo',
             'primaryColor',
+            'accentColor',
             'notificationEmails',
             'metaPixelId',
             'metaConversionApiToken',
@@ -52,6 +54,7 @@ class SettingController extends Controller
             'site_description' => 'nullable|string|max:1000',
             'site_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'primary_color' => ['nullable', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
+            'accent_color' => ['nullable', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
             'order_notification_emails' => 'nullable|string|max:1000',
             'meta_pixel_id' => 'nullable|string|max:100',
             'meta_conversion_api_token' => 'nullable|string|max:255',
@@ -65,9 +68,10 @@ class SettingController extends Controller
             'steadfast_secret_key' => 'nullable|string|max:255',
         ]);
 
-        Setting::setValue('site_name', $request->input('site_name', 'Outfitt'));
+        Setting::setValue('site_name', $request->input('site_name', 'laamtex'));
         Setting::setValue('site_description', $request->input('site_description', ''));
         Setting::setValue('primary_color', $request->input('primary_color', '#7c3aed'));
+        Setting::setValue('accent_color', $request->input('accent_color', primary_color()));
 
         if ($request->hasFile('site_logo')) {
             $oldLogo = Setting::getValue('site_logo', '');

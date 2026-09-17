@@ -84,7 +84,7 @@
             </div>
         </div>
         <div class="footer">
-            &copy; {{ date('Y') }} Outfitt. All rights reserved.
+            &copy; {{ date('Y') }} laamtex. All rights reserved.
         </div>
     </div>
 </body>

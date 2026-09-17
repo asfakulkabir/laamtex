@@ -52,6 +52,8 @@
         :root {
             --color-primary: {{ primary_color() }};
             --color-primary-dark: {{ primary_color_dark() }};
+            --color-accent: {{ accent_color() }};
+            --color-accent-dark: {{ accent_color_dark() }};
         }
         .text-primary { color: var(--color-primary); }
         .hover\:text-primary:hover { color: var(--color-primary-dark); }
@@ -64,6 +66,14 @@
         .to-primary { --tw-gradient-to: var(--color-primary) var(--tw-gradient-to-position); }
         .hover\:from-primary:hover { --tw-gradient-from: var(--color-primary-dark) var(--tw-gradient-from-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
         .hover\:to-primary:hover { --tw-gradient-to: var(--color-primary-dark) var(--tw-gradient-to-position); }
+
+        .text-accent { color: var(--color-accent); }
+        .hover\:text-accent:hover { color: var(--color-accent-dark); }
+        .bg-accent { background-color: var(--color-accent); }
+        .hover\:bg-accent:hover { background-color: var(--color-accent-dark); }
+        .border-accent { border-color: var(--color-accent); }
+        .ring-accent { --tw-ring-color: var(--color-accent); }
+        .hover\:ring-accent:hover { --tw-ring-color: var(--color-accent); }
 
         .bg-purple-50 { background-color: color-mix(in srgb, var(--color-primary) 6%, white) !important; }
         .bg-purple-100 { background-color: color-mix(in srgb, var(--color-primary) 12%, white) !important; }
@@ -118,116 +128,152 @@
 
         .group-hover\:text-purple-600:is(:where(.group):hover *) { color: var(--color-primary) !important; }
         .group-hover\:text-purple-50:is(:where(.group):hover *) { color: color-mix(in srgb, var(--color-primary) 6%, white) !important; }
+
+        /* brand-* accent (links and hover accents) */
+        .bg-brand-50 { background-color: color-mix(in srgb, var(--color-accent) 6%, white) !important; }
+        .hover\:bg-brand-50:hover { background-color: color-mix(in srgb, var(--color-accent) 12%, white) !important; }
+        .text-brand-600 { color: var(--color-accent) !important; }
+        .hover\:text-brand-600:hover { color: var(--color-accent-dark) !important; }
+        .group-hover\:text-brand-600:is(:where(.group):hover *) { color: var(--color-accent) !important; }
+        .ring-brand-200 { --tw-ring-color: var(--color-accent) !important; }
+        .ring-brand-300 { --tw-ring-color: var(--color-accent) !important; }
+        .hover\:ring-brand-200:hover { --tw-ring-color: var(--color-accent) !important; }
+        .hover\:ring-brand-300:hover { --tw-ring-color: var(--color-accent) !important; }
+        .focus-within\:ring-brand-500:focus-within { --tw-ring-color: var(--color-primary) !important; }
+
+        /* brand-* primary (buttons, badges, tints) */
+        .bg-brand-600 { background-color: var(--color-primary) !important; }
+        .hover\:bg-brand-700:hover { background-color: var(--color-primary-dark) !important; }
+        .bg-brand-100 { background-color: color-mix(in srgb, var(--color-primary) 12%, white) !important; }
+        .bg-brand-200 { background-color: color-mix(in srgb, var(--color-primary) 25%, white) !important; }
+        .text-brand-800 { color: color-mix(in srgb, var(--color-primary) 60%, black) !important; }
+        .focus-within\:border-brand-500:focus-within { border-color: var(--color-primary) !important; }
+
+        /* violet (WhatsApp pill) follows accent */
+        .bg-violet-100 { background-color: color-mix(in srgb, var(--color-accent) 12%, white) !important; }
+        .hover\:bg-violet-200:hover { background-color: color-mix(in srgb, var(--color-accent) 22%, white) !important; }
+        .text-violet-700 { color: color-mix(in srgb, var(--color-accent) 72%, black) !important; }
     </style>
 </head>
-<body class="bg-gradient-to-br from-rose-50 via-gray-50 to-pink-100 text-gray-800 flex flex-col min-h-screen">
+<body class="bg-white text-gray-900 flex flex-col min-h-screen">
 
     <!-- Header / Navbar -->
-    <header x-data="{ menuOpen: false, openCat: null }" class="bg-white/95 backdrop-blur-md sticky top-0 z-40 border-b border-purple-500 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-20">
-                
-                <!-- Logo -->
-                <div class="flex-shrink-0">
-                    <a href="{{ route('home') }}" class="flex items-center">
-                        <img class="h-8 lg:h-10 w-auto rounded" src="{{ site_logo() }}" alt="{{ site_name() }}">
+    @php
+        $parentCats = \App\Models\Category::whereNull('parent_id')->with('children')->orderBy('name')->get();
+        $cartCount = count(session('cart', []));
+        $whatsapp = App\Models\Setting::getValue('whatsapp_number', '');
+    @endphp
+
+    <header x-data="{ menuOpen: false, openCat: null }" class="sticky top-0 z-40 bg-white border-b border-slate-200">
+        <div class="border-b border-slate-100">
+            <div class="mx-auto max-w-[1280px] px-4 sm:px-6">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5 md:h-16 md:flex-nowrap md:gap-4 md:py-0">
+                    <a href="{{ route('home') }}" class="flex items-center gap-2 shrink-0">
+                        <img src="{{ site_logo() }}" alt="{{ site_name() }}" class="h-8 w-auto max-w-[130px] sm:h-9 sm:max-w-[160px] rounded-lg object-contain">
                     </a>
-                </div>
 
-                @php
-                    $parentCats = \App\Models\Category::whereNull('parent_id')->with('children')->orderBy('name')->get();
-                @endphp
-
-                <!-- Desktop Navigation Links -->
-                <nav class="hidden md:flex items-center space-x-8 text-sm font-semibold tracking-wider uppercase">
-                    <a href="{{ route('home') }}" class="text-gray-600 hover:text-purple-600 transition-colors py-2 {{ request()->routeIs('home') ? 'border-b-2 border-pink-500 text-purple-600' : '' }}">Home</a>
-                    <a href="{{ route('shop') }}" class="text-gray-600 hover:text-purple-600 transition-colors py-2 {{ request()->routeIs('shop') ? 'border-b-2 border-pink-500 text-purple-600' : '' }}">Shop</a>
-                    
-                    @foreach($parentCats as $cat)
-                        <div class="relative group">
-                            <a href="{{ route('shop', ['category' => $cat->slug]) }}" class="text-gray-600 hover:text-purple-600 transition-colors py-2 inline-block {{ request()->input('category') === $cat->slug ? 'border-b-2 border-pink-500 text-purple-600' : '' }}">{{ $cat->name }}</a>
-                            @if($cat->children->count() > 0)
-                                <div class="absolute top-full left-0 mt-0 bg-white rounded-lg shadow-lg border border-gray-100 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 py-2">
-                                    @foreach($cat->children as $child)
-                                        <a href="{{ route('shop', ['category' => $child->slug]) }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-purple-600 hover:bg-purple-50 transition-colors whitespace-nowrap">{{ $child->name }}</a>
-                                    @endforeach
-                                </div>
-                            @endif
+                    <form role="search" class="relative order-last w-full md:order-none md:mx-auto md:max-w-2xl" action="{{ route('shop') }}" method="get">
+                        <div class="flex items-stretch h-11 rounded-lg border border-slate-300 overflow-hidden focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/30 bg-white">
+                            <select name="category" aria-label="Product category" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-3 border-0 focus:outline-none cursor-pointer hidden sm:block">
+                                <option value="">All Categories</option>
+                                @foreach($parentCats as $cat)
+                                    <option value="{{ $cat->slug }}" @selected(request('category') === $cat->slug)>{{ $cat->name }}</option>
+                                @endforeach
+                            </select>
+                            <input type="search" placeholder="Type and search products..." autocomplete="off" name="search" value="{{ request('search') }}" class="flex-1 min-w-0 px-3 text-sm border-0 focus:outline-none placeholder:text-slate-400 text-slate-900">
+                            <button type="submit" class="px-4 bg-slate-900 hover:bg-slate-800 text-white" aria-label="Search">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search h-4 w-4"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                            </button>
                         </div>
-                    @endforeach
-                </nav>
-
-                <!-- Desktop Action Controls -->
-                <div class="flex items-center space-x-6">
-                    <!-- Desktop Search Form -->
-                    <form action="{{ route('shop') }}" method="GET" class="hidden lg:flex relative items-center">
-                        <input type="text" name="search" placeholder="Search products..." value="{{ request('search') }}"
-                               class="bg-purple-50 text-gray-800 placeholder-purple-300 text-sm rounded-full py-2 px-5 pl-10 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:bg-white border border-purple-500 w-64 transition-all">
-                        <svg class="w-5 h-5 text-purple-400 absolute left-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                        </svg>
                     </form>
 
-                    <!-- Cart Icon with badge -->
-                    <a href="#" @click.prevent="$dispatch('open-cart')" class="relative p-2 text-gray-600 hover:text-purple-600 transition-colors" id="cart-nav-btn">
-                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                        </svg>
-                        @php
-                            $cartCount = count(session('cart', []));
-                        @endphp
-                        <span id="cart-badge" class="absolute -top-1 -right-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-full text-xs font-bold w-5 h-5 flex items-center justify-center border-2 border-white shadow {{ $cartCount == 0 ? 'hidden' : '' }}">
-                            {{ $cartCount }}
-                        </span>
-                    </a>
+                    <div class="flex items-center gap-1 shrink-0 ml-auto md:ml-0">
+                        <a href="#" class="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user h-5 w-5 text-slate-600"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <div class="text-left hidden xl:block"><div class="text-[10px] text-slate-500 leading-none">Track</div><div class="text-xs font-semibold text-slate-900">My Order</div></div>
+                        </a>
+                        <a href="#" class="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-user h-5 w-5 text-slate-600"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="10" r="3"></circle><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"></path></svg>
+                            <div class="text-left hidden xl:block"><div class="text-[10px] text-slate-500 leading-none">Sign in</div><div class="text-xs font-semibold text-slate-900">Login</div></div>
+                        </a>
+                        <a href="#" @click.prevent="$dispatch('open-cart')" class="relative flex items-center gap-2 p-2 md:px-3 rounded-lg hover:bg-slate-50 text-sm" aria-label="Cart" id="cart-nav-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shopping-cart h-5 w-5 text-slate-600"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>
+                            <span id="cart-badge" class="absolute -top-1 -right-1 bg-brand-600 text-white rounded-full text-[10px] font-bold h-5 min-w-5 flex items-center justify-center px-1 border-2 border-white shadow {{ $cartCount == 0 ? 'hidden' : '' }}">{{ $cartCount }}</span>
+                            <span class="text-left hidden xl:block"><span class="block text-[10px] text-slate-500 leading-none">Cart</span><span class="block text-xs font-semibold text-slate-900">My Cart</span></span>
+                        </a>
+                        <button @click="menuOpen = !menuOpen" class="md:hidden p-2 rounded-lg hover:bg-slate-100" aria-label="Open menu">
+                            <svg x-show="!menuOpen" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-menu h-5 w-5"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg>
+                            <svg x-show="menuOpen" x-cloak xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x h-5 w-5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                    <!-- Hamburger Button (Mobile) -->
-                    <button @click="menuOpen = !menuOpen" class="md:hidden p-2 text-gray-600 hover:text-purple-600 transition-colors">
-                        <svg x-show="!menuOpen" class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                        </svg>
-                        <svg x-show="menuOpen" x-cloak class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
+        <div class="hidden md:block">
+            <div class="mx-auto max-w-[1280px] px-4 sm:px-6">
+                <div class="flex h-12 items-center gap-2">
+                    <div class="relative group">
+                        <button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-menu h-4 w-4"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg>
+                            Browse All Categories
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down h-4 w-4 transition-transform group-hover:rotate-180"><path d="m6 9 6 6 6-6"></path></svg>
+                        </button>
+                        <div class="absolute left-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                            <div class="bg-white rounded-xl shadow-xl ring-1 ring-slate-200 py-2 w-64 max-h-[70vh] overflow-y-auto">
+                                @foreach($parentCats as $cat)
+                                    <a href="{{ route('shop', ['category' => $cat->slug]) }}" class="block px-4 py-2 text-sm text-slate-700 hover:text-brand-600 hover:bg-brand-50 font-medium">{{ $cat->name }}</a>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                    <nav class="flex items-center gap-1 text-sm ml-2">
+                        <a href="{{ route('home') }}" class="px-3 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium transition {{ request()->routeIs('home') ? 'text-brand-600 bg-brand-50' : '' }}">Home</a>
+                        <a href="{{ route('shop') }}" class="px-3 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium transition {{ request()->routeIs('shop') ? 'text-brand-600 bg-brand-50' : '' }}">Shop</a>
+                        <a href="{{ route('shop') }}" class="px-3 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium transition">Categories</a>
+                        <a href="#" class="px-3 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium transition">About</a>
+                        <a href="#" class="px-3 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium transition">Track Order</a>
+                    </nav>
+                    <div class="ml-auto hidden lg:block">
+                        @if($whatsapp)
+                            <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $whatsapp) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-violet-100 text-violet-700 hover:bg-violet-200 transition">
+                                <svg class="h-[1.2em] w-[1.2em] shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 00-8.65 15.02L2 22l5.13-1.33A10 10 0 1012 2zm5.46 14.12c-.23.65-1.35 1.24-1.86 1.28-.5.05-.97.23-3.27-.68-2.77-1.09-4.53-3.9-4.67-4.08-.13-.18-1.11-1.48-1.11-2.82 0-1.34.7-2 .95-2.27.25-.27.54-.34.72-.34l.52.01c.17.01.39-.06.61.47.23.54.77 1.87.84 2.01.07.13.11.29.02.47-.09.18-.13.29-.27.45l-.4.47c-.13.13-.27.28-.12.54.16.27.7 1.16 1.5 1.88 1.03.92 1.9 1.2 2.17 1.34.27.13.42.11.58-.07.16-.18.67-.78.85-1.05.18-.27.36-.22.6-.13.25.09 1.57.74 1.84.88.27.13.45.2.51.31.07.11.07.65-.16 1.3z"></path></svg>
+                                Need help? +{{ ltrim($whatsapp, '+') }}
+                            </a>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Mobile Menu Dropdown -->
-        <div x-show="menuOpen" x-cloak @click.away="menuOpen = false" class="md:hidden bg-white border-t border-purple-100 shadow-lg">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 space-y-4">
-                <!-- Search inside hamburger -->
+        <div x-show="menuOpen" x-cloak @click.away="menuOpen = false" class="md:hidden bg-white border-t border-slate-100 shadow-lg">
+            <div class="mx-auto max-w-[1280px] px-4 sm:px-6 py-4 space-y-4">
                 <form action="{{ route('shop') }}" method="GET">
-                    <div class="relative">
-                        <input type="text" name="search" placeholder="Search products..." value="{{ request('search') }}"
-                               class="w-full bg-purple-50 text-gray-800 placeholder-purple-300 text-sm rounded-full py-2.5 px-5 pl-10 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:bg-white border border-purple-500 transition-all">
-                        <svg class="w-5 h-5 text-purple-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                        </svg>
+                    <div class="flex items-stretch h-11 rounded-lg border border-slate-300 overflow-hidden focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/30 bg-white">
+                        <input type="search" name="search" value="{{ request('search') }}" placeholder="Type and search products..." class="flex-1 min-w-0 px-3 text-sm border-0 focus:outline-none placeholder:text-slate-400 text-slate-900">
+                        <button type="submit" class="px-4 bg-slate-900 hover:bg-slate-800 text-white" aria-label="Search">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search h-4 w-4"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                        </button>
                     </div>
                 </form>
-
-                <!-- Mobile Nav Links -->
-                <div class="flex flex-col space-y-2 text-sm font-semibold tracking-wider uppercase">
-                    <a href="{{ route('home') }}" class="px-3 py-2 rounded-lg text-gray-600 hover:text-purple-600 hover:bg-purple-50 transition-colors {{ request()->routeIs('home') ? 'text-purple-600 bg-purple-50' : '' }}">Home</a>
-                    <a href="{{ route('shop') }}" class="px-3 py-2 rounded-lg text-gray-600 hover:text-purple-600 hover:bg-purple-50 transition-colors {{ request()->routeIs('shop') ? 'text-purple-600 bg-purple-50' : '' }}">Shop</a>
+                <div class="flex flex-col space-y-2 text-sm font-semibold">
+                    <a href="{{ route('home') }}" class="px-3 py-2 rounded-lg text-slate-700 hover:text-brand-600 hover:bg-brand-50 transition-colors {{ request()->routeIs('home') ? 'text-brand-600 bg-brand-50' : '' }}">Home</a>
+                    <a href="{{ route('shop') }}" class="px-3 py-2 rounded-lg text-slate-700 hover:text-brand-600 hover:bg-brand-50 transition-colors {{ request()->routeIs('shop') ? 'text-brand-600 bg-brand-50' : '' }}">Shop</a>
                     @foreach($parentCats as $cat)
                         <div class="space-y-1">
                             <div class="flex items-center justify-between">
-                                <a href="{{ route('shop', ['category' => $cat->slug]) }}" class="flex-1 px-3 py-2 rounded-lg text-gray-600 hover:text-purple-600 hover:bg-purple-50 transition-colors {{ request()->input('category') === $cat->slug ? 'text-purple-600 bg-purple-50' : '' }}">{{ $cat->name }}</a>
+                                <a href="{{ route('shop', ['category' => $cat->slug]) }}" class="flex-1 px-3 py-2 rounded-lg text-slate-700 hover:text-brand-600 hover:bg-brand-50 transition-colors {{ request()->input('category') === $cat->slug ? 'text-brand-600 bg-brand-50' : '' }}">{{ $cat->name }}</a>
                                 @if($cat->children->count() > 0)
-                                    <button @click="openCat = openCat === {{ $cat->id }} ? null : {{ $cat->id }}" class="ml-1 p-2 text-gray-400 hover:text-purple-600 transition-colors" aria-label="Toggle {{ $cat->name }} subcategories">
-                                        <svg :class="openCat === {{ $cat->id }} ? 'rotate-180' : ''" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                        </svg>
+                                    <button @click="openCat = openCat === {{ $cat->id }} ? null : {{ $cat->id }}" class="ml-1 p-2 text-slate-400 hover:text-brand-600 transition-colors" aria-label="Toggle {{ $cat->name }} subcategories">
+                                        <svg :class="openCat === {{ $cat->id }} ? 'rotate-180' : ''" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                                     </button>
                                 @endif
                             </div>
                             @if($cat->children->count() > 0)
                                 <div x-show="openCat === {{ $cat->id }}" class="pl-6 space-y-1">
                                     @foreach($cat->children as $child)
-                                        <a href="{{ route('shop', ['category' => $child->slug]) }}" class="block px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-purple-600 hover:bg-purple-50 transition-colors">{{ $child->name }}</a>
+                                        <a href="{{ route('shop', ['category' => $child->slug]) }}" class="block px-3 py-1.5 rounded-lg text-sm text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors">{{ $child->name }}</a>
                                     @endforeach
                                 </div>
                             @endif

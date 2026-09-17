@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Create Product - Outfitt')
+@section('title', 'Create Product - laamtex')
 @section('page_title', 'Create Product')
 
 @section('content')

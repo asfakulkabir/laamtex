@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Storage;
 if (!function_exists('site_name')) {
     function site_name(): string
     {
-        return (string) Setting::getValue('site_name', 'Outfitt');
+        return (string) Setting::getValue('site_name', 'laamtex');
     }
 }
 
@@ -43,6 +43,36 @@ if (!function_exists('primary_color_dark')) {
 
         if (strlen($hex) !== 6 || !ctype_xdigit($hex)) {
             return '#6d28d9';
+        }
+
+        $factor = 0.85;
+        $r = (int) round(hexdec(substr($hex, 0, 2)) * $factor);
+        $g = (int) round(hexdec(substr($hex, 2, 2)) * $factor);
+        $b = (int) round(hexdec(substr($hex, 4, 2)) * $factor);
+
+        return sprintf('#%02x%02x%02x', $r, $g, $b);
+    }
+}
+
+if (!function_exists('accent_color')) {
+    function accent_color(): string
+    {
+        $accent = (string) Setting::getValue('accent_color', '');
+        return $accent !== '' ? $accent : primary_color();
+    }
+}
+
+if (!function_exists('accent_color_dark')) {
+    function accent_color_dark(): string
+    {
+        $hex = ltrim(accent_color(), '#');
+
+        if (strlen($hex) === 3) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        }
+
+        if (strlen($hex) !== 6 || !ctype_xdigit($hex)) {
+            return primary_color_dark();
         }
 
         $factor = 0.85;
