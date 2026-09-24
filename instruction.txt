@@ -1,55 +1,86 @@
 📦 OUTfitt – cPanel Upload Guide
-==================================
+=================================
 
+The document root on cPanel is /public_html and CANNOT be changed to
+public_html/public. The project is therefore built so index.php lives at the
+project root (outside the public/ folder) and acts as the front controller.
+Locally this is mirrored by `php artisan serve` (uses root server.php).
+
+------------------------------------------------
 1.  EXPORT LOCAL DATABASE
---------------------------
+------------------------------------------------
     Open phpMyAdmin (or use mysqldump):
         mysqldump -u root -p outfitt > outfitt.sql
 
-2.  UPLOAD FILES TO cPanel
---------------------------
-    - Login to cPanel → File Manager → public_html (or a subfolder)
-    - Upload all project files (drag & drop or use "Upload" button)
-    - OR use FTP (FileZilla etc.) to transfer all files
+------------------------------------------------
+2.  UPLOAD ALL PROJECT FILES TO /public_html
+------------------------------------------------
+    Login to cPanel → File Manager → public_html
+    Upload the WHOLE project directly into public_html
+    (index.php, .htaccess, app/, bootstrap/, config/, public/, storage/,
+     vendor/, resources/, routes/, ... all go right into public_html).
 
+    DO NOT put the project in public_html/public — the root index.php
+    + .htaccess handle that for you.
+
+    Do NOT upload the local public/storage symlink — it is a macOS symlink
+    pointing at an absolute local path. Delete/skip it when uploading; the root
+    index.php serves /storage/... straight from storage/app/public, so it is
+    not needed on the server (recreate it later with `php artisan storage:link`
+    only if you want the classic layout).
+
+    NOTE: do NOT upload node_modules/, .env.example isn't needed, and
+    PUBLIC DEV ARTIFACTS (.DS_Store, cpanel_env.txt) are blocked by .htaccess.
+    Upload .env (see step 4).
+
+------------------------------------------------
 3.  SET UP DATABASE ON cPanel
---------------------------
+------------------------------------------------
     - cPanel → MySQL Databases → Create a new database + user
     - Import outfitt.sql into the new database via phpMyAdmin
 
+------------------------------------------------
 4.  UPDATE .env FILE
---------------------------
-    Rename .env.example → .env and edit:
+------------------------------------------------
+    Upload your local .env renamed/edited for production:
 
+        APP_ENV=production
+        APP_DEBUG=false
+        APP_URL=https://yourdomain.com
         DB_DATABASE=your_cpanel_db_name
         DB_USERNAME=your_cpanel_db_user
         DB_PASSWORD=your_cpanel_db_password
-        APP_URL=https://yourdomain.com
 
-5.  GENERATE APP KEY & CACHE
---------------------------
-    SSH into cPanel (if available) or use "Terminal":
+    Keep FILESYSTEM_DISK as it is in your local .env (local) — URLs are
+    generated as /storage/... and served by the root index.php from
+    storage/app/public.
 
-        php artisan key:generate
+    APP_KEY must match the uploaded one.
+
+------------------------------------------------
+5.  CACHE + STORAGE
+------------------------------------------------
+    cPanel → Terminal (SSH) if available, otherwise skip the cache lines:
+
         php artisan config:cache
         php artisan route:cache
         php artisan view:cache
+
+    Uploaded files need no symlink: the root index.php serves /storage/...
+    straight from storage/app/public. If you still want the classic
+    public/storage symlink, run:
         php artisan storage:link
 
-    (If SSH is not available, generate APP_KEY locally, put it in .env on cPanel,
-     upload .env, then re-run the cache commands above if possible.)
-
+------------------------------------------------
 6.  SET CORRECT PERMISSIONS
---------------------------
+------------------------------------------------
     chmod -R 755 storage bootstrap/cache
     chmod -R 775 storage
 
-7.  POINT DOCUMENT ROOT (Optional)
---------------------------
-    If your domain root should point to the public/ folder:
-        - cPanel → "Document Root" setting → select /public_html/public
+------------------------------------------------
+7.  DONE
+------------------------------------------------
+    Visit your domain. The root .htaccess rewrites everything to index.php
+    and blocks .env, app/, vendor/, storage/framework/ etc.
 
-8.  DONE
---------------------------
-    Visit your domain and check if the site runs.
     Admin panel: /admin

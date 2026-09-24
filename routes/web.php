@@ -2,12 +2,14 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\StoreController;
+use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\DeliveryChargeController;
 use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SliderController;
 
@@ -19,6 +21,7 @@ use App\Http\Controllers\Admin\SliderController;
 
 // Front-end Storefront Routes
 Route::get('/', [StoreController::class, 'index'])->name('home');
+Route::get('/categories', [StoreController::class, 'categories'])->name('categories');
 Route::get('/shop', [StoreController::class, 'shop'])->name('shop');
 Route::get('/product/{slug}', [StoreController::class, 'product'])->name('product.detail');
 
@@ -32,6 +35,26 @@ Route::post('/cart/remove', [StoreController::class, 'removeFromCart'])->name('c
 Route::get('/checkout', [StoreController::class, 'checkout'])->name('checkout');
 Route::post('/checkout/order', [StoreController::class, 'placeOrder'])->name('checkout.place');
 Route::get('/order-success/{order}', [StoreController::class, 'orderSuccess'])->name('order.success');
+
+// Customer Authentication & Account
+Route::middleware('guest')->group(function () {
+    Route::get('/register', [CustomerAuthController::class, 'showRegister'])->name('customer.register');
+    Route::post('/register', [CustomerAuthController::class, 'register'])->name('customer.register.submit');
+    Route::get('/login', [CustomerAuthController::class, 'showLogin'])->name('customer.login');
+    Route::post('/login', [CustomerAuthController::class, 'login'])->name('customer.login.submit');
+    Route::get('/forgot-password', [CustomerAuthController::class, 'showForgotPassword'])->name('customer.forgot');
+    Route::post('/forgot-password', [CustomerAuthController::class, 'sendResetLink'])->name('customer.forgot.submit');
+    Route::get('/reset-password/{token}', [CustomerAuthController::class, 'showResetForm'])->name('customer.reset.form');
+    Route::post('/reset-password', [CustomerAuthController::class, 'resetPassword'])->name('customer.reset.submit');
+});
+
+// Authenticated Customer Account Routes
+Route::middleware(['customer'])->group(function () {
+    Route::get('/account', [CustomerAuthController::class, 'dashboard'])->name('customer.dashboard');
+    Route::get('/account/profile/edit', [CustomerAuthController::class, 'editProfile'])->name('customer.profile.edit');
+    Route::put('/account/profile', [CustomerAuthController::class, 'updateProfile'])->name('customer.profile.update');
+    Route::post('/logout', [CustomerAuthController::class, 'logout'])->name('customer.logout');
+});
 
 // Admin Panel Routes
 Route::prefix('admin')->group(function () {
@@ -81,6 +104,11 @@ Route::prefix('admin')->group(function () {
         Route::get('/orders/export-csv', [OrderController::class, 'exportCsv'])->name('admin.orders.export-csv');
         Route::post('/orders/import-csv', [OrderController::class, 'importCsv'])->name('admin.orders.import-csv');
         Route::delete('/orders/{order}', [OrderController::class, 'destroy'])->name('admin.orders.destroy');
+
+        // Customers Management
+        Route::get('/customers', [CustomerController::class, 'index'])->name('admin.customers.index');
+        Route::get('/customers/{customer}', [CustomerController::class, 'show'])->name('admin.customers.show');
+        Route::delete('/customers/{customer}', [CustomerController::class, 'destroy'])->name('admin.customers.destroy');
 
         // Slider Management
         Route::get('/sliders', [SliderController::class, 'index'])->name('admin.sliders.index');

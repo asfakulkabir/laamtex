@@ -19,9 +19,9 @@ fbq('track', 'InitiateCheckout', {
 @endsection
 
 @section('content')
-<div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4" x-data="checkoutPage({{ $deliveryZones }})">
+<div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4" x-data="checkoutPage({{ $deliveryZones }})">
 
-    <h1 class="text-xl font-extrabold text-gray-900 mb-3">🔒 চেকআউট</h1>
+    <h1 class="text-xl font-extrabold text-gray-900 mb-2 sm:mb-3">🔒 চেকআউট</h1>
 
     @if(session('error'))
         <div class="mb-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm font-semibold">
@@ -29,19 +29,26 @@ fbq('track', 'InitiateCheckout', {
         </div>
     @endif
 
+    @auth
+        <div class="mb-3 bg-purple-50 border border-purple-200 text-purple-800 px-3 py-2 rounded-lg text-sm font-semibold flex flex-wrap items-center gap-2">
+            <span>👤 আপনার সংরক্ষিত তথ্য দিয়ে ফর্মটি পূরণ করা হয়েছে।</span>
+            <a href="{{ route('customer.profile.edit') }}" class="text-purple-600 underline font-bold">প্রোফাইল এডিট করুন</a>
+        </div>
+    @endauth
+
     <form action="{{ route('checkout.place') }}" method="POST" id="checkout-form">
         @csrf
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
 
             <!-- Left: Customer Form -->
-            <div class="lg:col-span-2 space-y-3">
+            <div class="lg:col-span-2 space-y-2 sm:space-y-3">
 
                 <!-- Customer Information -->
-                <div class="bg-white border border-gray-200 rounded-xl p-4 space-y-3 shadow-sm">
+                <div class="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 space-y-2.5 sm:space-y-3 shadow-sm">
                     <h2 class="font-bold text-gray-900 text-base border-b border-gray-200 pb-2">📋 আপনার তথ্য</h2>
 
-                    <div class="space-y-3">
+                    <div class="space-y-2.5 sm:space-y-3">
 
                         <!-- Full Name -->
                         <div>
@@ -49,8 +56,8 @@ fbq('track', 'InitiateCheckout', {
                                 আপনার নাম <span class="text-pink-500">*</span>
                             </label>
                             <input type="text" id="customer_name" name="customer_name"
-                                   value="{{ old('customer_name') }}" required
-                                   class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                   value="{{ old('customer_name', $customer->name ?? '') }}" required
+                                   class="w-full bg-white border-2 border-gray-400 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                                    placeholder="আপনার পুরো নাম লিখুন">
                             @error('customer_name')
                                 <span class="text-sm text-red-500 mt-0.5 block">{{ $message }}</span>
@@ -65,9 +72,9 @@ fbq('track', 'InitiateCheckout', {
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 text-base font-semibold select-none">🇧🇩</span>
                                 <input type="tel" id="customer_phone" name="customer_phone"
-                                       value="{{ old('customer_phone') }}" required
+                                       value="{{ old('customer_phone', $customer->phone ?? '') }}" required
                                        pattern="^(\+?88)?01[3-9]\d{8}$"
-                                       class="w-full bg-white border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                       class="w-full bg-white border-2 border-gray-400 rounded-lg pl-9 pr-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                                        placeholder="01XXXXXXXXX">
                             </div>
                             @error('customer_phone')
@@ -82,8 +89,8 @@ fbq('track', 'InitiateCheckout', {
                                 ঠিকানা <span class="text-pink-500">*</span>
                             </label>
                             <textarea id="customer_address" name="customer_address" rows="2" required
-                                      class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                                      placeholder="বাসা / রাস্তা / এলাকা / শহর / জেলা">{{ old('customer_address') }}</textarea>
+                                      class="w-full bg-white border-2 border-gray-400 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                      placeholder="বাসা / রাস্তা / এলাকা / শহর / জেলা">{{ old('customer_address', $customer->address ?? '') }}</textarea>
                             @error('customer_address')
                                 <span class="text-sm text-red-500 mt-0.5 block">{{ $message }}</span>
                             @enderror
@@ -131,23 +138,86 @@ fbq('track', 'InitiateCheckout', {
                 </div>
 
                 <!-- Payment Method -->
-                <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                <div class="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
+                    @php
+                        $bkashNumber = App\Models\Setting::getValue('bkash_number', '');
+                    @endphp
                     <h2 class="font-bold text-gray-900 text-base mb-2">💳 পেমেন্ট মেথড</h2>
-                    <div class="flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-lg px-4 py-3">
-                        <div class="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center text-lg">💵</div>
-                        <div>
-                            <p class="font-bold text-gray-900 text-sm">ক্যাশ অন ডেলিভারি</p>
-                            <p class="text-gray-500 text-xs">অর্ডার আপনার দরজায় পৌঁছালে পেমেন্ট করুন</p>
+
+                    <div class="space-y-2">
+                        <!-- Cash on Delivery -->
+                        <label class="relative flex items-center gap-3 p-3 cursor-pointer rounded-lg border-2 transition-all"
+                               :class="selectedPayment === 'cod' ? 'border-purple-500 bg-purple-50' : 'border-gray-300 bg-white hover:border-purple-400 hover:bg-gray-50'">
+                            <div class="flex items-center h-5">
+                                <input type="radio" name="payment_method" value="cod"
+                                       x-model="selectedPayment"
+                                       class="h-4 w-4 border-gray-400 text-purple-600 focus:ring-purple-500"
+                                       {{ old('payment_method', 'cod') === 'cod' ? 'checked' : '' }}>
+                            </div>
+                            <div class="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center text-lg">💵</div>
+                            <div>
+                                <p class="font-bold text-gray-900 text-sm">ক্যাশ অন ডেলিভারি</p>
+                                <p class="text-gray-500 text-xs">অর্ডার আপনার দরজায় পৌঁছালে পেমেন্ট করুন</p>
+                            </div>
+                        </label>
+
+                        <!-- bKash Send Money -->
+                        <label class="relative flex items-center gap-3 p-3 cursor-pointer rounded-lg border-2 transition-all"
+                               :class="selectedPayment === 'bkash' ? 'border-pink-500 bg-pink-50' : 'border-gray-300 bg-white hover:border-pink-400 hover:bg-gray-50'">
+                            <div class="flex items-center h-5">
+                                <input type="radio" name="payment_method" value="bkash"
+                                       x-model="selectedPayment"
+                                       class="h-4 w-4 border-gray-400 text-pink-600 focus:ring-pink-500"
+                                       {{ old('payment_method') === 'bkash' ? 'checked' : '' }}>
+                            </div>
+                            <div class="w-9 h-9 rounded-full bg-pink-100 flex items-center justify-center text-lg">💳</div>
+                            <div>
+                                <p class="font-bold text-gray-900 text-sm">bKash Send Money</p>
+                                <p class="text-gray-500 text-xs">bKash থেকে Send Money করে সম্পূর্ণ পেমেন্ট করুন</p>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- bKash details (only when selected) -->
+                    <div x-show="selectedPayment === 'bkash'" x-cloak x-transition
+                         class="mt-3 rounded-lg border-2 border-pink-200 bg-pink-50 p-4 space-y-3"
+                         @keydown.escape.window="selectedPayment = 'cod'">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-xs font-bold text-pink-700 uppercase tracking-wide">💯 Send Money করুন এই নম্বরে</p>
+                                <p class="text-lg font-extrabold text-gray-900 mt-0.5 tracking-wide">{{ $bkashNumber }}</p>
+                            </div>
+                            <button type="button" @click="copyBkashNumber()"
+                                    class="text-xs font-bold text-pink-600 border border-pink-300 bg-white px-3 py-1.5 rounded-lg hover:bg-pink-100 focus:outline-none transition">
+                                📋 কপি করুন
+                            </button>
                         </div>
-                        <div class="ml-auto w-4 h-4 rounded-full bg-purple-600 border-2 border-white ring-2 ring-purple-400"></div>
+
+                        <div>
+                            <label for="bkash_sender_last4" class="block text-sm font-bold text-gray-700 mb-1">
+                                কোন নম্বর থেকে Send Money করেছেন? (শেষ <span class="text-pink-500">৪ ডিজিট</span>)
+                            </label>
+                            <input type="text" id="bkash_sender_last4" name="bkash_sender_last4"
+                                   inputmode="numeric" maxlength="4" autocomplete="off"
+                                   value="{{ old('bkash_sender_last4') }}" x-model="bkashLast4" required
+                                   class="w-full bg-white border-2 border-gray-400 rounded-lg px-3 py-2.5 text-base text-center font-bold tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all"
+                                   placeholder="XXXX">
+                            <div x-show="bkashLast4.length > 0" x-cloak
+                                 class="text-xs text-pink-600 mt-1 font-semibold">
+                                ✅ যেই নম্বর থেকে Send Money করেছেন তার শেষ ৪ ডিজিট: <span class="font-extrabold" x-text="bkashLast4"></span>
+                            </div>
+                            @error('bkash_sender_last4')
+                                <span class="text-sm text-red-500 mt-0.5 block">{{ $message }}</span>
+                            @enderror
+                        </div>
                     </div>
                 </div>
 
             </div>
 
             <!-- Right: Order Summary -->
-            <aside class="space-y-3">
-                <div class="bg-white border border-gray-200 p-4 rounded-xl shadow-sm space-y-3 sticky top-20">
+            <aside class="space-y-2 sm:space-y-3">
+                <div class="bg-white border border-gray-200 p-3 sm:p-4 rounded-xl shadow-sm space-y-2.5 sm:space-y-3 lg:sticky lg:top-20">
                     <h3 class="font-bold text-gray-900 text-base">🛒 অর্ডার সারসংক্ষেপ</h3>
 
                     <!-- Cart Items -->
@@ -156,12 +226,25 @@ fbq('track', 'InitiateCheckout', {
                         @foreach($cart as $key => $item)
                             @php $subtotal += $item['price'] * $item['quantity']; @endphp
                             <div class="flex justify-between items-start text-sm">
-                                <div class="flex-1 pr-2">
-                                    <span class="font-semibold text-gray-900">{{ $item['name'] }}</span>
-                                    @if($item['variation_details'])
-                                        <span class="text-xs text-purple-500 font-semibold block">{{ $item['variation_details'] }}</span>
-                                    @endif
-                                    <span class="text-gray-400 text-xs">× {{ $item['quantity'] }}</span>
+                                <div class="flex-1 flex items-start gap-2.5 pr-2">
+                                    <div class="w-11 h-11 bg-gray-50 border border-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                                        @if($item['image'])
+                                            <img src="{{ Storage::url($item['image']) }}" alt="{{ $item['name'] }}" class="w-full h-full object-cover" loading="lazy">
+                                        @else
+                                            <div class="w-full h-full flex items-center justify-center text-purple-300">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                                </svg>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <div>
+                                        <span class="font-semibold text-gray-900">{{ $item['name'] }}</span>
+                                        @if($item['variation_details'])
+                                            <span class="text-xs text-purple-500 font-semibold block">{{ $item['variation_details'] }}</span>
+                                        @endif
+                                        <span class="text-gray-400 text-xs">× {{ $item['quantity'] }}</span>
+                                    </div>
                                 </div>
                                 <span class="font-semibold text-gray-900 whitespace-nowrap">৳{{ number_format($item['price'] * $item['quantity'], 0) }}</span>
                             </div>
@@ -216,6 +299,23 @@ fbq('track', 'InitiateCheckout', {
             shippingCharge: 0,
             selectedZoneDays: '',
             selectedZone: '{{ old('delivery_zone') }}',
+            selectedPayment: '{{ old('payment_method', 'cod') }}',
+            bkashLast4: '{{ old('bkash_sender_last4') }}',
+            bkashNumber: @json($bkashNumber ?? ''),
+
+            copyBkashNumber() {
+                if (!this.bkashNumber) return;
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(this.bkashNumber);
+                } else {
+                    const el = document.createElement('textarea');
+                    el.value = this.bkashNumber;
+                    document.body.appendChild(el);
+                    el.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(el);
+                }
+            },
 
             init() {
                 if (this.selectedZone && zoneMap[this.selectedZone]) {

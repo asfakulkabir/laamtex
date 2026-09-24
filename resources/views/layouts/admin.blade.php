@@ -102,6 +102,11 @@
                 <span>Orders</span>
             </a>
 
+            <a href="{{ route('admin.customers.index') }}" class="flex items-center space-x-3 px-3 md:px-4 py-3 md:py-3.5 rounded-xl text-base md:text-base font-semibold transition-all duration-200 {{ request()->routeIs('admin.customers.*') ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 border border-purple-500/30 text-purple-300 shadow-sm shadow-purple-500/5' : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-pink-500/10 hover:border hover:border-purple-500/30 hover:text-purple-300 border border-transparent' }}">
+                <span class="text-lg">👥</span>
+                <span>Customers</span>
+            </a>
+
             <a href="{{ route('admin.sliders.index') }}" class="flex items-center space-x-3 px-3 md:px-4 py-3 md:py-3.5 rounded-xl text-base md:text-base font-semibold transition-all duration-200 {{ request()->routeIs('admin.sliders.*') ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 border border-purple-500/30 text-purple-300 shadow-sm shadow-purple-500/5' : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-pink-500/10 hover:border hover:border-purple-500/30 hover:text-purple-300 border border-transparent' }}">
                 <span class="text-lg">🎠</span>
                 <span>Home Slider</span>

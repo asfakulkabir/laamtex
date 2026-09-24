@@ -131,6 +131,9 @@ fbq('track', 'Purchase', @json($pixelPurchase));
                 </span>
             </div>
             <span class="text-gray-400">Payment: {{ $order->payment_method }}</span>
+            @if($order->bkash_sender_last4)
+                <span class="text-xs text-pink-500 font-bold">Send Money শেষ ৪ ডিজিট: <span class="font-mono">{{ $order->bkash_sender_last4 }}</span></span>
+            @endif
         </div>
     </div>
 

@@ -3,7 +3,7 @@
     $imageUrl = $featuredImg ? Storage::url($featuredImg->image) : null;
 @endphp
 
-<a href="{{ $product->slug ? route('product.detail', $product->slug) : '#' }}" class="group relative block rounded-2xl bg-white ring-1 ring-brand-300 hover:ring-brand-300 hover:shadow-md transition overflow-hidden">
+<a href="{{ $product->slug ? route('product.detail', $product->slug) : '#' }}" class="group relative block h-full flex flex-col rounded-2xl bg-white ring-1 ring-gray-300 hover:ring-gray-900 hover:shadow-md transition-all duration-300 ease-in-out overflow-hidden">
     <div class="relative aspect-square bg-slate-100 overflow-hidden">
         @if($imageUrl)
             <img src="{{ $imageUrl }}" alt="" aria-hidden="true" loading="lazy" decoding="async"
@@ -26,11 +26,11 @@
         @endif
     </div>
 
-    <div class="p-3 sm:p-4">
+    <div class="p-3 sm:p-4 flex-1 flex flex-col">
         <h3 class="text-sm font-medium text-slate-900 line-clamp-2 mb-1.5 group-hover:text-brand-600 transition">
             {{ $product->name }}
         </h3>
-        <div class="flex items-baseline gap-2">
+        <div class="flex items-baseline gap-2 mt-auto">
             @if($product->sale_price !== null)
                 <span class="text-base font-bold text-slate-900">৳{{ number_format($product->sale_price, 0) }}</span>
                 <span class="text-xs text-slate-400 line-through">৳{{ number_format($product->regular_price, 0) }}</span>

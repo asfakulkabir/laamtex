@@ -1,9 +1,9 @@
 APP_NAME=laamtex
 APP_ENV=local
-APP_KEY=base64:KZONRF/0Qd5mYAAJ4vHMmjORbATBZSvayz8HB3MJw/Y=
+APP_KEY=base64:oVMncGuuRpC/mlXepHrJmVWlZq8hOeoZwjdYvb033oQ=
 APP_DEBUG=true
 APP_TIMEZONE=UTC
-APP_URL=https://outfitt.online
+APP_URL=https://laamtex.com/
 
 APP_LOCALE=en
 APP_FALLBACK_LOCALE=en
@@ -24,10 +24,9 @@ LOG_LEVEL=debug
 DB_CONNECTION=mysql
 DB_HOST=localhost
 DB_PORT=3306
-DB_DATABASE=outfitto_database
-DB_USERNAME=outfitto_user
-DB_PASSWORD=outfitt@BH
-
+DB_DATABASE=laamtex_laamtex
+DB_USERNAME=laamtex_laamtex
+DB_PASSWORD="@@#laam#@@"
 
 SESSION_DRIVER=database
 SESSION_LIFETIME=120

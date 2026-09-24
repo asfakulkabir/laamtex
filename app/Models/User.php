@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Notifications\CustomerResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -20,6 +21,8 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'phone',
+        'address',
         'password',
         'is_admin',
     ];
@@ -46,5 +49,17 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_admin' => 'boolean',
         ];
+    }
+
+    // Relationships
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    // Send customer password reset emails through the storefront reset flow
+    public function sendPasswordResetNotification($token)
+    {
+        $this->notify(new CustomerResetPassword($token));
     }
 }

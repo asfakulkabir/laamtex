@@ -35,6 +35,9 @@
                 @if($order->bkash_trx_id)
                     <p><strong>bKash TrxID:</strong> {{ $order->bkash_trx_id }}</p>
                 @endif
+                @if($order->bkash_sender_last4)
+                    <p><strong>bKash Sender Last 4:</strong> {{ $order->bkash_sender_last4 }}</p>
+                @endif
                 <p><strong>Date:</strong> {{ $order->created_at->format('d M Y, h:i A') }}</p>
             </div>
 

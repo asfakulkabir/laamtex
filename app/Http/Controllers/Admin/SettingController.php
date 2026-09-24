@@ -21,6 +21,7 @@ class SettingController extends Controller
         $metaConversionApiToken = Setting::getValue('meta_conversion_api_token', '');
         $metaTestEventCode = Setting::getValue('meta_test_event_code', '');
         $whatsappNumber = Setting::getValue('whatsapp_number', '');
+        $bkashNumber = Setting::getValue('bkash_number', '');
         $facebookUrl = Setting::getValue('facebook_url', '');
         $instagramUrl = Setting::getValue('instagram_url', '');
         $youtubeUrl = Setting::getValue('youtube_url', '');
@@ -38,6 +39,7 @@ class SettingController extends Controller
             'metaConversionApiToken',
             'metaTestEventCode',
             'whatsappNumber',
+            'bkashNumber',
             'facebookUrl',
             'instagramUrl',
             'youtubeUrl',
@@ -60,6 +62,7 @@ class SettingController extends Controller
             'meta_conversion_api_token' => 'nullable|string|max:255',
             'meta_test_event_code' => 'nullable|string|max:100',
             'whatsapp_number' => 'nullable|string|max:30',
+            'bkash_number' => 'nullable|string|max:30',
             'facebook_url' => 'nullable|url|max:500',
             'instagram_url' => 'nullable|url|max:500',
             'youtube_url' => 'nullable|url|max:500',
@@ -87,6 +90,7 @@ class SettingController extends Controller
         Setting::setValue('meta_conversion_api_token', $request->input('meta_conversion_api_token', ''));
         Setting::setValue('meta_test_event_code', $request->input('meta_test_event_code', ''));
         Setting::setValue('whatsapp_number', $request->input('whatsapp_number', ''));
+        Setting::setValue('bkash_number', $request->input('bkash_number', ''));
         Setting::setValue('facebook_url', $request->input('facebook_url', ''));
         Setting::setValue('instagram_url', $request->input('instagram_url', ''));
         Setting::setValue('youtube_url', $request->input('youtube_url', ''));

@@ -23,13 +23,16 @@ fbq('track', 'Search', {
         <aside class="space-y-6" :class="filterOpen ? 'block' : 'hidden lg:block'" x-cloak>
             
             <!-- Filter Form Wrapper -->
-            <form action="{{ route('shop') }}" method="GET" class="space-y-6">
+            <form action="{{ route('shop') }}" method="GET" class="space-y-6" id="price-filter-form">
                 <!-- Search term (hidden unless changed inside sidebar) -->
                 @if(request()->filled('search'))
                     <input type="hidden" name="search" value="{{ request('search') }}">
                 @endif
                 @if(request()->filled('sort'))
                     <input type="hidden" name="sort" value="{{ request('sort') }}">
+                @endif
+                @if(request()->filled('category'))
+                    <input type="hidden" name="category" value="{{ request('category') }}">
                 @endif
 
                 <!-- Categories Tree -->
@@ -67,21 +70,57 @@ fbq('track', 'Search', {
                 </div>
 
                 <!-- Price Range Filter -->
-                <div class="bg-white border border-gray-150 p-6 rounded-2xl shadow-sm space-y-4">
-                    <h3 class="font-bold text-gray-900 text-sm uppercase tracking-wider">Price Range</h3>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-[10px] text-gray-400 font-bold uppercase mb-1">Min (৳)</label>
-                            <input type="number" name="min_price" value="{{ request('min_price') }}" placeholder="0" min="0"
-                                   class="w-full bg-gray-50 border border-gray-200 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500">
+                <div class="bg-white border border-gray-150 p-6 rounded-2xl shadow-sm space-y-5">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-gray-900 text-sm uppercase tracking-wider">Price Range</h3>
+                        @if(request()->filled('min_price') || request()->filled('max_price'))
+                            <a href="{{ route('shop', request()->except(['min_price', 'max_price', 'page'])) }}" class="text-[11px] font-bold text-purple-600 hover:text-purple-800 transition">Clear</a>
+                        @endif
+                    </div>
+
+                    <div
+                        x-data="priceSlider({
+                            min: {{ $minPrice }},
+                            max: {{ $maxPrice }},
+                            selectedMin: {{ max((int) request('min_price', $minPrice), $minPrice) }},
+                            selectedMax: {{ min((int) request('max_price', $maxPrice), $maxPrice) }}
+                        })"
+                        x-ref="slider"
+                        class="relative select-none"
+                        style="touch-action: none;"
+                        @pointerdown="startDrag($event)"
+                        @pointermove="onDrag($event)"
+                        @pointerup="endDrag($event)"
+                        @pointercancel="endDrag($event)"
+                    >
+                        <input type="hidden" name="min_price" x-model="selectedMin">
+                        <input type="hidden" name="max_price" x-model="selectedMax">
+
+                        <!-- Displayed values -->
+                        <div class="flex justify-between text-xs font-bold text-gray-700 mb-5">
+                            <span class="tabular-nums">৳<span x-text="displayPrice(selectedMin)"></span></span>
+                            <span class="tabular-nums">৳<span x-text="displayPrice(selectedMax)"></span></span>
                         </div>
-                        <div>
-                            <label class="block text-[10px] text-gray-400 font-bold uppercase mb-1">Max (৳)</label>
-                            <input type="number" name="max_price" value="{{ request('max_price') }}" placeholder="1000" min="0"
-                                   class="w-full bg-gray-50 border border-gray-200 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500">
+
+                        <!-- Track + active range -->
+                        <div class="relative h-5">
+                            <div class="absolute top-1/2 -translate-y-1/2 w-full h-1.5 bg-gray-200 rounded-full"></div>
+                            <div class="absolute top-1/2 -translate-y-1/2 h-1.5 bg-purple-600 rounded-full"
+                                 :style="'left:' + pctMin + '%; width:' + (pctMax - pctMin) + '%'"></div>
+
+                            <!-- Min thumb -->
+                            <button type="button" aria-label="Minimum price"
+                                    class="absolute top-1/2 -translate-y-1/2 -ml-2.5 w-5 h-5 rounded-full bg-white border-2 border-purple-600 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-300 cursor-grab active:cursor-grabbing"
+                                    :style="'left:' + pctMin + '%'"></button>
+
+                            <!-- Max thumb -->
+                            <button type="button" aria-label="Maximum price"
+                                    class="absolute top-1/2 -translate-y-1/2 -ml-2.5 w-5 h-5 rounded-full bg-white border-2 border-purple-600 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-300 cursor-grab active:cursor-grabbing"
+                                    :style="'left:' + pctMax + '%'"></button>
                         </div>
                     </div>
-                    <button type="submit" class="w-full py-2 bg-purple-600 hover:bg-primary text-white rounded text-xs font-bold transition">
+
+                    <button type="submit" class="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-bold transition">
                         Apply Price
                     </button>
                 </div>
@@ -129,7 +168,7 @@ fbq('track', 'Search', {
             </div>
 
             <!-- Products Grid -->
-            <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 lg:gap-4">
+            <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4 lg:gap-4">
                 @forelse($products as $product)
                     @include('store.partials.product-card', ['product' => $product])
                 @empty

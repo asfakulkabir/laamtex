@@ -28,7 +28,7 @@
             <button type="submit" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-semibold transition">
                 Filter
             </button>
-            @if(request()->filled('search') || request()->filled('status'))
+            @if(request()->filled('search') || request()->filled('status') || request()->filled('from') || request()->filled('to') || request('range'))
                 <a href="{{ route('admin.orders.index') }}" class="text-sm font-semibold text-pink-400 hover:underline">Clear Filters</a>
             @endif
         </form>
@@ -43,6 +43,40 @@
             </label>
         </div>
     </div>
+
+    <!-- Date Range Filter -->
+    <form action="{{ route('admin.orders.index') }}" method="GET" class="rounded-2xl border border-slate-800/50 bg-slate-900/60 p-4 flex flex-wrap items-center gap-x-4 gap-y-3">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Period:</span>
+        <div class="flex items-center gap-1 rounded-lg border border-slate-700/50 bg-slate-900/80 p-1">
+            @php
+                $periods = ['today' => 'Today', 'week' => 'This Week', 'month' => 'This Month', 'all' => 'All Time'];
+                $customDates = request()->filled('from') || request()->filled('to');
+            @endphp
+            @foreach($periods as $val => $label)
+                @php
+                    $isActive = !$customDates && (request()->input('range', 'today') === $val);
+                @endphp
+                <label class="cursor-pointer">
+                    <input type="radio" name="range" value="{{ $val }}" class="sr-only peer" onchange="this.form.submit()" {{ $isActive ? 'checked' : '' }}>
+                    <span class="px-3 py-1.5 rounded-md text-sm font-semibold text-slate-300 peer-checked:bg-purple-500 peer-checked:text-white transition">{{ $label }}</span>
+                </label>
+            @endforeach
+        </div>
+        <div class="flex items-center gap-2">
+            <input type="date" name="from" value="{{ request('from') }}" aria-label="From date"
+                   class="bg-slate-900/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark]">
+            <span class="text-slate-500 text-sm">→</span>
+            <input type="date" name="to" value="{{ request('to') }}" aria-label="To date"
+                   class="bg-slate-900/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark]">
+            <button type="submit"
+                    class="px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 border border-purple-500/30 rounded-lg text-sm font-bold transition">
+                Apply Dates
+            </button>
+        </div>
+        <span class="text-sm text-slate-400">
+            Showing: <strong class="text-white">{{ $orders->total() }}</strong> orders
+        </span>
+    </form>
 
     <!-- Hidden Import Form -->
     <form id="importForm" action="{{ route('admin.orders.import-csv') }}" method="POST" enctype="multipart/form-data" class="hidden">
@@ -151,6 +185,12 @@
                                         <div>
                                             <span class="text-xs font-bold uppercase text-slate-400 block">bKash TrxID</span>
                                             <span class="font-semibold text-slate-200 font-mono">{{ $order->bkash_trx_id }}</span>
+                                        </div>
+                                        @endif
+                                        @if($order->bkash_sender_last4)
+                                        <div>
+                                            <span class="text-xs font-bold uppercase text-slate-400 block">bKash Last4</span>
+                                            <span class="font-semibold text-slate-200 font-mono">{{ $order->bkash_sender_last4 }}</span>
                                         </div>
                                         @endif
                                         <div>

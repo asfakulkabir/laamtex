@@ -22,6 +22,7 @@ class Order extends Model
     ];
 
     protected $fillable = [
+        'user_id',
         'items_json',
         'payment_method',
         'customer_name',
@@ -29,6 +30,7 @@ class Order extends Model
         'customer_address',
         'delivery_charge_id',
         'bkash_trx_id',
+        'bkash_sender_last4',
         'total_amount',
         'total',          // alias kept for backward compat in views
         'status',
@@ -44,6 +46,11 @@ class Order extends Model
     ];
 
     // Relationships
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function deliveryCharge()
     {
         return $this->belongsTo(DeliveryCharge::class);

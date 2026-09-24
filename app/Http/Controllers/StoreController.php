@@ -28,6 +28,13 @@ class StoreController extends Controller
         return view('store.index', compact('featuredCategories', 'featuredProducts', 'latestProducts', 'sliders'));
     }
 
+    public function categories()
+    {
+        $categories = Category::whereNull('parent_id')->with('children')->orderBy('name')->get();
+
+        return view('store.categories', compact('categories'));
+    }
+
     public function shop(Request $request)
     {
         $query = Product::with(['images', 'categories'])->where('is_active', true);
@@ -49,6 +56,19 @@ class StoreController extends Controller
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where('name', 'like', "%{$search}%");
+        }
+
+        // Price range bounds for slider (based on current category/search scope)
+        $priceBounds = (clone $query)
+            ->toBase()
+            ->selectRaw('MIN(COALESCE(products.sale_price, products.regular_price, (SELECT MIN(price) FROM product_variations WHERE product_variations.product_id = products.id))) as min_price')
+            ->selectRaw('MAX(COALESCE(products.sale_price, products.regular_price, (SELECT MAX(price) FROM product_variations WHERE product_variations.product_id = products.id))) as max_price')
+            ->first();
+
+        $minPrice = (int) floor(($priceBounds->min_price ?? 0) / 100) * 100;
+        $maxPrice = (int) ceil(($priceBounds->max_price ?? 10000) / 100) * 100;
+        if ($maxPrice <= $minPrice) {
+            $maxPrice = $minPrice + 100;
         }
 
         // Price filter
@@ -95,7 +115,7 @@ class StoreController extends Controller
             ]);
         }
 
-        return view('store.shop', compact('products', 'categories'));
+        return view('store.shop', compact('products', 'categories', 'minPrice', 'maxPrice'));
     }
 
     public function product($slug)
@@ -320,6 +340,7 @@ class StoreController extends Controller
 
         $subtotal = array_sum(array_map(fn($item) => $item['price'] * $item['quantity'], $cart));
         $deliveryZones = DeliveryCharge::orderBy('zone')->get();
+        $customer = auth()->user();
 
         // Send InitiateCheckout + AddPaymentInfo to Conversion API
         $contentIds = array_values(array_map(fn($item) => $item['product_id'], $cart));
@@ -336,7 +357,7 @@ class StoreController extends Controller
             'num_items' => count($cart),
         ]);
 
-        return view('store.checkout', compact('cart', 'deliveryZones', 'subtotal'));
+        return view('store.checkout', compact('cart', 'deliveryZones', 'subtotal', 'customer'));
     }
 
     public function placeOrder(Request $request)
@@ -346,6 +367,8 @@ class StoreController extends Controller
             'customer_phone'   => ['required', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
             'customer_address' => 'required|string',
             'delivery_zone'    => 'required|exists:delivery_charges,zone',
+            'payment_method'   => 'required|in:cod,bkash',
+            'bkash_sender_last4' => 'required_if:payment_method,bkash|digits:4',
         ]);
 
         $cart = session()->get('cart', []);
@@ -394,8 +417,10 @@ class StoreController extends Controller
             }
 
             $order = Order::create([
+                'user_id'             => auth()->id(),
                 'items_json'          => json_encode($itemsArray),
-                'payment_method'      => 'Cash on Delivery',
+                'payment_method'      => $request->payment_method === 'bkash' ? 'bKash Send Money' : 'Cash on Delivery',
+                'bkash_sender_last4'  => $request->payment_method === 'bkash' ? $request->bkash_sender_last4 : null,
                 'customer_name'       => $request->customer_name,
                 'customer_phone'      => $request->customer_phone,
                 'customer_address'    => $request->customer_address,

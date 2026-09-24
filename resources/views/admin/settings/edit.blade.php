@@ -118,6 +118,32 @@
             </div>
         </div>
 
+        <!-- bKash Settings -->
+        <div class="bg-gradient-to-br from-slate-900 to-pink-950 border border-pink-800/40 p-8 rounded-2xl shadow-lg">
+            <div class="flex items-center gap-3 mb-6 pb-4 border-b border-pink-800/30">
+                <span class="w-10 h-10 rounded-lg bg-pink-500/20 flex items-center justify-center text-pink-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h2m4 0h2M9 21h6M12 3a9 9 0 00-9 9h18a9 9 0 00-9-9z"/></svg>
+                </span>
+                <div>
+                    <h3 class="font-bold text-white text-xl">bKash Settings</h3>
+                    <p class="text-base text-pink-300/70">Configure the bKash number customers use for Send Money payments.</p>
+                </div>
+            </div>
+            <div>
+                <label for="bkash_number" class="block text-base font-bold uppercase tracking-wider text-pink-300 mb-2">
+                    bKash Number (Send Money)
+                </label>
+                <input type="text" id="bkash_number" name="bkash_number"
+                       value="{{ old('bkash_number', $bkashNumber) }}"
+                       class="w-full bg-slate-800/60 border border-pink-700/40 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600"
+                       placeholder="01XXXXXXXXX">
+                <p class="text-base text-pink-300/50 mt-1">This number is shown at checkout and copied by customers to send money via bKash.</p>
+                @error('bkash_number')
+                    <span class="text-base text-red-500 mt-1 block">{{ $message }}</span>
+                @enderror
+            </div>
+        </div>
+
         <!-- Steadfast Courier Settings -->
         <div class="bg-gradient-to-br from-slate-900 to-cyan-950 border border-cyan-800/40 p-8 rounded-2xl shadow-lg">
             <div class="flex items-center gap-3 mb-6 pb-4 border-b border-cyan-800/30">

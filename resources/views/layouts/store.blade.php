@@ -8,7 +8,10 @@
         <meta name="description" content="{{ site_description() }}">
     @endif
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/webp" href="{{ asset('favicon.webp') }}">
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -155,134 +158,24 @@
         .text-violet-700 { color: color-mix(in srgb, var(--color-accent) 72%, black) !important; }
     </style>
 </head>
-<body class="bg-white text-gray-900 flex flex-col min-h-screen">
+<body class="storefront bg-white text-gray-900 flex flex-col min-h-screen">
 
     <!-- Header / Navbar -->
     @php
         $parentCats = \App\Models\Category::whereNull('parent_id')->with('children')->orderBy('name')->get();
         $cartCount = count(session('cart', []));
         $whatsapp = App\Models\Setting::getValue('whatsapp_number', '');
+        $navCatProducts = [];
+        foreach ($parentCats as $pcat) {
+            $ids = collect([$pcat->id])->merge($pcat->children->pluck('id'));
+            $navCatProducts[$pcat->id] = \App\Models\Product::with(['images'])
+                ->where('is_active', true)
+                ->whereHas('categories', fn ($q) => $q->whereIn('categories.id', $ids))
+                ->orderBy('sort_order')->latest()->limit(6)->get();
+        }
     @endphp
 
-    <header x-data="{ menuOpen: false, openCat: null }" class="sticky top-0 z-40 bg-white border-b border-slate-200">
-        <div class="border-b border-slate-100">
-            <div class="mx-auto max-w-[1280px] px-4 sm:px-6">
-                <div class="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5 md:h-16 md:flex-nowrap md:gap-4 md:py-0">
-                    <a href="{{ route('home') }}" class="flex items-center gap-2 shrink-0">
-                        <img src="{{ site_logo() }}" alt="{{ site_name() }}" class="h-8 w-auto max-w-[130px] sm:h-9 sm:max-w-[160px] rounded-lg object-contain">
-                    </a>
-
-                    <form role="search" class="relative order-last w-full md:order-none md:mx-auto md:max-w-2xl" action="{{ route('shop') }}" method="get">
-                        <div class="flex items-stretch h-11 rounded-lg border border-slate-300 overflow-hidden focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/30 bg-white">
-                            <select name="category" aria-label="Product category" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-3 border-0 focus:outline-none cursor-pointer hidden sm:block">
-                                <option value="">All Categories</option>
-                                @foreach($parentCats as $cat)
-                                    <option value="{{ $cat->slug }}" @selected(request('category') === $cat->slug)>{{ $cat->name }}</option>
-                                @endforeach
-                            </select>
-                            <input type="search" placeholder="Type and search products..." autocomplete="off" name="search" value="{{ request('search') }}" class="flex-1 min-w-0 px-3 text-sm border-0 focus:outline-none placeholder:text-slate-400 text-slate-900">
-                            <button type="submit" class="px-4 bg-slate-900 hover:bg-slate-800 text-white" aria-label="Search">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search h-4 w-4"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
-                            </button>
-                        </div>
-                    </form>
-
-                    <div class="flex items-center gap-1 shrink-0 ml-auto md:ml-0">
-                        <a href="#" class="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user h-5 w-5 text-slate-600"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                            <div class="text-left hidden xl:block"><div class="text-[10px] text-slate-500 leading-none">Track</div><div class="text-xs font-semibold text-slate-900">My Order</div></div>
-                        </a>
-                        <a href="#" class="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-user h-5 w-5 text-slate-600"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="10" r="3"></circle><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"></path></svg>
-                            <div class="text-left hidden xl:block"><div class="text-[10px] text-slate-500 leading-none">Sign in</div><div class="text-xs font-semibold text-slate-900">Login</div></div>
-                        </a>
-                        <a href="#" @click.prevent="$dispatch('open-cart')" class="relative flex items-center gap-2 p-2 md:px-3 rounded-lg hover:bg-slate-50 text-sm" aria-label="Cart" id="cart-nav-btn">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shopping-cart h-5 w-5 text-slate-600"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>
-                            <span id="cart-badge" class="absolute -top-1 -right-1 bg-brand-600 text-white rounded-full text-[10px] font-bold h-5 min-w-5 flex items-center justify-center px-1 border-2 border-white shadow {{ $cartCount == 0 ? 'hidden' : '' }}">{{ $cartCount }}</span>
-                            <span class="text-left hidden xl:block"><span class="block text-[10px] text-slate-500 leading-none">Cart</span><span class="block text-xs font-semibold text-slate-900">My Cart</span></span>
-                        </a>
-                        <button @click="menuOpen = !menuOpen" class="md:hidden p-2 rounded-lg hover:bg-slate-100" aria-label="Open menu">
-                            <svg x-show="!menuOpen" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-menu h-5 w-5"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg>
-                            <svg x-show="menuOpen" x-cloak xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x h-5 w-5"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="hidden md:block">
-            <div class="mx-auto max-w-[1280px] px-4 sm:px-6">
-                <div class="flex h-12 items-center gap-2">
-                    <div class="relative group">
-                        <button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-menu h-4 w-4"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg>
-                            Browse All Categories
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down h-4 w-4 transition-transform group-hover:rotate-180"><path d="m6 9 6 6 6-6"></path></svg>
-                        </button>
-                        <div class="absolute left-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                            <div class="bg-white rounded-xl shadow-xl ring-1 ring-slate-200 py-2 w-64 max-h-[70vh] overflow-y-auto">
-                                @foreach($parentCats as $cat)
-                                    <a href="{{ route('shop', ['category' => $cat->slug]) }}" class="block px-4 py-2 text-sm text-slate-700 hover:text-brand-600 hover:bg-brand-50 font-medium">{{ $cat->name }}</a>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
-                    <nav class="flex items-center gap-1 text-sm ml-2">
-                        <a href="{{ route('home') }}" class="px-3 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium transition {{ request()->routeIs('home') ? 'text-brand-600 bg-brand-50' : '' }}">Home</a>
-                        <a href="{{ route('shop') }}" class="px-3 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium transition {{ request()->routeIs('shop') ? 'text-brand-600 bg-brand-50' : '' }}">Shop</a>
-                        <a href="{{ route('shop') }}" class="px-3 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium transition">Categories</a>
-                        <a href="#" class="px-3 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium transition">About</a>
-                        <a href="#" class="px-3 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 font-medium transition">Track Order</a>
-                    </nav>
-                    <div class="ml-auto hidden lg:block">
-                        @if($whatsapp)
-                            <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $whatsapp) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-violet-100 text-violet-700 hover:bg-violet-200 transition">
-                                <svg class="h-[1.2em] w-[1.2em] shrink-0" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 00-8.65 15.02L2 22l5.13-1.33A10 10 0 1012 2zm5.46 14.12c-.23.65-1.35 1.24-1.86 1.28-.5.05-.97.23-3.27-.68-2.77-1.09-4.53-3.9-4.67-4.08-.13-.18-1.11-1.48-1.11-2.82 0-1.34.7-2 .95-2.27.25-.27.54-.34.72-.34l.52.01c.17.01.39-.06.61.47.23.54.77 1.87.84 2.01.07.13.11.29.02.47-.09.18-.13.29-.27.45l-.4.47c-.13.13-.27.28-.12.54.16.27.7 1.16 1.5 1.88 1.03.92 1.9 1.2 2.17 1.34.27.13.42.11.58-.07.16-.18.67-.78.85-1.05.18-.27.36-.22.6-.13.25.09 1.57.74 1.84.88.27.13.45.2.51.31.07.11.07.65-.16 1.3z"></path></svg>
-                                Need help? +{{ ltrim($whatsapp, '+') }}
-                            </a>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Mobile Menu Dropdown -->
-        <div x-show="menuOpen" x-cloak @click.away="menuOpen = false" class="md:hidden bg-white border-t border-slate-100 shadow-lg">
-            <div class="mx-auto max-w-[1280px] px-4 sm:px-6 py-4 space-y-4">
-                <form action="{{ route('shop') }}" method="GET">
-                    <div class="flex items-stretch h-11 rounded-lg border border-slate-300 overflow-hidden focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/30 bg-white">
-                        <input type="search" name="search" value="{{ request('search') }}" placeholder="Type and search products..." class="flex-1 min-w-0 px-3 text-sm border-0 focus:outline-none placeholder:text-slate-400 text-slate-900">
-                        <button type="submit" class="px-4 bg-slate-900 hover:bg-slate-800 text-white" aria-label="Search">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search h-4 w-4"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
-                        </button>
-                    </div>
-                </form>
-                <div class="flex flex-col space-y-2 text-sm font-semibold">
-                    <a href="{{ route('home') }}" class="px-3 py-2 rounded-lg text-slate-700 hover:text-brand-600 hover:bg-brand-50 transition-colors {{ request()->routeIs('home') ? 'text-brand-600 bg-brand-50' : '' }}">Home</a>
-                    <a href="{{ route('shop') }}" class="px-3 py-2 rounded-lg text-slate-700 hover:text-brand-600 hover:bg-brand-50 transition-colors {{ request()->routeIs('shop') ? 'text-brand-600 bg-brand-50' : '' }}">Shop</a>
-                    @foreach($parentCats as $cat)
-                        <div class="space-y-1">
-                            <div class="flex items-center justify-between">
-                                <a href="{{ route('shop', ['category' => $cat->slug]) }}" class="flex-1 px-3 py-2 rounded-lg text-slate-700 hover:text-brand-600 hover:bg-brand-50 transition-colors {{ request()->input('category') === $cat->slug ? 'text-brand-600 bg-brand-50' : '' }}">{{ $cat->name }}</a>
-                                @if($cat->children->count() > 0)
-                                    <button @click="openCat = openCat === {{ $cat->id }} ? null : {{ $cat->id }}" class="ml-1 p-2 text-slate-400 hover:text-brand-600 transition-colors" aria-label="Toggle {{ $cat->name }} subcategories">
-                                        <svg :class="openCat === {{ $cat->id }} ? 'rotate-180' : ''" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                                    </button>
-                                @endif
-                            </div>
-                            @if($cat->children->count() > 0)
-                                <div x-show="openCat === {{ $cat->id }}" class="pl-6 space-y-1">
-                                    @foreach($cat->children as $child)
-                                        <a href="{{ route('shop', ['category' => $child->slug]) }}" class="block px-3 py-1.5 rounded-lg text-sm text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors">{{ $child->name }}</a>
-                                    @endforeach
-                                </div>
-                            @endif
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-    </header>
+    @include('store.partials.navbar')
 
     <!-- Notification Toasts / Banners -->
     @if(session('success'))
@@ -302,81 +195,162 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-900 text-gray-400 border-t border-gray-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                
-                <!-- Brand Info -->
-                <div class="space-y-4">
-                    <img src="{{ site_logo() }}" alt="{{ site_name() }}" class="h-10 opacity-90 rounded bg-white p-1">
-                    <p class="text-sm">{{ site_description() ?: 'Premium clothing and accessories curated for modern lifestyles. Wear your style with confidence.' }}</p>
+    @php
+        $fbUrl = App\Models\Setting::getValue('facebook_url', '');
+        $igUrl = App\Models\Setting::getValue('instagram_url', '');
+        $ytUrl = App\Models\Setting::getValue('youtube_url', '');
+        $twUrl = App\Models\Setting::getValue('twitter_url', '');
+        $contactEmail = App\Models\Setting::getValue('contact_email', 'laamtexoffice@gmail.com');
+        $storeAddress = App\Models\Setting::getValue('office_address', 'House 12, Road 5, Dhanmondi, Dhaka 1205, Bangladesh');
+        $storePhone = App\Models\Setting::getValue('whatsapp_number', '');
+        $storePhoneDigits = $storePhone ? preg_replace('/[^0-9]/', '', $storePhone) : '';
+    @endphp
+    <footer class="relative overflow-hidden border-t border-[rgba(145,158,171,0.24)] bg-[#f1f8f5] text-[#212b36] lg:min-h-[400px] lg:bg-white">
+        <div class="px-4 pt-[30px] pb-[calc(45px+var(--mobile-bottom-nav-height,56px))] lg:max-w-[1280px] lg:mx-auto lg:px-0 lg:pt-12 lg:pb-[137px]">
+            <div class="lg:flex lg:justify-between">
+                <div class="w-full max-w-[285px]">
+                    <a href="{{ route('home') }}">
+                        <img src="{{ site_logo() }}" alt="{{ site_name() }}" width="280" height="64" class="block h-12 w-[210px] object-contain lg:h-16 lg:w-[280px]">
+                    </a>
+                    <p class="mt-6 max-w-[285px] text-sm leading-relaxed text-[#637381]">{{ site_description() ?: site_name() . ' - Premium products curated for modern lifestyles.' }}</p>
+                    @if($fbUrl || $igUrl || $ytUrl || $twUrl)
+                        <div class="mt-6 flex items-center gap-5 lg:mt-12">
+                            @if($fbUrl)
+                                <a href="{{ $fbUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex transition-opacity duration-150 hover:opacity-80" aria-label="Facebook">
+                                    <span class="inline-flex h-[35px] w-[35px] items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 transition-all duration-200 hover:scale-105">
+                                        <svg viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5 text-[#1877f2]"><path d="M13.58 22V12.88H16.64L17.1 9.32H13.58V7.04C13.58 6.01 13.87 5.3 15.34 5.3H17.22V2.12C16.89 2.08 15.76 2 14.45 2C11.72 2 9.86 3.67 9.86 6.73V9.32H6.8V12.88H9.86V22H13.58Z"></path></svg>
+                                    </span>
+                                </a>
+                            @endif
+                            @if($igUrl)
+                                <a href="{{ $igUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex transition-opacity duration-150 hover:opacity-80" aria-label="Instagram">
+                                    <span class="inline-flex h-[35px] w-[35px] items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 transition-all duration-200 hover:scale-105">
+                                        <svg viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                                    </span>
+                                </a>
+                            @endif
+                            @if($ytUrl)
+                                <a href="{{ $ytUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex transition-opacity duration-150 hover:opacity-80" aria-label="YouTube">
+                                    <span class="inline-flex h-[35px] w-[35px] items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 transition-all duration-200 hover:scale-105">
+                                        <svg viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5 text-[#ff0000]"><path d="M21.58 7.19C21.35 6.33 20.67 5.66 19.81 5.42C18.25 5 12 5 12 5C12 5 5.75 5 4.19 5.42C3.33 5.66 2.65 6.33 2.42 7.19C2 8.75 2 12 2 12C2 12 2 15.25 2.42 16.81C2.65 17.67 3.33 18.34 4.19 18.58C5.75 19 12 19 12 19C12 19 18.25 19 19.81 18.58C20.67 18.34 21.35 17.67 21.58 16.81C22 15.25 22 12 22 12C22 12 22 8.75 21.58 7.19ZM10 15.01V8.99L15.2 12L10 15.01Z"/></svg>
+                                    </span>
+                                </a>
+                            @endif
+                            @if($twUrl)
+                                <a href="{{ $twUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex transition-opacity duration-150 hover:opacity-80" aria-label="Twitter / X">
+                                    <span class="inline-flex h-[35px] w-[35px] items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 transition-all duration-200 hover:scale-105">
+                                        <svg viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                                    </span>
+                                </a>
+                            @endif
+                        </div>
+                    @endif
                 </div>
 
-                <!-- Quick links -->
-                <div>
-                    <h3 class="text-sm font-semibold uppercase tracking-wider text-white mb-4">Quick Links</h3>
-                    <ul class="space-y-2 text-sm">
-                        <li><a href="{{ route('shop') }}" class="hover:text-purple-400 transition-all">Shop All</a></li>
-                        <li><a href="{{ route('cart') }}" class="hover:text-purple-400 transition-all">My Cart</a></li>
-                        <li><a href="{{ route('admin.login') }}" class="hover:text-purple-400 transition-all">Admin Dashboard</a></li>
-                    </ul>
-                </div>
+                <div class="mt-12 flex flex-col gap-12 lg:mt-0 lg:ml-auto lg:flex-row lg:items-start lg:gap-[65px]">
+                    @if($contactEmail || $storePhone || $storeAddress)
+                        <div class="max-w-[297px] lg:order-3">
+                            <h3 class="text-lg font-semibold text-[#212b36]">Contact</h3>
+                            <div class="mt-[13px] flex flex-col gap-4">
+                                @if($contactEmail)
+                                    <div class="flex items-start gap-[14px]">
+                                        <span class="mt-0.5 shrink-0 text-gray-700">
+                                            <svg viewBox="0 0 24 24" fill="none" class="h-6 w-6"><path d="M17 20.5H7C4 20.5 2 19 2 15.5V8.5C2 5 4 3.5 7 3.5H17C20 3.5 22 5 22 8.5V15.5C22 19 20 20.5 17 20.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path><path d="M17 9L13.87 11.5C12.84 12.32 11.15 12.32 10.12 11.5L7 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                                        </span>
+                                        <div class="flex flex-col text-sm text-[#212b36]">
+                                            <span class="font-semibold">Email Us</span>
+                                            <span class="flex flex-wrap items-center gap-x-1.5">
+                                                <a class="hover:text-gray-900" href="mailto:{{ $contactEmail }}">{{ $contactEmail }}</a>
+                                            </span>
+                                        </div>
+                                    </div>
+                                @endif
+                                @if($storePhone)
+                                    <div class="flex items-start gap-[14px]">
+                                        <span class="mt-0.5 shrink-0 text-gray-700">
+                                            <svg viewBox="0 0 24 24" fill="none" class="h-6 w-6"><path d="M21.97 18.33C21.97 18.69 21.89 19.06 21.72 19.42C21.55 19.78 21.33 20.12 21.04 20.44C20.55 20.98 20.01 21.37 19.4 21.62C18.8 21.87 18.15 22 17.45 22C16.43 22 15.34 21.76 14.19 21.27C13.04 20.78 11.89 20.12 10.75 19.29C9.6 18.45 8.51 17.52 7.47 16.49C6.44 15.45 5.51 14.36 4.68 13.22C3.86 12.08 3.2 10.94 2.72 9.81C2.24 8.67 2 7.58 2 6.54C2 5.86 2.12 5.21 2.36 4.61C2.6 4 2.98 3.44 3.51 2.94C4.15 2.31 4.85 2 5.59 2C5.87 2 6.15 2.06 6.4 2.18C6.66 2.3 6.89 2.48 7.07 2.74L9.39 6.01C9.57 6.26 9.7 6.49 9.79 6.71C9.88 6.92 9.93 7.13 9.93 7.32C9.93 7.56 9.86 7.8 9.72 8.03C9.59 8.26 9.4 8.5 9.16 8.74L8.4 9.53C8.29 9.64 8.24 9.77 8.24 9.93C8.24 10.01 8.25 10.08 8.27 10.16C8.3 10.24 8.33 10.3 8.35 10.36C8.53 10.69 8.84 11.12 9.28 11.64C9.73 12.16 10.21 12.69 10.73 13.22C11.27 13.75 11.79 14.24 12.32 14.69C12.84 15.13 13.27 15.43 13.61 15.61C13.66 15.63 13.72 15.66 13.79 15.69C13.87 15.72 13.95 15.73 14.04 15.73C14.21 15.73 14.34 15.67 14.45 15.56L15.21 14.81C15.46 14.56 15.7 14.37 15.93 14.25C16.16 14.11 16.39 14.04 16.64 14.04C16.83 14.04 17.03 14.08 17.25 14.17C17.47 14.26 17.7 14.39 17.95 14.56L21.26 16.91C21.52 17.09 21.7 17.3 21.81 17.55C21.91 17.8 21.97 18.05 21.97 18.33Z" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10"></path><path d="M18.5 9C18.5 8.4 18.03 7.48 17.33 6.73C16.69 6.04 15.84 5.5 15 5.5" opacity="0.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path><path d="M22 9C22 5.13 18.87 2 15 2" opacity="0.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                                        </span>
+                                        <div class="flex flex-col text-sm text-[#212b36]">
+                                            <span class="font-semibold">Customer Support / Hotline</span>
+                                            <span class="flex flex-wrap items-center gap-x-1.5">
+                                                <a class="hover:text-gray-900" href="tel:{{ $storePhoneDigits }}">{{ $storePhone }}</a>
+                                            </span>
+                                        </div>
+                                    </div>
+                                @endif
 
-                <!-- Categories List -->
-                <div>
-                    <h3 class="text-sm font-semibold uppercase tracking-wider text-white mb-4">Shop Categories</h3>
-                    <ul class="space-y-2 text-sm">
-                        @foreach($parentCats as $cat)
-                            <li><a href="{{ route('shop', ['category' => $cat->slug]) }}" class="hover:text-purple-400 transition-all">{{ $cat->name }}</a></li>
-                        @endforeach
-                    </ul>
-                </div>
+                                @if($storeAddress)
+                                    <div class="flex items-start gap-[14px]">
+                                        <span class="mt-0.5 shrink-0 text-gray-700">
+                                            <svg viewBox="0 0 24 24" fill="none" class="h-6 w-6"><path d="M12 13.43C13.7231 13.43 15.12 12.0331 15.12 10.31C15.12 8.58687 13.7231 7.19 12 7.19C10.2769 7.19 8.88 8.58687 8.88 10.31C8.88 12.0331 10.2769 13.43 12 13.43Z" stroke="currentColor" stroke-width="1.5"></path><path d="M3.62 8.49C5.59 -0.17 18.42 -0.16 20.38 8.5C21.53 13.58 18.37 17.88 15.6 20.54C13.59 22.48 10.41 22.48 8.39 20.54C5.63 17.88 2.47 13.57 3.62 8.49Z" stroke="currentColor" stroke-width="1.5"></path></svg>
+                                        </span>
+                                        <div class="flex flex-col text-sm text-[#212b36]">
+                                            <span class="font-semibold">Office / Showroom</span>
+                                            <span>{{ $storeAddress }}</span>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
 
-                <!-- Newsletter / Contact -->
-                <div>
-                    <h3 class="text-sm font-semibold uppercase tracking-wider text-white mb-4">Newsletter</h3>
-                    <p class="text-sm mb-4">Subscribe to receive updates, access to exclusive deals, and more.</p>
-                    <form class="flex">
-                        <input type="email" placeholder="Your email" class="w-full bg-gray-800 text-gray-200 placeholder-gray-500 rounded-l-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500 border border-gray-700 text-sm">
-                        <button type="submit" class="bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-r-md px-4 py-2 font-medium hover:from-primary hover:to-pink-600 transition text-sm">Join</button>
-                    </form>
-                </div>
-            </div>
-            @php
-                $fbUrl = App\Models\Setting::getValue('facebook_url', '');
-                $igUrl = App\Models\Setting::getValue('instagram_url', '');
-                $ytUrl = App\Models\Setting::getValue('youtube_url', '');
-                $twUrl = App\Models\Setting::getValue('twitter_url', '');
-            @endphp
-            <div class="mt-12 border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center text-xs">
-                <p class="text-gray-400">
-                    &copy; {{ date('Y') }} {{ site_name() }}. Developed by 
-                    <a href="https://beginnershut.com/" target="_blank" rel="noopener noreferrer" class="text-purple-400 hover:text-purple-300 font-semibold">Beginners Hut</a>.
-                </p>
-                <div class="flex items-center space-x-4 mt-4 md:mt-0">
-                    @if($fbUrl)
-                        <a href="{{ $fbUrl }}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-purple-400 transition-all" title="Facebook">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                        </a>
-                    @endif
-                    @if($igUrl)
-                        <a href="{{ $igUrl }}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-purple-400 transition-all" title="Instagram">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-                        </a>
-                    @endif
-                    @if($ytUrl)
-                        <a href="{{ $ytUrl }}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-purple-400 transition-all" title="YouTube">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                        </a>
-                    @endif
-                    @if($twUrl)
-                        <a href="{{ $twUrl }}" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-purple-400 transition-all" title="Twitter / X">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                        </a>
-                    @endif
+                    <div class="flex items-start justify-between gap-8 lg:contents">
+                        <div class="min-w-0 lg:order-1">
+                            <h3 class="text-lg font-semibold text-[#212b36]">Quick Links</h3>
+                            <div class="mt-5 flex flex-col gap-4">
+                                <a class="inline-flex items-center gap-1.5 text-sm text-[#212b36] hover:text-gray-900" href="{{ route('home') }}">
+                                    <svg viewBox="0 0 24 24" fill="none" class="h-[13px] w-[13px] text-gray-700"><path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                                    <span>Home</span>
+                                </a>
+                                <a class="inline-flex items-center gap-1.5 text-sm text-[#212b36] hover:text-gray-900" href="{{ route('shop') }}">
+                                    <svg viewBox="0 0 24 24" fill="none" class="h-[13px] w-[13px] text-gray-700"><path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                                    <span>Shop All</span>
+                                </a>
+                                <a class="inline-flex items-center gap-1.5 text-sm text-[#212b36] hover:text-gray-900" href="{{ route('categories') }}">
+                                    <svg viewBox="0 0 24 24" fill="none" class="h-[13px] w-[13px] text-gray-700"><path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                                    <span>Categories</span>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="min-w-0 lg:order-2">
+                            <h3 class="text-lg font-semibold text-[#212b36]">Support</h3>
+                            <div class="mt-5 flex flex-col gap-4">
+                                <a class="inline-flex items-center gap-1.5 text-sm text-[#212b36] hover:text-gray-900" href="{{ route('cart') }}">
+                                    <svg viewBox="0 0 24 24" fill="none" class="h-[13px] w-[13px] text-gray-700"><path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                                    <span>My Cart</span>
+                                </a>
+                                <a class="inline-flex items-center gap-1.5 text-sm text-[#212b36] hover:text-gray-900" href="{{ route('checkout') }}">
+                                    <svg viewBox="0 0 24 24" fill="none" class="h-[13px] w-[13px] text-gray-700"><path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                                    <span>Shipping &amp; Returns</span>
+                                </a>
+                                <a class="inline-flex items-center gap-1.5 text-sm text-[#212b36] hover:text-gray-900" href="{{ route('admin.login') }}">
+                                    <svg viewBox="0 0 24 24" fill="none" class="h-[13px] w-[13px] text-gray-700"><path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                                    <span>Admin</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <div class="pointer-events-none absolute inset-x-0 bottom-[var(--mobile-bottom-nav-height,56px)] lg:bottom-0">
+            <svg viewBox="0 0 1740 82.8842" preserveAspectRatio="none" fill="none" class="block h-[43px] w-full lg:h-[83px]">
+                <path fill="#0f0f0f" fill-opacity="0.08" d="M0 16.8842V82.8842H174V16.8842C160 17.3842 150 18.032 133 10.8604C97.5 -4.11578 75.5 -3.11583 41 10.8603C25.4071 17.1771 7 16.7175 0 16.8842Z"></path>
+                <path fill="#0f0f0f" fill-opacity="0.08" d="M174 16.8842V82.8842H348V16.8842C334 17.3842 324 18.032 307 10.8604C271.5 -4.11578 249.5 -3.11583 215 10.8603C199.4071 17.1771 181 16.7175 174 16.8842Z"></path>
+                <path fill="#0f0f0f" fill-opacity="0.08" d="M348 16.8842V82.8842H522V16.8842C508 17.3842 498 18.032 481 10.8604C445.5 -4.11578 423.5 -3.11583 389 10.8603C373.4071 17.1771 355 16.7175 348 16.8842Z"></path>
+                <path fill="#0f0f0f" fill-opacity="0.08" d="M522 16.8842V82.8842H696V16.8842C682 17.3842 672 18.032 655 10.8604C619.5 -4.11578 597.5 -3.11583 563 10.8603C547.4071 17.1771 529 16.7175 522 16.8842Z"></path>
+                <path fill="#0f0f0f" fill-opacity="0.08" d="M696 16.8842V82.8842H870V16.8842C856 17.3842 846 18.032 829 10.8604C793.5 -4.11578 771.5 -3.11583 737 10.8603C721.4071 17.1771 703 16.7175 696 16.8842Z"></path>
+                <path fill="#0f0f0f" fill-opacity="0.08" d="M870 16.8842V82.8842H1044V16.8842C1030 17.3842 1020 18.032 1003 10.8604C967.5 -4.11578 945.5 -3.11583 911 10.8603C895.4071 17.1771 877 16.7175 870 16.8842Z"></path>
+                <path fill="#0f0f0f" fill-opacity="0.08" d="M1044 16.8842V82.8842H1218V16.8842C1204 17.3842 1194 18.032 1177 10.8604C1141.5 -4.11578 1119.5 -3.11583 1085 10.8603C1069.4071 17.1771 1051 16.7175 1044 16.8842Z"></path>
+                <path fill="#0f0f0f" fill-opacity="0.08" d="M1218 16.8842V82.8842H1392V16.8842C1378 17.3842 1368 18.032 1351 10.8604C1315.5 -4.11578 1293.5 -3.11583 1259 10.8603C1243.4071 17.1771 1225 16.7175 1218 16.8842Z"></path>
+                <path fill="#0f0f0f" fill-opacity="0.08" d="M1392 16.8842V82.8842H1566V16.8842C1552 17.3842 1542 18.032 1525 10.8604C1489.5 -4.11578 1467.5 -3.11583 1433 10.8603C1417.4071 17.1771 1399 16.7175 1392 16.8842Z"></path>
+                <path fill="#0f0f0f" fill-opacity="0.08" d="M1566 16.8842V82.8842H1740V16.8842C1726 17.3842 1716 18.032 1699 10.8604C1663.5 -4.11578 1641.5 -3.11583 1607 10.8603C1591.4071 17.1771 1573 16.7175 1566 16.8842Z"></path>
+            </svg>
+        </div>
+        <p class="absolute inset-x-0 bottom-[calc(7px+var(--mobile-bottom-nav-height,56px))] px-4 text-center text-[11px] text-[#212b36] lg:bottom-[21px]">
+            Copyright &copy; {{ site_name() }} {{ date('Y') }} &ndash; All Rights Reserved
+        </p>
     </footer>
 
     <!-- Side Cart Drawer -->
@@ -491,7 +465,7 @@
                                 <p class="text-[10px] text-gray-400">Shipping and taxes calculated at checkout.</p>
 
                                 <div class="space-y-2">
-                                    <a href="{{ route('checkout') }}" class="block w-full text-center py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-primary hover:to-pink-600 text-white rounded-lg font-bold tracking-wide transition shadow-md">
+                                    <a href="{{ route('checkout') }}" class="block w-full text-center py-3 bg-primary hover:bg-primary text-white rounded-lg font-bold tracking-wide transition shadow-md">
                                         Checkout Now
                                     </a>
                                     <a href="{{ route('cart') }}" class="block w-full text-center py-2 text-xs font-bold text-purple-600 hover:text-primary uppercase tracking-wider">
@@ -544,11 +518,11 @@
                     return '\u09F3' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 },
                 refreshBadge() {
-                    const badge = document.getElementById('cart-badge');
-                    if (badge) {
+                    document.querySelectorAll('[data-cart-badge]').forEach((badge) => {
                         badge.textContent = this.count;
                         badge.classList.toggle('hidden', this.count === 0);
-                    }
+                        badge.style.display = this.count === 0 ? 'none' : '';
+                    });
                 },
                 async updateQty(key, qty) {
                     if (qty < 1) return;
@@ -600,6 +574,107 @@
                         }
                     } catch (e) {
                         alert('Cannot remove item.');
+                    }
+                }
+            }));
+        });
+
+        // Price range slider (used on the shop page)
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('priceSlider', (options) => ({
+                min: 0,
+                max: 10000,
+                selectedMin: 0,
+                selectedMax: 10000,
+                drag: null,
+                moved: false,
+                step: 10,
+
+                init() {
+                    this.min = Number(options.min);
+                    this.max = Number(options.max);
+                    if (!isFinite(this.min) || this.min < 0) this.min = 0;
+                    if (!isFinite(this.max) || this.max <= this.min) this.max = this.min + 100;
+                    this.selectedMin = Math.max(Number(options.selectedMin), this.min);
+                    this.selectedMax = Math.min(Number(options.selectedMax), this.max);
+                    if (!isFinite(this.selectedMin)) this.selectedMin = this.min;
+                    if (!isFinite(this.selectedMax)) this.selectedMax = this.max;
+                    if (this.selectedMin > this.selectedMax) this.selectedMin = this.selectedMax;
+                    this.step = Math.max(10, Math.round(this.range / 200));
+                },
+
+                get range() {
+                    return this.max - this.min;
+                },
+                get pctMin() {
+                    return ((this.selectedMin - this.min) / this.range) * 100;
+                },
+                get pctMax() {
+                    return ((this.selectedMax - this.min) / this.range) * 100;
+                },
+
+                displayPrice(n) {
+                    return Number(n).toLocaleString('en-US');
+                },
+
+                startDrag(event) {
+                    if (event.button !== 0) return;
+                    const slider = this.$refs.slider;
+                    if (!slider) return;
+                    const rect = slider.getBoundingClientRect();
+                    const pct = ((event.clientX - rect.left) / rect.width) * 100;
+                    this.drag = Math.abs(pct - this.pctMin) <= Math.abs(pct - this.pctMax) ? 'min' : 'max';
+                    this.moved = false;
+                    try {
+                        slider.setPointerCapture(event.pointerId);
+                    } catch (e) {}
+                    event.preventDefault();
+                    this.updateFromX(event.clientX - rect.left, rect.width);
+                },
+
+                onDrag(event) {
+                    if (!this.drag) return;
+                    const slider = this.$refs.slider;
+                    if (!slider) return;
+                    const rect = slider.getBoundingClientRect();
+                    this.updateFromX(event.clientX - rect.left, rect.width);
+                },
+
+                updateFromX(x, width) {
+                    if (width <= 0 || this.range <= 0) return;
+                    let value = this.min + (x / width) * this.range;
+                    value = Math.round(value / this.step) * this.step;
+
+                    if (this.drag === 'min') {
+                        const next = Math.min(Math.max(value, this.min), this.selectedMax);
+                        if (next !== this.selectedMin) {
+                            this.selectedMin = next;
+                            this.moved = true;
+                        }
+                    } else {
+                        const next = Math.max(Math.min(value, this.max), this.selectedMin);
+                        if (next !== this.selectedMax) {
+                            this.selectedMax = next;
+                            this.moved = true;
+                        }
+                    }
+                },
+
+                endDrag(event) {
+                    if (!this.drag) return;
+                    const slider = this.$refs.slider;
+                    if (slider && slider.hasPointerCapture && slider.hasPointerCapture(event.pointerId)) {
+                        try {
+                            slider.releasePointerCapture(event.pointerId);
+                        } catch (e) {}
+                    }
+                    this.drag = null;
+                    if (this.moved) {
+                        this.moved = false;
+                        const form = document.getElementById('price-filter-form');
+                        if (form && typeof form.requestSubmit === 'function') {
+                            form.requestSubmit();
+                        }
                     }
                 }
             }));

@@ -96,6 +96,9 @@
                     <div>
                         <p class="text-sm font-bold text-slate-300 uppercase">Payment Method</p>
                         <p class="font-semibold text-slate-200 mt-1">{{ $order->payment_method }}</p>
+                        @if($order->bkash_sender_last4)
+                            <p class="text-xs text-pink-400 font-bold mt-1">Sender last 4: {{ $order->bkash_sender_last4 }}</p>
+                        @endif
                     </div>
                     <div>
                         <p class="text-sm font-bold text-slate-300 uppercase">Delivery Zone</p>

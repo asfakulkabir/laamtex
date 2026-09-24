@@ -27,6 +27,30 @@ class OrderController extends Controller
             });
         }
 
+        if ($request->filled('from') && $request->filled('to')) {
+            $query->whereDate('created_at', '>=', $request->input('from'))
+                  ->whereDate('created_at', '<=', $request->input('to'));
+        } elseif ($request->filled('from')) {
+            $query->whereDate('created_at', '>=', $request->input('from'));
+        } elseif ($request->filled('to')) {
+            $query->whereDate('created_at', '<=', $request->input('to'));
+        } else {
+            $range = $request->input('range', 'today');
+            switch ($range) {
+                case 'week':
+                    $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                    break;
+                case 'month':
+                    $query->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()]);
+                    break;
+                case 'all':
+                    break;
+                default:
+                    $query->whereDate('created_at', now()->toDateString());
+                    break;
+            }
+        }
+
         $orders = $query->with('deliveryCharge')->latest()->paginate(10);
         return view('admin.orders.index', compact('orders'));
     }
@@ -98,7 +122,7 @@ class OrderController extends Controller
 
         $callback = function () use ($orders) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['id', 'customer_name', 'customer_phone', 'customer_address', 'payment_method', 'bkash_trx_id', 'total_amount', 'status', 'delivery_zone', 'is_sent_to_steadfast', 'steadfast_consignment_id', 'is_notification_sent', 'created_at']);
+            fputcsv($handle, ['id', 'customer_name', 'customer_phone', 'customer_address', 'payment_method', 'bkash_trx_id', 'bkash_sender_last4', 'total_amount', 'status', 'delivery_zone', 'is_sent_to_steadfast', 'steadfast_consignment_id', 'is_notification_sent', 'created_at']);
 
             foreach ($orders as $order) {
                 fputcsv($handle, [
@@ -108,6 +132,7 @@ class OrderController extends Controller
                     $order->customer_address,
                     $order->payment_method,
                     $order->bkash_trx_id,
+                    $order->bkash_sender_last4,
                     $order->total_amount,
                     $order->status,
                     $order->deliveryCharge?->zone ?? '',

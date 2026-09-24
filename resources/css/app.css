@@ -1,3 +1,43 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Prevent horizontal scrolling / scrollbar on the storefront.
+ * `overflow-x: clip` is preferred because it does not turn <html>/<body>
+ * into a scroll container (which would break position: sticky on iOS);
+ * `overflow-x: hidden` is kept as a fallback for older browsers.
+ */
+html,
+body {
+    overflow-x: hidden;
+}
+
+@supports (overflow: clip) {
+    html,
+    body {
+        overflow-x: clip;
+    }
+}
+
+/*
+ * Prevent iOS Safari from zooming the page when an input/select/textarea is
+ * focused. iOS zooms in when the focused element's font-size is under 16px.
+ */
+@layer base {
+    input,
+    select,
+    textarea {
+        font-size: 16px;
+    }
+}
+
+@layer utilities {
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+}

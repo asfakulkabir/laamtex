@@ -1,0 +1,52 @@
+# ----------------------------------------------------------------------------
+# Document root = project root (same layout as cPanel's /public_html).
+# The front controller is index.php at this level; static assets and uploaded
+# files are served from the public/ and storage/app/public folders through it.
+# ----------------------------------------------------------------------------
+
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # ------------------------------------------------------------------------
+    # Security: never let Apache serve dotfiles or the .env file directly.
+    # ------------------------------------------------------------------------
+    <FilesMatch "^(\.env|\.env\.example|\.env\.backup|\.env\.production|\.gitignore|\.gitattributes|\.editorconfig|\.DS_Store)$">
+        Require all denied
+    </FilesMatch>
+
+    RedirectMatch 403 ^/\.env
+    RedirectMatch 403 ^/\.git
+
+    # ------------------------------------------------------------------------
+    # Security: block project folders/files that must never hit the browser.
+    # ------------------------------------------------------------------------
+    RewriteRule ^(app|bootstrap|config|database|node_modules|resources|routes|tests|vendor)/ - [F,L]
+    RewriteRule ^(storage/framework|storage/logs|storage/app/private)/ - [F,L]
+    RewriteRule ^(artisan|composer\.json|composer\.lock|package\.json|package-lock\.json|phpunit\.xml|vite\.config\.js|tailwind\.config\.js|postcss\.config\.js)(/|$) - [F,L]
+    RewriteRule ^cpanel_env\.txt - [F,L]
+
+    # ------------------------------------------------------------------------
+    # Handle Authorization Header
+    # ------------------------------------------------------------------------
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # ------------------------------------------------------------------------
+    # Redirect Trailing Slashes If Not A Folder...
+    # ------------------------------------------------------------------------
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # ------------------------------------------------------------------------
+    # Send Requests To Front Controller (index.php serves assets, uploads and
+    # forwards every other request to Laravel).
+    # ------------------------------------------------------------------------
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>

@@ -108,7 +108,7 @@
                 <h2 class="text-xl font-bold text-gray-900">Your cart is empty</h2>
                 <p class="text-gray-400 text-sm mt-1">Looks like you haven't added anything to your cart yet.</p>
             </div>
-            <a href="{{ route('shop') }}" class="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-primary hover:to-pink-600 text-white rounded-full font-bold shadow-lg transition">Start Shopping</a>
+            <a href="{{ route('shop') }}" class="px-8 py-3 bg-primary hover:bg-primary text-white rounded-full font-bold shadow-lg transition">Start Shopping</a>
         </div>
     @endif
 </div>
