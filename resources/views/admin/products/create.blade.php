@@ -77,41 +77,213 @@
                     @enderror
                 </div>
 
-                <!-- Variable Product Details (Only visible when productType is 'variable') -->
+                <!-- Variable Product Attributes (Only visible when productType is 'variable') -->
                 <div x-show="productType === 'variable'" class="space-y-4 bg-purple-500/5 p-6 rounded-xl border border-purple-500/20">
                     <div class="flex justify-between items-center pb-2 border-b border-purple-500/20">
-                        <h4 class="font-bold text-slate-200 text-sm">Product Variations Mappings</h4>
-                        <button type="button" @click="addVariation()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-bold transition">
-                            + Add Row
+                        <h4 class="font-bold text-slate-200 text-sm">Product Attributes</h4>
+                        <button type="button" @click="addAttribute()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-bold transition">
+                            + Add Attribute
                         </button>
                     </div>
 
-                    <div class="space-y-3">
-                        <!-- Headings -->
-                        <div class="grid grid-cols-6 gap-2 text-sm font-bold uppercase text-slate-300">
-                            <div>Size</div>
-                            <div>Color</div>
-                            <div>Weight</div>
-                            <div>Price (৳)</div>
-                            <div>Stock</div>
-                            <div class="text-right">Action</div>
-                        </div>
+                    <p class="text-xs text-slate-400">
+                        Choose a global attribute and tick the values this product offers. Attributes marked
+                        <span class="text-purple-300 font-semibold">Used for variations</span> build the variation combinations
+                        automatically. Save the product, then set the price, stock and image for each row on the edit screen.
+                    </p>
 
-                        <!-- Rows -->
-                        <template x-for="(v, index) in variations" :key="index">
-                            <div class="grid grid-cols-6 gap-2 items-center">
-                                <input type="text" :name="`variations[${index}][size]`" x-model="v.size" placeholder="e.g. M"
-                                       class="bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 text-slate-200 placeholder-slate-600">
-                                <input type="text" :name="`variations[${index}][color]`" x-model="v.color" placeholder="e.g. Red"
-                                       class="bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 text-slate-200 placeholder-slate-600">
-                                <input type="text" :name="`variations[${index}][weight]`" x-model="v.weight" placeholder="e.g. 200g"
-                                       class="bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 text-slate-200 placeholder-slate-600">
-                                <input type="number" step="0.01" min="0" :name="`variations[${index}][price]`" x-model="v.price" placeholder="45.99"
-                                       class="bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 text-slate-200 placeholder-slate-600">
-                                <input type="number" min="0" :name="`variations[${index}][stock]`" x-model="v.stock" placeholder="10" required
-                                       class="bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 text-slate-200 placeholder-slate-600">
-                                <div class="text-right">
-                                    <button type="button" @click="removeVariation(index)" class="p-1 text-pink-400 hover:text-pink-300 bg-pink-500/10 hover:bg-pink-500/20 rounded text-sm transition">Remove</button>
+                    <div class="space-y-3">
+                        <template x-for="(a, index) in attributes" :key="a.key || index">
+                            <div class="bg-slate-900/60 border border-slate-800/50 rounded-lg p-4 space-y-3">
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Attribute</label>
+                                        <select :name="`attributes[${index}][attribute_id]`" x-model="a.attribute_id"
+                                                @change="a.value_ids = []; syncVariations()"
+                                                class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                            <option value="">— Custom attribute —</option>
+                                            <template x-for="g in allAttributes" :key="g.id">
+                                                <option :value="g.id" x-text="g.name"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+
+                                    <div x-show="!a.attribute_id" class="md:col-span-2">
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Custom name</label>
+                                        <input type="text" :name="`attributes[${index}][custom_name]`" x-model="a.custom_name" @input.debounce.400ms="syncVariations()" placeholder="e.g. Material"
+                                               class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                    </div>
+
+                                    <div x-show="!a.attribute_id">
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Options (comma separated)</label>
+                                        <input type="text" :name="`attributes[${index}][options]`" x-model="a.options" @input.debounce.400ms="syncVariations()" placeholder="Cotton, Silk"
+                                               class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                    </div>
+
+                                    <div class="flex items-center justify-end gap-4">
+                                        <label class="flex items-center gap-1.5 text-xs text-slate-300">
+                                            <input type="checkbox" :name="`attributes[${index}][is_visible]`" value="1" x-model="a.is_visible"
+                                                   class="h-3.5 w-3.5 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
+                                            Visible
+                                        </label>
+                                        <label class="flex items-center gap-1.5 text-xs text-slate-300">
+                                            <input type="checkbox" :name="`attributes[${index}][is_variation]`" value="1" x-model="a.is_variation" @change="syncVariations()"
+                                                   class="h-3.5 w-3.5 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
+                                            Used for variations
+                                        </label>
+                                        <button type="button" @click="removeAttribute(index); syncVariations()" class="p-1 text-pink-400 hover:text-pink-300 bg-pink-500/10 hover:bg-pink-500/20 rounded text-sm transition">Remove</button>
+                                    </div>
+                                </div>
+
+                                <div x-show="a.attribute_id" class="flex flex-wrap gap-2">
+                                    <template x-if="optionsFor(index).length === 0">
+                                        <span class="text-xs text-slate-500">This attribute has no values yet. Add them under Attributes in the admin menu.</span>
+                                    </template>
+                                    <template x-for="v in optionsFor(index)" :key="v.id">
+                                        <label class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border cursor-pointer transition"
+                                               :class="a.value_ids.includes(v.id) ? 'bg-purple-500/20 border-purple-500/50 text-purple-200' : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:border-purple-500/30'">
+                                            <input type="checkbox" :name="`attributes[${index}][value_ids][]`" :value="v.id" x-model="a.value_ids" @change="syncVariations()"
+                                                   class="h-3 w-3 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
+                                            <span x-show="v.color_code" class="inline-block h-3 w-3 rounded-full border border-slate-600" :style="`background-color:${v.color_code}`"></span>
+                                            <span x-text="v.name"></span>
+                                        </label>
+                                    </template>
+                                </div>
+
+                                <div x-show="!a.attribute_id && a.options" class="text-xs text-slate-400">
+                                    Will create values: <span x-text="a.options"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                </div>
+
+                <!-- Variations (variable products only) -->
+                <div x-show="productType === 'variable'" class="space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-lg font-bold text-white">Variations</h3>
+                            <p class="text-xs text-slate-400">
+                                Every combination of the ticked values is created automatically.
+                                Set the price, stock and image for each row, then save.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs text-slate-400" x-show="variations.length > 0"
+                                  x-text="`${variations.length} variation${variations.length === 1 ? '' : 's'}`"></span>
+                            <button type="button" @click="generateVariations()"
+                                    class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-bold transition">
+                                Generate from Attributes
+                            </button>
+                        </div>
+                    </div>
+
+                    <template x-if="variationAttributes().length > 0 && variations.length === 0">
+                        <div class="flex items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+                            <p class="text-xs text-amber-200">
+                                You removed all rows. Tick the values again to bring them back.
+                            </p>
+                            <button type="button" @click="restoreRemovedVariations()"
+                                    class="shrink-0 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 rounded text-xs font-bold transition">
+                                Restore
+                            </button>
+                        </div>
+                    </template>
+
+                    <div class="space-y-3">
+                        <template x-if="variationAttributes().length === 0">
+                            <p class="text-sm text-slate-400 py-4 text-center">
+                                No attributes are marked “Used for variations” yet. Add one above to build combinations.
+                            </p>
+                        </template>
+
+                        <template x-for="(v, index) in variations" :key="v.combo_key || index">
+                            <div class="bg-slate-900/60 border border-slate-800/50 rounded-lg p-4 space-y-3">
+                                <input type="hidden" :name="`variations[${index}][id]`" x-model="v.id">
+                                <input type="hidden" :name="`variations[${index}][combo_key]`" x-model="v.combo_key">
+
+                                <div class="flex flex-wrap items-center justify-between gap-3">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <template x-for="pa in variationAttributes()" :key="pa.key">
+                                            <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-700/60 bg-slate-800/60 px-2.5 py-1 text-xs text-slate-200">
+                                                <span class="text-slate-500" x-text="pa.name + ':'"></span>
+                                                <span class="font-semibold" x-text="valueLabel(pa, v.values[pa.key])"></span>
+                                                <input type="hidden" :name="`variations[${index}][values][${pa.position}]`" :value="v.values[pa.key]">
+                                            </span>
+                                        </template>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <label class="flex items-center gap-1.5 text-xs text-slate-300">
+                                            <input type="hidden" :name="`variations[${index}][status]`" x-model="v.status">
+                                            <input type="checkbox" value="1"
+                                                   :checked="v.status === 'publish'"
+                                                   @change="v.status = $event.target.checked ? 'publish' : 'private'"
+                                                   class="h-3.5 w-3.5 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
+                                            Enabled
+                                        </label>
+                                        <button type="button" @click="removeVariation(index)"
+                                                class="px-3 py-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-400 rounded text-xs font-bold transition">
+                                            Remove row
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Regular (৳)</label>
+                                        <input type="number" step="0.01" min="0" :name="`variations[${index}][regular_price]`" x-model="v.regular_price"
+                                               class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Sale (৳)</label>
+                                        <input type="number" step="0.01" min="0" :name="`variations[${index}][sale_price]`" x-model="v.sale_price"
+                                               class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Stock</label>
+                                        <input type="number" min="0" :name="`variations[${index}][stock_quantity]`" x-model="v.stock_quantity"
+                                               :disabled="!v.manage_stock"
+                                               class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 disabled:opacity-50 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Status</label>
+                                        <select :name="`variations[${index}][stock_status]`" x-model="v.stock_status"
+                                                class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                            <option value="instock">In stock</option>
+                                            <option value="outofstock">Out of stock</option>
+                                            <option value="onbackorder">On backorder</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">SKU</label>
+                                        <input type="text" :name="`variations[${index}][sku]`" x-model="v.sku" placeholder="auto"
+                                               class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Image</label>
+                                        <input type="file" :name="`variations[${index}][image]`" accept="image/*"
+                                               class="text-[11px] text-slate-300 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-slate-700 file:text-white text-xs">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Weight</label>
+                                        <input type="number" step="0.001" min="0" :name="`variations[${index}][weight_value]`" x-model="v.weight_value"
+                                               class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                    </div>
+                                    <label class="flex items-center gap-2 text-xs text-slate-300">
+                                        <input type="checkbox" :name="`variations[${index}][manage_stock]`" value="1" x-model="v.manage_stock"
+                                               class="rounded bg-slate-800 border-slate-700">
+                                        Manage stock
+                                    </label>
+                                    <div class="flex justify-end">
+                                        <button type="button" @click="removeVariation(index)"
+                                                class="px-3 py-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-400 rounded text-xs font-bold transition">
+                                            Remove row
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </template>
@@ -254,22 +426,219 @@
 @endsection
 
 @section('scripts')
+@php
+    $allAttributesPayload = $attributes->map(fn ($attribute) => [
+        'id' => $attribute->id,
+        'name' => $attribute->name,
+        'type' => $attribute->type,
+        'values' => $attribute->values->map(fn ($value) => [
+            'id' => $value->id,
+            'name' => $value->name,
+            'color_code' => $value->color_code,
+        ])->values(),
+    ])->values();
+@endphp
 <script>
     function productForm() {
         return {
             productType: 'simple',
-            variations: [
-                { size: '', color: '', weight: '', price: '', stock: 10 }
-            ],
+            allAttributes: {!! json_encode($allAttributesPayload) !!},
+            attributes: [],
+            variations: [],
+            removedCombos: [],
+            nextKey: 1,
             uploadImages: [
                 { name: 'front_view', alt_text: '' }
             ],
-            addVariation() {
-                this.variations.push({ size: '', color: '', weight: '', price: '', stock: 10 });
+
+            addAttribute() {
+                this.attributes.push({
+                    key: 'a' + (this.nextKey++),
+                    attribute_id: '',
+                    custom_name: '',
+                    options: '',
+                    value_ids: [],
+                    is_visible: true,
+                    is_variation: true,
+                });
             },
+
+            removeAttribute(index) {
+                this.attributes.splice(index, 1);
+            },
+
+            optionsFor(index) {
+                const row = this.attributes[index];
+                if (!row || !row.attribute_id) return [];
+
+                const attribute = this.allAttributes.find(a => a.id == row.attribute_id);
+                return attribute ? attribute.values : [];
+            },
+
+            /**
+             * The attributes flagged "Used for variations", each reduced to the
+             * values the shopper ticked. `position` is the index in the submitted
+             * attributes array, which the controller maps to a real
+             * product attribute id once the product exists.
+             */
+            variationAttributes() {
+                return this.attributes
+                    .map((row, position) => ({ row, position }))
+                    .filter(({ row }) => row.is_variation)
+                    .map(({ row, position }) => {
+                        let values = [];
+
+                        if (row.attribute_id) {
+                            const attribute = this.allAttributes.find(a => a.id == row.attribute_id);
+                            const picked = (attribute ? attribute.values : []).filter(
+                                v => (row.value_ids || []).some(id => String(id) === String(v.id))
+                            );
+                            values = picked;
+                        } else if (row.options) {
+                            // Custom attributes are stored by name, so the name is
+                            // the identifier the controller resolves afterwards.
+                            values = String(row.options)
+                                .split(',')
+                                .map(s => s.trim())
+                                .filter(Boolean)
+                                .map(name => ({ id: name, name: name }));
+                        }
+
+                        return {
+                            key: row.key,
+                            position: position,
+                            name: row.attribute_id
+                                ? (this.allAttributes.find(a => a.id == row.attribute_id) || {}).name || ''
+                                : row.custom_name,
+                            values: values,
+                        };
+                    })
+                    .filter(a => a.values.length > 0);
+            },
+
+            /**
+             * Build the cartesian product of the selected values. Rows the admin
+             * already filled in are kept, matched on their combination, and rows
+             * the admin removed stay removed until their combination is
+             * un-ticked and ticked again.
+             */
+            generateVariations() {
+                const attributes = this.variationAttributes();
+
+                if (attributes.length === 0) {
+                    this.variations = [];
+                    this.removedCombos = [];
+                    return;
+                }
+
+                let combinations = [{}];
+
+                for (const attribute of attributes) {
+                    const next = [];
+                    for (const combination of combinations) {
+                        for (const value of attribute.values) {
+                            next.push(Object.assign({}, combination, { [attribute.key]: value.id }));
+                        }
+                    }
+                    combinations = next;
+                }
+
+                const existing = {};
+                this.variations.forEach(row => {
+                    if (row.combo_key) existing[row.combo_key] = row;
+                });
+
+                this.forgetRemovedCombosMissingFrom(attributes);
+
+                const removed = this.removedCombos;
+                this.variations = combinations
+                    .filter(combination => !removed.includes(this.comboKeyFor(attributes, combination)))
+                    .map(combination => {
+                        const key = this.comboKeyFor(attributes, combination);
+
+                        if (existing[key]) {
+                            return Object.assign({}, existing[key], { combo_key: key });
+                        }
+
+                        return {
+                            id: '',
+                            combo_key: key,
+                            values: combination,
+                            regular_price: '',
+                            sale_price: '',
+                            manage_stock: true,
+                            stock_quantity: 0,
+                            stock_status: 'instock',
+                            sku: '',
+                            weight_value: '',
+                            status: 'publish',
+                        };
+                    });
+            },
+
+            comboKeyFor(attributes, combination) {
+                return attributes
+                    .map(a => a.key + ':' + combination[a.key])
+                    .join('|');
+            },
+
+            /** The human readable value shown on a generated row. */
+            valueLabel(attribute, valueId) {
+                if (valueId === null || valueId === undefined || valueId === '') return 'Any';
+
+                for (const value of attribute.values) {
+                    if (String(value.id) === String(valueId)) return value.name;
+                }
+
+                return String(valueId);
+            },
+
             removeVariation(index) {
+                const row = this.variations[index];
+                if (row && row.combo_key) {
+                    this.removedCombos.push(row.combo_key);
+                }
                 this.variations.splice(index, 1);
             },
+
+            restoreRemovedVariations() {
+                this.removedCombos = [];
+                this.generateVariations();
+            },
+
+            /**
+             * A row the admin removed comes back when its combination stops
+             * being offered and is ticked again, which is how WooCommerce
+             * behaves after deleting a variation.
+             */
+            forgetRemovedCombosMissingFrom(attributes) {
+                if (this.removedCombos.length === 0) return;
+
+                const live = new Set();
+
+                let combinations = [{}];
+                for (const attribute of attributes) {
+                    const next = [];
+                    for (const combination of combinations) {
+                        for (const value of attribute.values) {
+                            next.push(Object.assign({}, combination, { [attribute.key]: value.id }));
+                        }
+                    }
+                    combinations = next;
+                }
+                combinations.forEach(c => live.add(this.comboKeyFor(attributes, c)));
+
+                this.removedCombos = this.removedCombos.filter(key => live.has(key));
+            },
+
+
+            // Regenerate whenever the selected attributes or values change, so
+            // the rows always match what is ticked above. Anything the admin has
+            // already typed is preserved.
+            syncVariations() {
+                this.$nextTick(() => this.generateVariations());
+            },
+
             addImageField() {
                 this.uploadImages.push({ name: '', alt_text: '' });
             },

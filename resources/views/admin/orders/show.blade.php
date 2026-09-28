@@ -25,9 +25,11 @@
                     <h3 class="font-bold text-white">Order Items</h3>
                 </div>
 
+                @php $thumbSize = 96; @endphp
                 <table class="w-full text-left border-collapse text-sm">
                     <thead>
                         <tr class="bg-slate-800/30 border-b border-slate-800/50 text-sm font-bold uppercase text-slate-300">
+                            <th class="px-8 py-4" style="width:{{ $thumbSize + 32 }}px"></th>
                             <th class="px-8 py-4">Product</th>
                             <th class="px-8 py-4 text-center">Price</th>
                             <th class="px-8 py-4 text-center">Qty</th>
@@ -35,6 +37,12 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-800/30 text-slate-400">
+                        @php
+                            // Older orders stored no image, so fall back to the
+                            // stored line item and its variation.
+                            $lineItems = $order->items()->with(['variation', 'product.images'])->get()
+                                ->keyBy(fn ($line) => ($line->product_variation_id ?? 0) . '-' . $line->product_id);
+                        @endphp
                         @foreach($order->items as $item)
                             @php
                                 $isArray = is_array($item);
@@ -42,8 +50,51 @@
                                 $varDet  = $isArray ? ($item['variation_details'] ?? '')  : $item->variation_details;
                                 $qty     = $isArray ? ($item['quantity']          ?? 1)   : $item->quantity;
                                 $price   = $isArray ? ($item['price']             ?? 0)   : $item->price;
+
+                                // Prefer the image snapshotted at checkout, then the
+                                // variation image, then the product's featured image.
+                                $image = $isArray ? ($item['image'] ?? null) : null;
+
+                                if (! $isArray) {
+                                    $variation = $item->product_variation_id ? $item->variation : null;
+
+                                    if ($variation && $variation->image) {
+                                        $image = $variation->image;
+                                    } elseif ($item->product && $item->product->images->isNotEmpty()) {
+                                        $image = $item->product->images->where('is_featured', true)->first()?->image
+                                            ?? $item->product->images->first()?->image;
+                                    }
+                                }
+
+                                if (! $image) {
+                                    $line = $lineItems->get(
+                                        (($item['variation_id'] ?? null) ?? 0) . '-' . ($item['product_id'] ?? 0)
+                                    );
+
+                                    if ($line) {
+                                        $image = ($line->variation?->image)
+                                            ?? $line->product?->images?->where('is_featured', true)->first()?->image
+                                            ?? $line->product?->images?->first()?->image;
+                                    }
+                                }
                             @endphp
                             <tr>
+                                <td class="px-8 py-4 align-top">
+                                    @if($image)
+                                        <a href="{{ Storage::url($image) }}" target="_blank" rel="noopener"
+                                           title="View full size image">
+                                            <img src="{{ Storage::url($image) }}" alt="{{ $name }}"
+                                                 width="{{ $thumbSize }}" height="{{ $thumbSize }}"
+                                                 style="border-radius:6px;object-fit:cover;display:block;border:1px solid rgb(51 65 85);"
+                                                 class="hover:opacity-80 transition-opacity">
+                                        </a>
+                                    @else
+                                        <div style="width:{{ $thumbSize }}px;height:{{ $thumbSize }}px;"
+                                             class="rounded bg-slate-700/50 border border-slate-700/50 flex items-center justify-center text-slate-500">
+                                            —
+                                        </div>
+                                    @endif
+                                </td>
                                 <td class="px-8 py-4">
                                     <div class="font-semibold text-slate-200">{{ $name }}</div>
                                     @if($varDet)
@@ -63,13 +114,18 @@
                     $deliveryCharge = $order->deliveryCharge;
                     $chargeAmount   = $deliveryCharge ? $deliveryCharge->charge : 0;
                     $zoneName       = $deliveryCharge ? $deliveryCharge->zone   : 'N/A';
-                    $subtotalCalc   = $order->total_amount - $chargeAmount;
                 @endphp
                 <div class="p-8 bg-slate-800/50 border-t border-slate-800/50 space-y-3 text-sm flex flex-col items-end">
                     <div class="flex justify-between w-72">
                         <span class="text-slate-300">Subtotal:</span>
-                        <span class="font-semibold text-slate-200">৳{{ number_format($subtotalCalc, 0) }}</span>
+                        <span class="font-semibold text-slate-200">৳{{ number_format($order->subtotal, 0) }}</span>
                     </div>
+                    @if($order->discount_amount > 0)
+                    <div class="flex justify-between w-72">
+                        <span class="text-slate-300">Discount ({{ $order->coupon_code }}):</span>
+                        <span class="font-semibold text-emerald-400">-৳{{ number_format($order->discount_amount, 0) }}</span>
+                    </div>
+                    @endif
                     <div class="flex justify-between w-72">
                         <span class="text-slate-300">Delivery ({{ $zoneName }}):</span>
                         <span class="font-semibold text-slate-200">৳{{ number_format($chargeAmount, 0) }}</span>
@@ -215,7 +271,8 @@
                 </form>
             </div>
 
-            <!-- Delete Order -->
+            <!-- Delete Order (super admin only) -->
+            @if(auth()->user()->isSuperAdmin())
             <div class="bg-slate-900 border border-red-800/40 p-6 rounded-2xl space-y-4">
                 <div>
                     <h3 class="font-bold text-sm uppercase tracking-wider text-red-400">Danger Zone</h3>
@@ -230,6 +287,7 @@
                     </button>
                 </form>
             </div>
+            @endif
 
         </div>
     </div>

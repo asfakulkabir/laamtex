@@ -5,59 +5,77 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\SteadfastService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
+    /**
+     * Period presets offered on the orders page.
+     */
+    public const PERIODS = [
+        'today'      => 'Today',
+        'yesterday'  => 'Yesterday',
+        '7days'      => 'Last 7 Days',
+        '30days'     => 'Last 30 Days',
+        'this_month' => 'This Month',
+        'last_month' => 'Last Month',
+        'custom'     => 'Custom Range',
+        'all'        => 'All Time',
+    ];
+
+    public const SORTS = [
+        'newest' => 'Newest first',
+        'oldest' => 'Oldest first',
+        'highest' => 'Highest amount',
+        'lowest' => 'Lowest amount',
+    ];
+
     public function index(Request $request)
     {
-        $query = Order::query();
+        // The list respects every filter, including status.
+        [$query, $period] = $this->filteredQuery($request);
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
+        // The headline numbers describe the whole period, so the status filter
+        // is deliberately left out of them (that is what makes it possible to
+        // jump from "how many cancelled?" to that exact list).
+        [$periodQuery] = $this->filteredQuery($request, withStatus: false);
+
+        $sort = array_key_exists($request->input('sort'), self::SORTS) ? $request->input('sort') : 'newest';
+        $perPage = (int) $request->input('per_page', 15);
+        if (!in_array($perPage, [10, 15, 25, 50, 100], true)) {
+            $perPage = 15;
         }
 
-        if ($request->filled('search')) {
-            $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('customer_name', 'like', "%{$search}%")
-                  ->orWhere('customer_phone', 'like', "%{$search}%")
-                  ->orWhere('customer_address', 'like', "%{$search}%")
-                  ->orWhere('id', $search);
-            });
-        }
+        $query->with('deliveryCharge');
 
-        if ($request->filled('from') && $request->filled('to')) {
-            $query->whereDate('created_at', '>=', $request->input('from'))
-                  ->whereDate('created_at', '<=', $request->input('to'));
-        } elseif ($request->filled('from')) {
-            $query->whereDate('created_at', '>=', $request->input('from'));
-        } elseif ($request->filled('to')) {
-            $query->whereDate('created_at', '<=', $request->input('to'));
-        } else {
-            $range = $request->input('range', 'today');
-            switch ($range) {
-                case 'week':
-                    $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
-                    break;
-                case 'month':
-                    $query->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()]);
-                    break;
-                case 'all':
-                    break;
-                default:
-                    $query->whereDate('created_at', now()->toDateString());
-                    break;
-            }
-        }
+        match ($sort) {
+            'oldest'  => $query->oldest('created_at'),
+            'highest' => $query->orderByDesc('total_amount'),
+            'lowest'  => $query->orderBy('total_amount'),
+            default   => $query->latest('created_at'),
+        };
 
-        $orders = $query->with('deliveryCharge')->latest()->paginate(10);
-        return view('admin.orders.index', compact('orders'));
+        $orders = $query->paginate($perPage)->withQueryString();
+
+        $statusCounts = (clone $periodQuery)
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
+        $stats = [
+            'total'    => (clone $periodQuery)->count(),
+            'revenue'  => (float) (clone $periodQuery)->where('status', '!=', Order::STATUS_CANCELLED)->sum('total_amount'),
+            'discount' => (float) (clone $periodQuery)->sum('discount_amount'),
+            'byStatus' => $statusCounts,
+        ];
+
+        return view('admin.orders.index', compact('orders', 'period', 'sort', 'perPage', 'stats'));
     }
 
     public function show(Order $order)
     {
-        $order->load('items.product', 'items.variation', 'deliveryCharge');
+        $order->load('items.product', 'items.variation', 'deliveryCharge', 'coupon');
         return view('admin.orders.show', compact('order'));
     }
 
@@ -72,7 +90,7 @@ class OrderController extends Controller
         ]);
 
         return redirect()->route('admin.orders.index')
-            ->with('success', "Order #{$order->id} status updated to " . \App\Models\Order::STATUSES[$order->status] ?? ucfirst($order->status) . '.');
+            ->with('success', "Order #{$order->id} status updated to " . (Order::STATUSES[$order->status] ?? ucfirst($order->status)) . '.');
     }
 
     public function sendToSteadfast(Order $order, SteadfastService $steadfast)
@@ -111,9 +129,11 @@ class OrderController extends Controller
         return redirect()->back()->with('error', 'Failed to send order to Steadfast. ' . ($response['message'] ?? 'Please try again.'));
     }
 
-    public function exportCsv()
+    public function exportCsv(Request $request)
     {
-        $orders = Order::with('deliveryCharge')->latest()->get();
+        [$query] = $this->filteredQuery($request);
+
+        $orders = $query->with('deliveryCharge')->latest('created_at')->get();
 
         $headers = [
             'Content-Type' => 'text/csv',
@@ -122,7 +142,7 @@ class OrderController extends Controller
 
         $callback = function () use ($orders) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['id', 'customer_name', 'customer_phone', 'customer_address', 'payment_method', 'bkash_trx_id', 'bkash_sender_last4', 'total_amount', 'status', 'delivery_zone', 'is_sent_to_steadfast', 'steadfast_consignment_id', 'is_notification_sent', 'created_at']);
+            fputcsv($handle, ['id', 'customer_name', 'customer_phone', 'customer_address', 'payment_method', 'bkash_trx_id', 'bkash_sender_last4', 'subtotal', 'discount_amount', 'coupon_code', 'delivery_charge', 'total_amount', 'status', 'delivery_zone', 'is_sent_to_steadfast', 'steadfast_consignment_id', 'is_notification_sent', 'created_at']);
 
             foreach ($orders as $order) {
                 fputcsv($handle, [
@@ -133,6 +153,10 @@ class OrderController extends Controller
                     $order->payment_method,
                     $order->bkash_trx_id,
                     $order->bkash_sender_last4,
+                    $order->subtotal,
+                    $order->discount_amount,
+                    $order->coupon_code,
+                    $order->delivery_charge_amount,
                     $order->total_amount,
                     $order->status,
                     $order->deliveryCharge?->zone ?? '',
@@ -209,6 +233,94 @@ class OrderController extends Controller
     public function destroy(Order $order)
     {
         $order->delete();
+
         return redirect()->route('admin.orders.index')->with('success', "Order #{$order->id} deleted successfully.");
+    }
+
+    /**
+     * Build the filtered order query used by both the list and the CSV export.
+     *
+     * @return array{0: \Illuminate\Database\Eloquent\Builder, 1: array{key: string, label: string, from: ?string, to: ?string}}
+     */
+    private function filteredQuery(Request $request, bool $withStatus = true)
+    {
+        $query = Order::query();
+
+        $period = $this->resolvePeriod($request);
+
+        if ($period['from']) {
+            $query->whereDate('created_at', '>=', $period['from']);
+        }
+        if ($period['to']) {
+            $query->whereDate('created_at', '<=', $period['to']);
+        }
+
+        if ($withStatus && $request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('search')) {
+            $search = trim($request->input('search'));
+            $query->where(function ($q) use ($search) {
+                $q->where('customer_name', 'like', "%{$search}%")
+                    ->orWhere('customer_phone', 'like', "%{$search}%")
+                    ->orWhere('customer_address', 'like', "%{$search}%")
+                    ->orWhere('coupon_code', 'like', "%{$search}%")
+                    ->orWhere('id', $search);
+            });
+        }
+
+        if ($request->filled('payment')) {
+            $query->where('payment_method', $request->input('payment'));
+        }
+
+        if ($request->boolean('coupon_only')) {
+            $query->whereNotNull('coupon_code');
+        }
+
+        return [$query, $period];
+    }
+
+    /**
+     * Work out which time window the request is asking for.
+     *
+     * @return array{key: string, label: string, from: ?string, to: ?string}
+     */
+    private function resolvePeriod(Request $request): array
+    {
+        $now = Carbon::now();
+
+        $range = $request->input('range');
+        $custom = $request->filled('from') || $request->filled('to');
+
+        if ($custom) {
+            return [
+                'key'   => 'custom',
+                'label' => 'Custom Range',
+                'from'  => $request->input('from'),
+                'to'    => $request->input('to'),
+            ];
+        }
+
+        if (!array_key_exists($range, self::PERIODS) || $range === 'custom') {
+            $range = 'today';
+        }
+
+        [$from, $to] = match ($range) {
+            'yesterday'  => [$now->copy()->subDay()->startOfDay(), $now->copy()->subDay()->endOfDay()],
+            '7days'      => [$now->copy()->subDays(6)->startOfDay(), $now->copy()->endOfDay()],
+            '30days'     => [$now->copy()->subDays(29)->startOfDay(), $now->copy()->endOfDay()],
+            'this_month' => [$now->copy()->startOfMonth(), $now->copy()->endOfDay()],
+            'last_month' => [$now->copy()->subMonthNoOverflow()->startOfMonth(), $now->copy()->subMonthNoOverflow()->endOfMonth()],
+            'all'        => [null, null],
+            default      => [$now->copy()->startOfDay(), $now->copy()->endOfDay()],
+        };
+
+        return [
+            'key'   => $range,
+            'label' => self::PERIODS[$range],
+            'from'  => $from?->toDateString(),
+            'to'    => $to?->toDateString(),
+        ];
     }
 }

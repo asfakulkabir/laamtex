@@ -87,8 +87,14 @@ fbq('track', 'Purchase', @json($pixelPurchase));
                 @endphp
                 <div class="flex justify-between text-gray-450">
                     <span>Subtotal</span>
-                    <span>৳{{ number_format($order->total_amount - $chargeAmount, 0) }}</span>
+                    <span>৳{{ number_format($order->subtotal, 0) }}</span>
                 </div>
+                @if($order->discount_amount > 0)
+                <div class="flex justify-between text-gray-450">
+                    <span>Discount ({{ $order->coupon_code }})</span>
+                    <span class="text-green-600">-৳{{ number_format($order->discount_amount, 0) }}</span>
+                </div>
+                @endif
                 <div class="flex justify-between text-gray-450">
                     <span>Delivery ({{ $zoneName }})</span>
                     <span>৳{{ number_format($chargeAmount, 0) }}</span>
@@ -132,7 +138,7 @@ fbq('track', 'Purchase', @json($pixelPurchase));
             </div>
             <span class="text-gray-400">Payment: {{ $order->payment_method }}</span>
             @if($order->bkash_sender_last4)
-                <span class="text-xs text-pink-500 font-bold">Send Money শেষ ৪ ডিজিট: <span class="font-mono">{{ $order->bkash_sender_last4 }}</span></span>
+                <span class="text-xs text-pink-500 font-bold">Send Money last 4 digits: <span class="font-mono">{{ $order->bkash_sender_last4 }}</span></span>
             @endif
         </div>
     </div>

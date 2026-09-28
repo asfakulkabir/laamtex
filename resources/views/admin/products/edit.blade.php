@@ -85,42 +85,214 @@
                     @enderror
                 </div>
 
-                <!-- Variable Product Variations Rows -->
+                <!-- Variable Product: Attributes -->
                 <div x-show="productType === 'variable'" class="space-y-4 bg-purple-500/5 p-6 rounded-xl border border-purple-500/20">
                     <div class="flex justify-between items-center pb-2 border-b border-purple-500/20">
-                        <h4 class="font-bold text-slate-200 text-sm">Product Variations Mappings</h4>
-                        <button type="button" @click="addVariation()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-bold transition">
-                            + Add Row
+                        <h4 class="font-bold text-slate-200 text-sm">Product Attributes</h4>
+                        <button type="button" @click="addAttribute()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-bold transition">
+                            + Add Attribute
                         </button>
                     </div>
 
-                    <div class="space-y-3">
-                        <!-- Headings -->
-                        <div class="grid grid-cols-6 gap-2 text-sm font-bold uppercase text-slate-300">
-                            <div>Size</div>
-                            <div>Color</div>
-                            <div>Weight</div>
-                            <div>Price (৳)</div>
-                            <div>Stock</div>
-                            <div class="text-right">Action</div>
-                        </div>
+                    <p class="text-xs text-slate-400">
+                        Choose a global attribute and tick the values this product offers. Attributes marked
+                        <span class="text-purple-300 font-semibold">Used for variations</span> build the variation combinations.
+                    </p>
 
-                        <!-- Rows -->
+                    <div class="space-y-3">
+                        <template x-for="(a, index) in attributes" :key="index">
+                            <div class="bg-slate-900/60 border border-slate-800/50 rounded-lg p-4 space-y-3">
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Attribute</label>
+                                        <select :name="`attributes[${index}][attribute_id]`" x-model="a.attribute_id"
+                                                @change="onAttributeChange(index)"
+                                                class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                            <option value="">— Custom attribute —</option>
+                                            <template x-for="g in allAttributes" :key="g.id">
+                                                <option :value="g.id" x-text="g.name"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+
+                                    <div x-show="!a.attribute_id" class="md:col-span-2">
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Custom name</label>
+                                        <input type="text" :name="`attributes[${index}][custom_name]`" x-model="a.custom_name" placeholder="e.g. Material"
+                                               class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                    </div>
+
+                                    <div x-show="!a.attribute_id">
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Options (comma separated)</label>
+                                        <input type="text" :name="`attributes[${index}][options]`" x-model="a.options" placeholder="Cotton, Silk"
+                                               class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                    </div>
+
+                                    <div class="flex items-center justify-end gap-4">
+                                        <label class="flex items-center gap-1.5 text-xs text-slate-300">
+                                            <input type="checkbox" :name="`attributes[${index}][is_visible]`" value="1" x-model="a.is_visible"
+                                                   class="h-3.5 w-3.5 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
+                                            Visible
+                                        </label>
+                                        <label class="flex items-center gap-1.5 text-xs text-slate-300">
+                                            <input type="checkbox" :name="`attributes[${index}][is_variation]`" value="1" x-model="a.is_variation"
+                                                   class="h-3.5 w-3.5 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
+                                            Used for variations
+                                        </label>
+                                        <button type="button" @click="removeAttribute(index)" class="p-1 text-pink-400 hover:text-pink-300 bg-pink-500/10 hover:bg-pink-500/20 rounded text-sm transition">Remove</button>
+                                    </div>
+                                </div>
+
+                                <!-- Value picker for global attributes -->
+                                <div x-show="a.attribute_id" class="flex flex-wrap gap-2">
+                                    <template x-if="optionsFor(index).length === 0">
+                                        <span class="text-xs text-slate-500">This attribute has no values yet. Add them under Attributes in the admin menu.</span>
+                                    </template>
+                                    <template x-for="v in optionsFor(index)" :key="v.id">
+                                        <label class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border cursor-pointer transition"
+                                               :class="a.value_ids.includes(v.id) ? 'bg-purple-500/20 border-purple-500/50 text-purple-200' : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:border-purple-500/30'">
+                                            <input type="checkbox" :name="`attributes[${index}][value_ids][]`" :value="v.id" x-model="a.value_ids"
+                                                   class="h-3 w-3 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
+                                            <span x-show="v.color_code" class="inline-block h-3 w-3 rounded-full border border-slate-600" :style="`background-color:${v.color_code}`"></span>
+                                            <span x-text="v.name"></span>
+                                        </label>
+                                    </template>
+                                </div>
+
+                                <!-- Custom option preview -->
+                                <div x-show="!a.attribute_id && a.options" class="text-xs text-slate-400">
+                                    Will create values: <span x-text="a.options"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Variable Product: Variations -->
+                <div x-show="productType === 'variable'" class="space-y-4 bg-purple-500/5 p-6 rounded-xl border border-purple-500/20">
+                    <div class="flex flex-wrap justify-between items-center gap-3 pb-2 border-b border-purple-500/20">
+                        <h4 class="font-bold text-slate-200 text-sm">Variations</h4>
+                        <div class="flex items-center gap-2">
+                            <button type="button" @click="addVariation()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-sm font-bold transition">
+                                + Add Variation
+                            </button>
+                            <button type="submit"
+                                    formaction="{{ route('admin.products.generate-variations', $product) }}"
+                                    formmethod="POST"
+                                    class="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white rounded text-sm font-bold transition">
+                                Generate from Attributes
+                            </button>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-slate-400">
+                        Each row is one combination of attribute values. Untick a row and save to delete it.
+                    </p>
+
+                    <div class="space-y-3">
+                        <template x-if="variationAttributes().length === 0">
+                            <p class="text-sm text-slate-400 py-4 text-center">
+                                No attributes are marked “Used for variations” yet. Add one above, then generate.
+                            </p>
+                        </template>
+
                         <template x-for="(v, index) in variations" :key="index">
-                            <div class="grid grid-cols-6 gap-2 items-center">
+                            <div class="bg-slate-900/60 border border-slate-800/50 rounded-lg p-4 space-y-3">
                                 <input type="hidden" :name="`variations[${index}][id]`" x-model="v.id">
-                                <input type="text" :name="`variations[${index}][size]`" x-model="v.size" placeholder="e.g. M"
-                                       class="bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 text-slate-200 placeholder-slate-600">
-                                <input type="text" :name="`variations[${index}][color]`" x-model="v.color" placeholder="e.g. Red"
-                                       class="bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 text-slate-200 placeholder-slate-600">
-                                <input type="text" :name="`variations[${index}][weight]`" x-model="v.weight" placeholder="e.g. 200g"
-                                       class="bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 text-slate-200 placeholder-slate-600">
-                                <input type="number" step="0.01" min="0" :name="`variations[${index}][price]`" x-model="v.price" placeholder="45.99"
-                                       class="bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 text-slate-200 placeholder-slate-600">
-                                <input type="number" min="0" :name="`variations[${index}][stock]`" x-model="v.stock" placeholder="10" required
-                                       class="bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 text-slate-200 placeholder-slate-600">
-                                <div class="text-right">
-                                    <button type="button" @click="removeVariation(index)" class="p-1 text-pink-400 hover:text-pink-300 bg-pink-500/10 hover:bg-pink-500/20 rounded text-sm transition">Remove</button>
+
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    <template x-for="pa in variationAttributes()" :key="pa.product_attribute_id">
+                                        <div>
+                                            <label class="block text-xs font-bold uppercase text-slate-400 mb-1" x-text="pa.name"></label>
+                                            <select :name="`variations[${index}][values][${pa.product_attribute_id}]`"
+                                                    :value="v.values[pa.product_attribute_id] || ''"
+                                                    @change="v.values[pa.product_attribute_id] = $event.target.value"
+                                                    class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                                <option value="">— Any —</option>
+                                                <template x-for="o in optionsForProductAttribute(pa)" :key="o.id">
+                                                    <option :value="o.id" x-text="o.name"></option>
+                                                </template>
+                                            </select>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <div class="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Regular (৳)</label>
+                                        <input type="number" step="0.01" min="0" :name="`variations[${index}][regular_price]`" x-model="v.regular_price"
+                                               class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Sale (৳)</label>
+                                        <input type="number" step="0.01" min="0" :name="`variations[${index}][sale_price]`" x-model="v.sale_price"
+                                               class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Stock</label>
+                                        <input type="number" min="0" :name="`variations[${index}][stock_quantity]`" x-model="v.stock_quantity"
+                                               :disabled="!v.manage_stock"
+                                               class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 disabled:opacity-50 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Status</label>
+                                        <select :name="`variations[${index}][stock_status]`" x-model="v.stock_status"
+                                                class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                            <option value="instock">In stock</option>
+                                            <option value="outofstock">Out of stock</option>
+                                            <option value="onbackorder">On backorder</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">SKU</label>
+                                        <input type="text" :name="`variations[${index}][sku]`" x-model="v.sku" placeholder="auto"
+                                               class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Enabled</label>
+                                        <select :name="`variations[${index}][status]`" x-model="v.status"
+                                                class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                            <option value="publish">Enabled</option>
+                                            <option value="private">Disabled</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Image</label>
+                                        <input type="file" :name="`variations[${index}][image]`" accept="image/*"
+                                               class="w-full text-xs text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-slate-700 file:text-white">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Weight</label>
+                                        <input type="number" step="0.001" min="0" :name="`variations[${index}][weight_value]`" x-model="v.weight_value"
+                                               class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                                    </div>
+                                    <div class="flex items-center gap-1.5">
+                                        <input type="checkbox" :name="`variations[${index}][manage_stock]`" value="1" x-model="v.manage_stock"
+                                               class="h-3.5 w-3.5 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
+                                        <label class="text-xs text-slate-300">Manage stock here</label>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <label class="flex items-center gap-1.5 text-xs text-slate-400">
+                                            <input type="checkbox" form="bulkVariationForm" :name="`bulk_variation_ids[]`" :value="v.id"
+                                                   class="h-3.5 w-3.5 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
+                                            Select
+                                        </label>
+                                        <div x-show="v.image_url" class="flex items-center gap-2">
+                                            <img :src="v.image_url" class="h-8 w-8 object-cover rounded border border-slate-700" alt="">
+                                            <label class="flex items-center gap-1 text-xs text-pink-400">
+                                                <input type="checkbox" :name="`variations[${index}][remove_image]`" value="1" x-model="v.remove_image"
+                                                       class="h-3 w-3 rounded border-slate-600 text-pink-400 focus:ring-pink-500">
+                                                Remove
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between">
+                                    <div class="text-xs text-slate-500" x-text="v.combo_key ? `Key: ${v.combo_key}` : ''"></div>
+                                    <button type="button" @click="removeVariation(index)" class="p-1 text-pink-400 hover:text-pink-300 bg-pink-500/10 hover:bg-pink-500/20 rounded text-sm transition">Remove row</button>
                                 </div>
                             </div>
                         </template>
@@ -312,26 +484,192 @@
             </a>
         </div>
     </form>
+
+    {{-- Bulk actions operate on the "Select" checkboxes inside the variations form. --}}
+    <form id="bulkVariationForm" action="{{ route('admin.products.variations.bulk', $product) }}" method="POST"
+          class="mt-6 bg-slate-900 border border-slate-800/50 rounded-2xl p-6">
+        @csrf
+
+        <h4 class="font-bold text-slate-200 text-sm mb-4">Bulk Actions</h4>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-300 mb-2">Action</label>
+                <select name="action" required
+                        class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                    <option value="set_regular_price">Set regular price</option>
+                    <option value="set_sale_price">Set sale price</option>
+                    <option value="increase_price">Increase regular price</option>
+                    <option value="decrease_price">Decrease regular price</option>
+                    <option value="set_stock">Set stock quantity</option>
+                    <option value="toggle_manage_stock">Toggle manage stock</option>
+                    <option value="set_weight">Set weight</option>
+                    <option value="enable">Enable</option>
+                    <option value="disable">Disable</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-300 mb-2">Value</label>
+                <input type="text" name="params[value]"
+                       class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-300 mb-2">Mode</label>
+                <select name="params[mode]"
+                        class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                    <option value="fixed">Fixed amount</option>
+                    <option value="percent">Percentage</option>
+                </select>
+            </div>
+
+            <div>
+                <button type="submit"
+                        class="w-full px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white rounded-lg text-sm font-bold transition">
+                    Apply to Selected
+                </button>
+            </div>
+        </div>
+
+        @error('variation_ids')
+            <span class="text-sm text-red-500 mt-2 block">{{ $message }}</span>
+        @enderror
+    </form>
 </div>
 @endsection
 
 @section('scripts')
+@php
+    $allAttributesPayload = $attributes->map(fn ($attribute) => [
+        'id' => $attribute->id,
+        'name' => $attribute->name,
+        'type' => $attribute->type,
+        'values' => $attribute->values->map(fn ($value) => [
+            'id' => $value->id,
+            'name' => $value->name,
+            'color_code' => $value->color_code,
+        ])->values(),
+    ])->values();
+
+    // For every saved product attribute, the value options a variation row
+    // may select. Global attributes use their own values; custom ones use the
+    // attribute values created for their options.
+    $variationOptionsPayload = $product->productAttributes->map(fn ($productAttribute) => [
+        'product_attribute_id' => $productAttribute->id,
+        'attribute_id' => $productAttribute->attribute_id,
+        'name' => $productAttribute->display_name,
+        'is_variation' => (bool) $productAttribute->is_variation,
+        'values' => $productAttribute->values->map(fn ($value) => [
+            'id' => $value->id,
+            'name' => $value->name,
+            'color_code' => $value->color_code,
+        ])->values(),
+    ])->values();
+
+    $variationRowsPayload = $product->variations->map(fn ($variation) => [
+        'id' => $variation->id,
+        'values' => $variation->attributeValues
+            ->mapWithKeys(fn ($value) => [$value->product_attribute_id => (string) $value->attribute_value_id])
+            ->all(),
+        'regular_price' => $variation->regular_price,
+        'sale_price' => $variation->sale_price,
+        'manage_stock' => (bool) $variation->manage_stock,
+        'stock_quantity' => $variation->stock_quantity,
+        'stock_status' => $variation->stock_status,
+        'sku' => $variation->sku,
+        'weight_value' => $variation->weight_value,
+        'status' => $variation->status,
+        'combo_key' => $variation->combo_key,
+        'image_url' => $variation->image_url,
+        'remove_image' => false,
+    ])->values();
+
+    $attributeRowsPayload = $product->productAttributes->map(fn ($productAttribute) => [
+        'product_attribute_id' => $productAttribute->id,
+        'attribute_id' => $productAttribute->attribute_id,
+        'custom_name' => $productAttribute->custom_name,
+        'options' => implode(', ', (array) $productAttribute->custom_options),
+        'value_ids' => $productAttribute->values->pluck('id')->map(fn ($id) => (int) $id)->all(),
+        'is_visible' => (bool) $productAttribute->is_visible,
+        'is_variation' => (bool) $productAttribute->is_variation,
+    ])->values();
+@endphp
 <script>
     function productForm() {
         return {
             productType: '{{ $product->product_type }}',
-            variations: [
-                @foreach($product->variations as $v)
-                    { id: '{{ $v->id }}', size: '{{ $v->size }}', color: '{{ $v->color }}', weight: '{{ $v->weight }}', price: '{{ $v->price }}', stock: {{ $v->stock }} },
-                @endforeach
-            ],
-            uploadImages: [],
-            addVariation() {
-                this.variations.push({ id: '', size: '', color: '', weight: '', price: '', stock: 10 });
+            allAttributes: {!! json_encode($allAttributesPayload) !!},
+            variationOptions: {!! json_encode($variationOptionsPayload) !!},
+            attributes: {!! json_encode($attributeRowsPayload) !!},
+            variations: {!! json_encode($variationRowsPayload) !!},
+
+            addAttribute() {
+                this.attributes.push({
+                    product_attribute_id: null,
+                    attribute_id: '',
+                    custom_name: '',
+                    options: '',
+                    value_ids: [],
+                    is_visible: true,
+                    is_variation: true,
+                });
             },
+
+            removeAttribute(index) {
+                this.attributes.splice(index, 1);
+            },
+
+            /** Value options for an unsaved attribute row. */
+            optionsFor(index) {
+                const row = this.attributes[index];
+                if (!row || !row.attribute_id) return [];
+
+                const attribute = this.allAttributes.find(a => a.id == row.attribute_id);
+                return attribute ? attribute.values : [];
+            },
+
+            onAttributeChange(index) {
+                this.attributes[index].value_ids = [];
+            },
+
+            /** Only the attributes flagged for variations, in display order. */
+            variationAttributes() {
+                return this.variationOptions.filter(a => a.is_variation);
+            },
+
+            optionsForProductAttribute(productAttribute) {
+                if (productAttribute.attribute_id) {
+                    const attribute = this.allAttributes.find(a => a.id == productAttribute.attribute_id);
+                    return attribute ? attribute.values : [];
+                }
+
+                return productAttribute.values;
+            },
+
+            addVariation() {
+                this.variations.push({
+                    id: '',
+                    values: {},
+                    regular_price: '',
+                    sale_price: '',
+                    manage_stock: true,
+                    stock_quantity: 0,
+                    stock_status: 'instock',
+                    sku: '',
+                    weight_value: '',
+                    status: 'publish',
+                    combo_key: null,
+                    image_url: null,
+                    remove_image: false,
+                });
+            },
+
             removeVariation(index) {
                 this.variations.splice(index, 1);
             },
+
+            uploadImages: [],
             addImageField() {
                 this.uploadImages.push({ name: '', alt_text: '' });
             },

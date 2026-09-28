@@ -3,19 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\AttributeValue;
+use App\Models\Coupon;
 use App\Models\DeliveryCharge;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductAttribute;
 use App\Models\ProductVariation;
 use App\Models\Setting;
 use App\Models\Slider;
+use App\Models\Testimonial;
 use App\Mail\NewOrderNotification;
 use App\Services\MetaPixelService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 class StoreController extends Controller
 {
@@ -25,12 +30,14 @@ class StoreController extends Controller
         $featuredProducts = Product::with(['images', 'categories'])->where('is_active', true)->where('is_featured', true)->orderBy('sort_order')->latest()->limit(8)->get();
         $latestProducts = Product::with(['images', 'categories'])->where('is_active', true)->orderBy('sort_order')->latest()->limit(8)->get();
         $sliders = Slider::active()->get();
-        $videoSliders = $sliders->filter(fn (Slider $slider) => $slider->isVideo())->values();
-        if ($videoSliders->isNotEmpty()) {
-            $sliders = $videoSliders;
+        $mediaSliders = $sliders->filter(fn (Slider $slider) => $slider->isVideo() || $slider->isAudio())->values();
+        if ($mediaSliders->isNotEmpty()) {
+            $sliders = $mediaSliders;
         }
 
-        return view('store.index', compact('featuredCategories', 'featuredProducts', 'latestProducts', 'sliders'));
+        $testimonials = Testimonial::active()->get();
+
+        return view('store.index', compact('featuredCategories', 'featuredProducts', 'latestProducts', 'sliders', 'testimonials'));
     }
 
     public function categories()
@@ -64,10 +71,12 @@ class StoreController extends Controller
         }
 
         // Price range bounds for slider (based on current category/search scope)
+        // Variable products use their cached min/max, which the variation
+        // service keeps in step with the purchasable variations.
         $priceBounds = (clone $query)
             ->toBase()
-            ->selectRaw('MIN(COALESCE(products.sale_price, products.regular_price, (SELECT MIN(price) FROM product_variations WHERE product_variations.product_id = products.id))) as min_price')
-            ->selectRaw('MAX(COALESCE(products.sale_price, products.regular_price, (SELECT MAX(price) FROM product_variations WHERE product_variations.product_id = products.id))) as max_price')
+            ->selectRaw('MIN(COALESCE(products.min_price, products.sale_price, products.regular_price, 0)) as min_price')
+            ->selectRaw('MAX(COALESCE(products.max_price, products.sale_price, products.regular_price, 0)) as max_price')
             ->first();
 
         $minPrice = (int) floor(($priceBounds->min_price ?? 0) / 100) * 100;
@@ -81,9 +90,11 @@ class StoreController extends Controller
             $query->where(function ($q) use ($request) {
                 // For simple products
                 $q->where('regular_price', '>=', $request->input('min_price'))
-                  // For variable products, we'll check variations price in a subquery or do simple logic
+                  // A variable product qualifies when any variation reaches it.
                   ->orWhereHas('variations', function ($qv) use ($request) {
-                      $qv->where('price', '>=', $request->input('min_price'));
+                      $qv->where('status', 'publish')
+                         ->whereNotNull('regular_price')
+                         ->where('regular_price', '>=', $request->input('min_price'));
                   });
             });
         }
@@ -93,7 +104,9 @@ class StoreController extends Controller
                     $qs->whereNotNull('regular_price')
                        ->where('regular_price', '<=', $request->input('max_price'));
                 })->orWhereHas('variations', function ($qv) use ($request) {
-                    $qv->where('price', '<=', $request->input('max_price'));
+                    $qv->where('status', 'publish')
+                       ->whereNotNull('regular_price')
+                       ->where('regular_price', '<=', $request->input('max_price'));
                 });
             });
         }
@@ -101,9 +114,9 @@ class StoreController extends Controller
         // Sorting
         $sort = $request->input('sort', 'latest');
         if ($sort === 'price_asc') {
-            $query->orderByRaw('COALESCE(products.sale_price, products.regular_price, (SELECT MIN(price) FROM product_variations WHERE product_variations.product_id = products.id)) asc');
+            $query->orderByRaw('COALESCE(products.min_price, products.sale_price, products.regular_price, 0) asc');
         } elseif ($sort === 'price_desc') {
-            $query->orderByRaw('COALESCE(products.sale_price, products.regular_price, (SELECT MAX(price) FROM product_variations WHERE product_variations.product_id = products.id)) desc');
+            $query->orderByRaw('COALESCE(products.max_price, products.sale_price, products.regular_price, 0) desc');
         } else {
             $query->orderBy('products.sort_order')->orderBy('products.created_at', 'desc');
         }
@@ -125,7 +138,12 @@ class StoreController extends Controller
 
     public function product($slug)
     {
-        $product = Product::with(['images', 'categories', 'variations'])->where('slug', $slug)->where('is_active', true)->firstOrFail();
+        $product = Product::with([
+            'images',
+            'categories',
+            'variations.attributeValues',
+            'productAttributes.values',
+        ])->where('slug', $slug)->where('is_active', true)->firstOrFail();
         
         // Find related products
         $categoryIds = $product->categories->pluck('id')->toArray();
@@ -138,19 +156,49 @@ class StoreController extends Controller
             ->limit(4)
             ->get();
 
-        // Group variations for dropdown rendering if product is variable
         $variationsJson = [];
+        $attributesJson = [];
+
         if ($product->product_type === 'variable') {
-            $variationsJson = $product->variations->map(function ($v) {
+            // Only purchasable, enabled variations are offered to customers.
+            $variations = $product->publishedVariations()->get();
+
+            $variationsJson = $variations->map(function (ProductVariation $variation) {
+                // Keyed by product attribute id so the storefront can look a
+                // variation up by the shopper's selection. A null value means
+                // the variation accepts any option for that attribute.
+                $values = [];
+
+                foreach ($variation->valuesByProductAttribute() as $attributeId => $value) {
+                    $values[$attributeId] = $value->attribute_value_id;
+                }
+
                 return [
-                    'id' => $v->id,
-                    'size' => $v->size,
-                    'color' => $v->color,
-                    'weight' => $v->weight,
-                    'price' => $v->price ?: $v->product->getDisplayPrice() ?: 0,
-                    'stock' => $v->stock,
+                    'id' => $variation->id,
+                    'values' => $values,
+                    'price' => $variation->active_price,
+                    'stock' => (int) $variation->effectiveStockQuantity(),
+                    'in_stock' => $variation->isInStock(),
+                    'sku' => $variation->sku,
+                    'image' => $variation->image ? Storage::url($variation->image) : null,
                 ];
-            });
+            })->values();
+
+            // The option pickers, in the order the product defines them.
+            $attributesJson = $product->productAttributes
+                ->filter(fn (ProductAttribute $attribute) => $attribute->is_visible && $attribute->values->isNotEmpty())
+                ->map(fn (ProductAttribute $attribute) => [
+                    'id' => $attribute->id,
+                    'name' => $attribute->display_name,
+                    'type' => $attribute->type,
+                    'is_variation' => (bool) $attribute->is_variation,
+                    'values' => $attribute->values->map(fn (AttributeValue $value) => [
+                        'id' => $value->id,
+                        'name' => $value->name,
+                        'color' => $value->swatch_color,
+                        'image' => $value->image_url,
+                    ])->values(),
+                ])->values();
         }
 
         // Send ViewContent to Conversion API
@@ -162,7 +210,7 @@ class StoreController extends Controller
             'currency' => 'BDT',
         ]);
 
-        return view('store.product', compact('product', 'relatedProducts', 'variationsJson'));
+        return view('store.product', compact('product', 'relatedProducts', 'variationsJson', 'attributesJson'));
     }
 
     public function cart()
@@ -188,12 +236,32 @@ class StoreController extends Controller
             if (!$variationId) {
                 return back()->with('error', 'Please select a product option.');
             }
-            $variation = ProductVariation::findOrFail($variationId);
-            if ($variation->stock < $qty) {
-                return back()->with('error', "Only {$variation->stock} items left in stock for this option.");
+
+            $variation = ProductVariation::with('attributeValues')->findOrFail($variationId);
+
+            if ($variation->product_id !== $product->id) {
+                return back()->with('error', 'That option does not belong to this product.');
             }
-            $price = $variation->price ?: $product->regular_price;
-            $variationDetails = trim("{$variation->size} {$variation->color} {$variation->weight}");
+
+            if (! $variation->isPurchasable()) {
+                return back()->with('error', 'Sorry, this option is currently unavailable.');
+            }
+
+            $available = (int) $variation->effectiveStockQuantity();
+
+            if ($available < $qty) {
+                return back()->with('error', "Only {$available} items left in stock for this option.");
+            }
+
+            // A variation never falls back to the parent price: the parent of a
+            // variable product has no price of its own.
+            $price = $variation->active_price;
+
+            if ($price === null) {
+                return back()->with('error', 'This option does not have a price yet.');
+            }
+
+            $variationDetails = $variation->attribute_label ?: null;
             $cartKey = "product_{$product->id}_var_{$variationId}";
         } else {
             if ($product->stock_quantity < $qty) {
@@ -209,15 +277,17 @@ class StoreController extends Controller
         if (isset($cart[$cartKey])) {
             $newQty = $cart[$cartKey]['quantity'] + $qty;
             // Validate stock again
-            if ($variation && $variation->stock < $newQty) {
-                return back()->with('error', "Cannot add more. Only {$variation->stock} items available in total.");
+            if ($variation && (int) $variation->effectiveStockQuantity() < $newQty) {
+                return back()->with('error', "Cannot add more. Only {$variation->effectiveStockQuantity()} items available in total.");
             } elseif (!$variation && $product->stock_quantity < $newQty) {
                 return back()->with('error', "Cannot add more. Only {$product->stock_quantity} items available in total.");
             }
             $cart[$cartKey]['quantity'] = $newQty;
         } else {
             $featuredImage = $product->images->where('is_featured', true)->first();
-            $imagePath = $featuredImage ? $featuredImage->image : null;
+            $imagePath = $variation && $variation->image
+                ? $variation->image
+                : ($featuredImage ? $featuredImage->image : null);
 
             $cart[$cartKey] = [
                 'product_id' => $product->id,
@@ -250,7 +320,7 @@ class StoreController extends Controller
             return redirect()->route('checkout');
         }
 
-        return redirect()->back()->with('success', 'Product added to cart successfully!')->with('open_side_cart', true);
+        return redirect()->route('cart')->with('success', 'Product added to cart successfully!');
     }
 
     public function updateCart(Request $request)
@@ -274,10 +344,11 @@ class StoreController extends Controller
 
         if ($cartItem['variation_id']) {
             $variation = ProductVariation::findOrFail($cartItem['variation_id']);
-            if ($variation->stock < $qty) {
+            $available = (int) $variation->effectiveStockQuantity();
+            if ($available < $qty) {
                 return response()->json([
-                    'success' => false, 
-                    'message' => "Only {$variation->stock} items available for this option."
+                    'success' => false,
+                    'message' => "Only {$available} items available for this option."
                 ], 422);
             }
         } else {
@@ -347,6 +418,13 @@ class StoreController extends Controller
         $deliveryZones = DeliveryCharge::orderBy('zone')->get();
         $customer = auth()->user();
 
+        // Re-check the coupon kept in the session against the live cart and
+        // drop it from the session when it is no longer valid.
+        [$coupon, $discount] = $this->resolveAppliedCoupon((float) $subtotal);
+        if (!$coupon) {
+            session()->forget('checkout_coupon_code');
+        }
+
         // Send InitiateCheckout + AddPaymentInfo to Conversion API
         $contentIds = array_values(array_map(fn($item) => $item['product_id'], $cart));
         app(MetaPixelService::class)->sendEvent('AddPaymentInfo', [
@@ -362,7 +440,72 @@ class StoreController extends Controller
             'num_items' => count($cart),
         ]);
 
-        return view('store.checkout', compact('cart', 'deliveryZones', 'subtotal', 'customer'));
+        return view('store.checkout', compact('cart', 'deliveryZones', 'subtotal', 'customer', 'coupon', 'discount'));
+    }
+
+    /**
+     * Apply a coupon code to the current cart (AJAX from the checkout page).
+     */
+    public function applyCoupon(Request $request)
+    {
+        $request->validate([
+            'code' => ['required', 'string', 'max:50'],
+        ]);
+
+        $cart = session()->get('cart', []);
+        if (empty($cart)) {
+            return response()->json(['success' => false, 'message' => 'Your cart is empty.'], 422);
+        }
+
+        $subtotal = (float) array_sum(array_map(fn($item) => $item['price'] * $item['quantity'], $cart));
+
+        $coupon = Coupon::whereRaw('UPPER(code) = ?', [strtoupper(trim($request->input('code')))])->first();
+        if (!$coupon) {
+            return response()->json(['success' => false, 'message' => 'Invalid coupon code.'], 422);
+        }
+
+        if ($reason = $coupon->rejectionReason($subtotal, auth()->id())) {
+            return response()->json(['success' => false, 'message' => $reason], 422);
+        }
+
+        $discount = $coupon->discountFor($subtotal);
+
+        session(['checkout_coupon_code' => $coupon->code]);
+
+        return response()->json([
+            'success' => true,
+            'code'    => $coupon->code,
+            'label'   => $coupon->value_label,
+            'discount' => $discount,
+            'discount_label' => '-৳' . number_format($discount, 0),
+        ]);
+    }
+
+    public function removeCoupon()
+    {
+        session()->forget('checkout_coupon_code');
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Load the coupon stored in the session and work out its discount.
+     *
+     * @return array{0: ?Coupon, 1: float}
+     */
+    private function resolveAppliedCoupon(float $subtotal): array
+    {
+        $code = session('checkout_coupon_code');
+        if (!$code) {
+            return [null, 0.0];
+        }
+
+        $coupon = Coupon::whereRaw('UPPER(code) = ?', [strtoupper($code)])->first();
+        if (!$coupon || $coupon->rejectionReason($subtotal, auth()->id())) {
+            return [null, 0.0];
+        }
+
+        return [$coupon, $coupon->discountFor($subtotal)];
     }
 
     public function placeOrder(Request $request)
@@ -391,8 +534,13 @@ class StoreController extends Controller
         foreach ($cart as $item) {
             $subtotal += $item['price'] * $item['quantity'];
         }
+        $subtotal = (float) $subtotal;
 
-        $totalAmount = (int) round($subtotal + $delivery->charge);
+        // The coupon is re-validated here so a tampered or expired session
+        // value can never change the price that gets stored.
+        [$coupon, $discount] = $this->resolveAppliedCoupon($subtotal);
+
+        $totalAmount = (int) round(max(0, $subtotal - $discount + $delivery->charge));
 
         $itemsArray = [];
         foreach ($cart as $item) {
@@ -415,7 +563,7 @@ class StoreController extends Controller
 
                 if ($item['variation_id']) {
                     $variation = ProductVariation::findOrFail($item['variation_id']);
-                    if ($variation->stock < $item['quantity']) {
+                    if ((int) $variation->effectiveStockQuantity() < $item['quantity']) {
                         throw new \Exception("{$product->name} ({$item['variation_details']}) is out of stock.");
                     }
                 } else {
@@ -434,6 +582,9 @@ class StoreController extends Controller
                 'customer_phone'      => $request->customer_phone,
                 'customer_address'    => $request->customer_address,
                 'delivery_charge_id'  => $delivery->id,
+                'coupon_id'           => $coupon?->id,
+                'coupon_code'         => $coupon?->code,
+                'discount_amount'     => $discount,
                 'total_amount'        => $totalAmount,
                 'total'               => $totalAmount,
                 'status'              => 'processing',
@@ -456,7 +607,7 @@ class StoreController extends Controller
 
                 if ($item['variation_id']) {
                     $variation = ProductVariation::findOrFail($item['variation_id']);
-                    $variation->decrement('stock', $item['quantity']);
+                    $variation->reduceStock($item['quantity']);
                     $product->updateStockFromVariations();
                 } else {
                     $product->decrement('stock_quantity', $item['quantity']);
@@ -465,7 +616,12 @@ class StoreController extends Controller
 
             DB::commit();
 
+            if ($coupon) {
+                $coupon->increment('used_count');
+            }
+
             session()->forget('cart');
+            session()->forget('checkout_coupon_code');
 
             // Flash purchase pixel data (consumed once in orderSuccess)
             $pixelContentIds = array_map(fn($item) => $item['product_id'], $cart);
@@ -488,7 +644,7 @@ class StoreController extends Controller
     public function orderSuccess(Order $order)
     {
         // Load the items relationship explicitly (not the attribute)
-        $order->load('items');
+        $order->load('items', 'deliveryCharge');
 
         // Send Purchase to Conversion API (one-time, never on refresh)
         $purchaseData = session()->get('pixel_purchase', null);

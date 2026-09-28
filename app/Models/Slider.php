@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Slider extends Model
 {
-    protected $fillable = ['title', 'image', 'video', 'video_type', 'link', 'sort_order', 'is_active'];
+    protected $fillable = ['title', 'image', 'video', 'video_type', 'audio', 'link', 'sort_order', 'is_active'];
 
     protected $casts = [
         'is_active' => 'boolean',
@@ -26,6 +26,11 @@ class Slider extends Model
     public function isYoutubeVideo(): bool
     {
         return $this->video_type === 'youtube' && !empty($this->video);
+    }
+
+    public function isAudio(): bool
+    {
+        return !empty($this->audio);
     }
 
     public function isUploadedVideo(): bool

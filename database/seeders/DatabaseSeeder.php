@@ -23,7 +23,15 @@ class DatabaseSeeder extends Seeder
             'name' => 'Admin',
             'email' => 'admin@outfitt.com',
             'password' => Hash::make('adminpassword'),
-            'is_admin' => true,
+            'role' => User::ROLE_SUPER_ADMIN,
+        ]);
+
+        // Seed a moderator who can only work with orders
+        User::create([
+            'name' => 'Moderator',
+            'email' => 'moderator@outfitt.com',
+            'password' => Hash::make('moderatorpassword'),
+            'role' => User::ROLE_MODERATOR,
         ]);
 
         // Seed a regular test user as well
@@ -31,7 +39,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Customer',
             'email' => 'customer@outfitt.com',
             'password' => Hash::make('password'),
-            'is_admin' => false,
+            'role' => User::ROLE_CUSTOMER,
         ]);
 
         // 2. Seed Delivery Charges

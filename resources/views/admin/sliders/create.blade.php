@@ -8,7 +8,7 @@
     
     <div class="mb-6">
         <h3 class="font-bold text-white text-lg">New Slider Item</h3>
-        <p class="text-sm text-slate-300 mt-1">Add an image, uploaded video or YouTube video for the home page hero. Recommended image size: <strong class="text-purple-400">1920 x 800 px</strong>.</p>
+        <p class="text-sm text-slate-300 mt-1">Add an image, uploaded video, YouTube video or audio track for the home page hero. Recommended image size: <strong class="text-purple-400">1920 x 800 px</strong>.</p>
     </div>
 
     <form action="{{ route('admin.sliders.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
@@ -18,9 +18,10 @@
             <label class="block text-sm font-bold uppercase tracking-wider text-slate-300 mb-2">Media Type</label>
             <select id="media_type" name="media_type"
                     class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-slate-800/50 transition-all text-slate-200">
-                <option value="image" {{ old('media_type') === 'video_upload' || old('media_type') === 'youtube' ? '' : 'selected' }}>Image</option>
+                <option value="image" {{ in_array(old('media_type'), ['video_upload', 'youtube', 'audio'], true) ? '' : 'selected' }}>Image</option>
                 <option value="video_upload" {{ old('media_type') === 'video_upload' ? 'selected' : '' }}>Video Upload</option>
                 <option value="youtube" {{ old('media_type') === 'youtube' ? 'selected' : '' }}>YouTube Video</option>
+                <option value="audio" {{ old('media_type') === 'audio' ? 'selected' : '' }}>Audio</option>
             </select>
         </div>
 
@@ -28,8 +29,18 @@
             <label for="image" class="block text-sm font-bold uppercase tracking-wider text-slate-300 mb-2">Image</label>
             <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/webp"
                    class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-slate-800/50 transition-all text-slate-200 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-purple-500/20 file:text-purple-400 hover:file:bg-purple-500/30">
-            <span class="text-xs text-slate-500 mt-1 block">Required when Media Type is <strong>Image</strong>. Optional as a video poster.</span>
+            <span class="text-xs text-slate-500 mt-1 block">Required when Media Type is <strong>Image</strong>. Optional as a video poster or audio cover.</span>
             @error('image')
+                <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
+            @enderror
+        </div>
+
+        <div id="audio_field" class="hidden">
+            <label for="audio" class="block text-sm font-bold uppercase tracking-wider text-slate-300 mb-2">Upload Audio <span class="text-pink-500">*</span></label>
+            <input type="file" id="audio" name="audio" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/aac,audio/x-m4a,audio/flac"
+                   class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-slate-800/50 transition-all text-slate-200 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-purple-500/20 file:text-purple-400 hover:file:bg-purple-500/30">
+            <span class="text-xs text-slate-500 mt-1 block">MP3, WAV, OGG, M4A, AAC or FLAC. Max 20 MB. Audio slides play only after the visitor taps play.</span>
+            @error('audio')
                 <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
             @enderror
         </div>
@@ -115,10 +126,12 @@
         const imageField = document.getElementById('image_field');
         const videoField = document.getElementById('video_upload_field');
         const youtubeField = document.getElementById('youtube_field');
+        const audioField = document.getElementById('audio_field');
 
         imageField.classList.toggle('hidden', type === 'video_upload' || type === 'youtube');
         videoField.classList.toggle('hidden', type !== 'video_upload');
         youtubeField.classList.toggle('hidden', type !== 'youtube');
+        audioField.classList.toggle('hidden', type !== 'audio');
     }
 
     document.addEventListener('DOMContentLoaded', function () {

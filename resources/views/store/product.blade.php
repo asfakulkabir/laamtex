@@ -15,7 +15,7 @@ fbq('track', 'ViewContent', {
 @endsection
 
 @section('content')
-<div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 md:py-10 pb-24 md:pb-10" x-data="productDetail({{ json_encode($variationsJson) }})">
+<div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 md:py-10 pb-24 md:pb-10" x-data="productDetail({{ json_encode($variationsJson) }}, {{ json_encode($attributesJson) }})">
     
     <!-- Breadcrumbs (desktop only) -->
     <nav class="hidden md:flex text-xs font-bold text-gray-400 mb-6 space-x-2">
@@ -59,7 +59,7 @@ fbq('track', 'ViewContent', {
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 3h6v6M10 14 21 3M21 14v7H3V3h7"/>
                     </svg>
-                    ক্লিক করে বড় দেখুন
+                    Click to view larger
                 </div>
             </div>
 
@@ -112,44 +112,36 @@ fbq('track', 'ViewContent', {
                     <input type="hidden" name="variation_id" x-model="selectedVariationId">
 
                     <div class="space-y-3 md:space-y-4 bg-purple-50/30 p-3 md:p-4 rounded-xl border border-purple-100/50">
-                        @php
-                            $sizes = $product->variations->pluck('size')->filter()->unique()->values()->toArray();
-                            $colors = $product->variations->pluck('color')->filter()->unique()->values()->toArray();
-                        @endphp
+                        @forelse($attributesJson as $attribute)
+                            @php $isSwatch = in_array($attribute['type'], ['color', 'image'], true); @endphp
 
-                        @if(count($colors) > 0)
                             <div>
-                                <label class="block text-xs text-gray-500 font-bold mb-2">রং</label>
+                                <label class="block text-xs text-gray-500 font-bold mb-2">{{ $attribute['name'] }}</label>
                                 <div class="flex flex-wrap gap-2">
-                                    @foreach($colors as $color)
-                                        <button type="button"
-                                                @click="selectedColor = '{{ $color }}'; matchVariation()"
-                                                class="w-9 h-9 md:w-10 md:h-10 rounded-full border-2 transition-all flex items-center justify-center font-bold text-xs hover:scale-105"
-                                                :class="selectedColor === '{{ $color }}' ? 'border-purple-600 ring-2 ring-purple-200 shadow' : 'border-gray-300 hover:border-purple-400'"
-                                                style="background-color: {{ strtolower($color) }}; color: {{ in_array(strtolower($color), ['white', 'yellow', 'lime']) ? '#333' : 'white' }};"
-                                                title="{{ $color }}">
-                                            <span x-show="selectedColor === '{{ $color }}'" class="text-sm">✓</span>
-                                        </button>
+                                    @foreach($attribute['values'] as $value)
+                                        @if($isSwatch)
+                                            <button type="button"
+                                                    @click="select({{ $attribute['id'] }}, {{ $value['id'] }})"
+                                                    class="w-9 h-9 md:w-10 md:h-10 rounded-full border-2 transition-all flex items-center justify-center font-bold text-xs hover:scale-105"
+                                                    :class="isSelected({{ $attribute['id'] }}, {{ $value['id'] }}) ? 'border-purple-600 ring-2 ring-purple-200 shadow' : 'border-gray-300 hover:border-purple-400'"
+                                                    style="background-color: {{ $value['color'] }}; @if(! empty($value['image'])) background-image: url('{{ $value['image'] }}'); background-size: cover; background-position: center; @endif color: {{ in_array(strtolower($value['name']), ['white', 'yellow', 'lime']) ? '#333' : 'white' }};"
+                                                    title="{{ $value['name'] }}">
+                                                <span x-show="isSelected({{ $attribute['id'] }}, {{ $value['id'] }})" class="text-sm">✓</span>
+                                            </button>
+                                        @else
+                                            <button type="button"
+                                                    @click="select({{ $attribute['id'] }}, {{ $value['id'] }})"
+                                                    class="px-4 py-2 rounded-lg border-2 font-bold text-sm transition-all active:scale-95 min-w-[3rem] text-center"
+                                                    :class="isSelected({{ $attribute['id'] }}, {{ $value['id'] }}) ? 'bg-purple-600 border-purple-600 text-white shadow' : 'bg-white border-gray-300 text-gray-700 hover:border-purple-400 hover:bg-gray-50'">
+                                                {{ $value['name'] }}
+                                            </button>
+                                        @endif
                                     @endforeach
                                 </div>
                             </div>
-                        @endif
-
-                        @if(count($sizes) > 0)
-                            <div>
-                                <label class="block text-xs text-gray-500 font-bold mb-2">সাইজ</label>
-                                <div class="flex flex-wrap gap-2">
-                                    @foreach($sizes as $size)
-                                        <button type="button"
-                                                @click="selectedSize = '{{ $size }}'; matchVariation()"
-                                                class="px-4 py-2 rounded-lg border-2 font-bold text-sm transition-all active:scale-95 min-w-[3rem] text-center"
-                                                :class="selectedSize === '{{ $size }}' ? 'bg-purple-600 border-purple-600 text-white shadow' : 'bg-white border-gray-300 text-gray-700 hover:border-purple-400 hover:bg-gray-50'">
-                                            {{ $size }}
-                                        </button>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endif
+                        @empty
+                            <p class="text-sm text-gray-500">No options available for this product yet.</p>
+                        @endforelse
                     </div>
                 @endif
 
@@ -180,7 +172,7 @@ fbq('track', 'ViewContent', {
                     <button type="button" @click="buyNow()" :disabled="!canOrder"
                             class="animate-order-pulse flex h-[52px] w-full items-center justify-center gap-2 rounded-[999px] border-0 bg-[#159758] px-[22px] py-[11px] text-base font-semibold leading-[26px] text-white shadow-[0_8px_16px_rgba(0,171,85,0.24)] transition-[filter,transform] duration-150 hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg>
-                        <span>অর্ডার করুন</span>
+                        <span>Order Now</span>
                     </button>
                 </div>
 
@@ -219,9 +211,9 @@ fbq('track', 'ViewContent', {
             <div class="pt-3 md:pt-4">
                 @if($product->product_type === 'simple')
                     @if($product->stock_quantity > 0)
-                        <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 bg-green-50 text-green-700 rounded-full border border-green-200">✅ স্টকে আছে</span>
+                        <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 bg-green-50 text-green-700 rounded-full border border-green-200">✅ In Stock</span>
                     @else
-                        <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 bg-red-50 text-red-700 rounded-full border border-red-200">❌ স্টক আউট</span>
+                        <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 bg-red-50 text-red-700 rounded-full border border-red-200">❌ Out of Stock</span>
                     @endif
                 @else
                     <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full border"
@@ -238,8 +230,8 @@ fbq('track', 'ViewContent', {
                         <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                     </div>
                     <div class="min-w-0">
-                        <p class="text-xs md:text-sm font-bold text-gray-900 leading-tight">দ্রুত ডেলিভারি</p>
-                        <p class="text-[11px] md:text-xs text-gray-500 mt-0.5">২-৩ দিনের মধ্যে নিরাপদ ডেলিভারি</p>
+                        <p class="text-xs md:text-sm font-bold text-gray-900 leading-tight">Fast Delivery</p>
+                        <p class="text-[11px] md:text-xs text-gray-500 mt-0.5">Safe delivery within 2-3 days</p>
                     </div>
                 </div>
                 <div class="flex items-start md:items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg md:rounded-[24px] p-3">
@@ -247,8 +239,8 @@ fbq('track', 'ViewContent', {
                         <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                     </div>
                     <div class="min-w-0">
-                        <p class="text-xs md:text-sm font-bold text-gray-900 leading-tight">ক্যাশ অন ডেলিভারি</p>
-                        <p class="text-[11px] md:text-xs text-gray-500 mt-0.5">পণ্য হাতে পেয়ে পেমেন্ট করুন</p>
+                        <p class="text-xs md:text-sm font-bold text-gray-900 leading-tight">Cash on Delivery</p>
+                        <p class="text-[11px] md:text-xs text-gray-500 mt-0.5">Pay when you receive the product</p>
                     </div>
                 </div>
             </div>
@@ -259,7 +251,7 @@ fbq('track', 'ViewContent', {
     <!-- Full Description -->
     @if($product->description)
         <div class="mt-6 md:mt-12 border-t border-gray-200 pt-5 md:pt-8">
-            <h3 class="text-lg md:text-2xl font-extrabold text-gray-900 mb-3 md:mb-5">📄 বিস্তারিত</h3>
+            <h3 class="text-lg md:text-2xl font-extrabold text-gray-900 mb-3 md:mb-5">📄 Details</h3>
             <div class="text-base text-gray-600 leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-purple-600 [&_a]:underline max-w-none">{!! $product->description !!}</div>
         </div>
     @endif
@@ -267,7 +259,7 @@ fbq('track', 'ViewContent', {
     <!-- Related Products -->
     @if($relatedProducts->count() > 0)
         <section class="mt-8 md:mt-16 border-t border-gray-200 pt-6 md:pt-12 space-y-4 md:space-y-6">
-            <h2 class="text-lg md:text-2xl font-extrabold text-gray-900 text-center">আরও দেখুন</h2>
+            <h2 class="text-lg md:text-2xl font-extrabold text-gray-900 text-center">See more</h2>
             <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2 md:gap-6">
                 @foreach($relatedProducts as $rel)
                     @include('store.partials.product-card', ['product' => $rel])
@@ -298,7 +290,7 @@ fbq('track', 'ViewContent', {
             <button type="button" @click="buyNow()" :disabled="!canOrder"
                     class="animate-order-pulse flex min-h-12 items-center justify-center gap-1.5 rounded-[999px] border-0 bg-[#159758] px-2 text-xs font-semibold leading-4 text-white shadow-[0_4px_10px_rgba(0,171,85,0.3)] transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 shrink-0"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg>
-                <span>অর্ডার করুন</span>
+                <span>Order Now</span>
             </button>
         </div>
     </div>
@@ -416,12 +408,14 @@ fbq('track', 'ViewContent', {
     }
 </style>
 <script>
-    function productDetail(variations) {
+    function productDetail(variations, attributes) {
         return {
             variations: variations || [],
+            attributes: attributes || [],
+            defaultImage: '{{ $featuredImg ? Storage::url($featuredImg->image) : "/placeholder.png" }}',
             activeImage: '{{ $featuredImg ? Storage::url($featuredImg->image) : "/placeholder.png" }}',
-            selectedSize: '',
-            selectedColor: '',
+            /** Selected value id per product attribute id. */
+            selected: {},
             qty: 1,
             selectedVariationId: '',
             variationStock: 0,
@@ -431,8 +425,8 @@ fbq('track', 'ViewContent', {
             simpleInStock: {{ $product->product_type === 'simple' ? ($product->stock_quantity > 0 ? 'true' : 'false') : 'true' }},
             
             formattedPrice: '৳{{ number_format($product->getDisplayPrice(), 2) }}',
-            stockStatusText: 'অপশন নির্বাচন করুন',
-            buttonText: 'অপশন নির্বাচন করুন',
+            stockStatusText: 'Select an option',
+            buttonText: 'Select an option',
 
             imageUrls: {!! json_encode($imagesList->pluck('image')->map(fn($i) => Storage::url($i))->values()) !!},
             autoSlideInterval: null,
@@ -446,6 +440,20 @@ fbq('track', 'ViewContent', {
 
             init() {
                 this.startAutoSlide();
+            },
+
+            /** The attributes that actually build variations. */
+            get variationAttributeIds() {
+                return this.attributes.filter(a => a.is_variation).map(a => a.id);
+            },
+
+            select(attributeId, valueId) {
+                this.selected[attributeId] = valueId;
+                this.matchVariation();
+            },
+
+            isSelected(attributeId, valueId) {
+                return this.selected[attributeId] == valueId;
             },
 
             onZoomMove(e) {
@@ -518,42 +526,78 @@ fbq('track', 'ViewContent', {
                 this.startAutoSlide();
             },
 
+            stopAutoSlide() {
+                if (this.autoSlideInterval) {
+                    clearInterval(this.autoSlideInterval);
+                    this.autoSlideInterval = null;
+                }
+            },
+
             matchVariation() {
-                if (!this.selectedSize && !this.selectedColor) {
-                    this.selectedVariationId = '';
-                    this.variationStock = 0;
-                    this.formattedPrice = '৳{{ number_format($product->getDisplayPrice(), 2) }}';
-                    this.stockStatusText = 'অপশন নির্বাচন করুন';
-                    this.buttonText = 'অপশন নির্বাচন করুন';
+                var basePrice = {{ $product->getDisplayPrice() ?: 0 }};
+                var required = this.variationAttributeIds;
+
+                this.selectedVariationId = '';
+                this.variationStock = 0;
+                this.variationPrice = basePrice;
+                this.formattedPrice = '৳' + Number(basePrice).toFixed(2);
+                this.stockStatusText = 'Select an option';
+                this.buttonText = 'Select an option';
+
+                // Nothing to match until every variation attribute is chosen.
+                var chosen = required.filter(id => this.selected[id]);
+                if (required.length === 0 || chosen.length < required.length) {
                     return;
                 }
 
-                var basePrice = {{ $product->getDisplayPrice() ?: 0 }};
-                let match = this.variations.find(v => {
-                    let sizeMatch = !v.size || v.size === this.selectedSize;
-                    let colorMatch = !v.color || v.color === this.selectedColor;
-                    return sizeMatch && colorMatch;
-                });
+                // Spec: prefer an exact match on every attribute, then fall back
+                // to a variation that leaves one or more attributes as "Any".
+                var matches = function (allowAny) {
+                    return function (v) {
+                        return required.every(function (id) {
+                            var variationValue = v.values[id];
+                            if (variationValue === null || variationValue === undefined) {
+                                return allowAny;
+                            }
+                            return String(variationValue) === String(this.selected[id]);
+                        }, this);
+                    };
+                };
 
-                if (match) {
-                    this.selectedVariationId = match.id;
-                    this.variationStock = match.stock;
-                    this.variationPrice = match.price ? parseFloat(match.price) : basePrice;
-                    this.formattedPrice = '৳' + this.variationPrice.toFixed(2);
-                    
-                    if (match.stock > 0) {
-                        this.stockStatusText = '✅ স্টকে আছে';
-                        this.buttonText = '🛒 কার্টে যোগ করুন';
-                    } else {
-                        this.stockStatusText = '❌ স্টক আউট';
-                        this.buttonText = '❌ স্টক নেই';
-                    }
-                } else {
-                    this.selectedVariationId = '';
-                    this.variationStock = 0;
-                    this.stockStatusText = 'এই কম্বিনেশন নেই';
+                var match = this.variations.find(matches(false), this)
+                    || this.variations.find(matches(true), this);
+
+                if (!match) {
+                    this.stockStatusText = 'This combination is unavailable';
                     this.formattedPrice = 'N/A';
-                    this.buttonText = 'কম্বিনেশন নেই';
+                    this.buttonText = 'Combination unavailable';
+                    return;
+                }
+
+                this.selectedVariationId = match.id;
+                this.variationStock = match.stock;
+
+                if (match.price !== null && match.price !== undefined) {
+                    this.variationPrice = parseFloat(match.price);
+                    this.formattedPrice = '৳' + this.variationPrice.toFixed(2);
+                }
+
+                // A variation with its own image swaps the main image and holds
+                // it there; otherwise the gallery keeps auto-rotating.
+                if (match.image) {
+                    this.activeImage = match.image;
+                    this.stopAutoSlide();
+                } else if (this.activeImage !== this.defaultImage) {
+                    this.activeImage = this.defaultImage;
+                    this.resetAutoSlide();
+                }
+
+                if (match.in_stock) {
+                    this.stockStatusText = '✅ In Stock';
+                    this.buttonText = '🛒 Add to Cart';
+                } else {
+                    this.stockStatusText = '❌ Out of Stock';
+                    this.buttonText = '❌ Out of Stock';
                 }
             },
 

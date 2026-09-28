@@ -10,7 +10,7 @@ class AuthController extends Controller
 {
     public function showLogin()
     {
-        if (Auth::check() && Auth::user()->is_admin) {
+        if (Auth::check() && Auth::user()->isAdmin()) {
             return redirect()->route('admin.dashboard');
         }
         return view('admin.auth.login');
@@ -25,7 +25,13 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $user = Auth::user();
-            if ($user->is_admin) {
+            if ($user->isAdmin()) {
+                // Start the notification badge from "now" so older orders are
+                // not all shown as new on the first login.
+                if (!$user->orders_seen_at) {
+                    $user->forceFill(['orders_seen_at' => now()])->save();
+                }
+
                 $request->session()->regenerate();
                 return redirect()->intended(route('admin.dashboard'));
             }

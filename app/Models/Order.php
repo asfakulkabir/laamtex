@@ -29,6 +29,9 @@ class Order extends Model
         'customer_phone',
         'customer_address',
         'delivery_charge_id',
+        'coupon_id',
+        'coupon_code',
+        'discount_amount',
         'bkash_trx_id',
         'bkash_sender_last4',
         'total_amount',
@@ -41,6 +44,7 @@ class Order extends Model
 
     protected $casts = [
         'total_amount'           => 'integer',
+        'discount_amount'        => 'float',
         'is_sent_to_steadfast'   => 'boolean',
         'is_notification_sent'   => 'boolean',
     ];
@@ -54,6 +58,11 @@ class Order extends Model
     public function deliveryCharge()
     {
         return $this->belongsTo(DeliveryCharge::class);
+    }
+
+    public function coupon()
+    {
+        return $this->belongsTo(Coupon::class);
     }
 
     public function items()
@@ -70,5 +79,18 @@ class Order extends Model
     public function getItemsAttribute(): array
     {
         return json_decode($this->items_json ?: '[]', true);
+    }
+
+    public function getDeliveryChargeAmountAttribute(): float
+    {
+        return (float) ($this->deliveryCharge->charge ?? 0);
+    }
+
+    /**
+     * Item total before delivery charge and coupon discount.
+     */
+    public function getSubtotalAttribute(): float
+    {
+        return round($this->total_amount + (float) $this->discount_amount - $this->delivery_charge_amount, 2);
     }
 }

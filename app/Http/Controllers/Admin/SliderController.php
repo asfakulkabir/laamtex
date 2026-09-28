@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Storage;
 
 class SliderController extends Controller
 {
+    protected const AUDIO_RULES = 'nullable|file|mimes:mp3,wav,ogg,m4a,aac,flac|mimetypes:audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/wave,audio/ogg,audio/x-ogg,audio/vorbis,audio/mp4,audio/m4a,audio/aac,audio/x-aac,audio/flac,audio/x-flac|max:20480';
+
     public function index()
     {
         $sliders = Slider::orderBy('sort_order')->get();
@@ -25,8 +27,9 @@ class SliderController extends Controller
         $request->validate([
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'video' => 'nullable|file|mimes:mp4,webm,mov,ogv,m4v|max:51200',
+            'audio' => self::AUDIO_RULES,
             'youtube_url' => 'nullable|url|max:1000',
-            'media_type' => 'required|in:image,video_upload,youtube',
+            'media_type' => 'required|in:image,video_upload,youtube,audio',
             'title' => 'nullable|string|max:255',
             'link' => 'nullable|url|max:1000',
             'sort_order' => 'nullable|integer|min:0',
@@ -42,12 +45,21 @@ class SliderController extends Controller
         $data['image'] = null;
         $data['video'] = null;
         $data['video_type'] = null;
+        $data['audio'] = null;
 
         if ($mediaType === 'image') {
             if (!$request->hasFile('image')) {
                 return back()->withErrors(['image' => 'An image is required when media type is Image.'])->withInput();
             }
             $data['image'] = $request->file('image')->store('sliders', 'public');
+        } elseif ($mediaType === 'audio') {
+            if (!$request->hasFile('audio')) {
+                return back()->withErrors(['audio' => 'An audio file is required when media type is Audio.'])->withInput();
+            }
+            $data['audio'] = $request->file('audio')->store('sliders/audio', 'public');
+            if ($request->hasFile('image')) {
+                $data['image'] = $request->file('image')->store('sliders', 'public');
+            }
         } elseif ($mediaType === 'video_upload' && $request->hasFile('video')) {
             $data['video'] = $request->file('video')->store('sliders/videos', 'public');
             $data['video_type'] = 'upload';
@@ -81,8 +93,9 @@ class SliderController extends Controller
         $request->validate([
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'video' => 'nullable|file|mimes:mp4,webm,mov,ogv,m4v|max:51200',
+            'audio' => self::AUDIO_RULES,
             'youtube_url' => 'nullable|url|max:1000',
-            'media_type' => 'required|in:image,video_upload,youtube',
+            'media_type' => 'required|in:image,video_upload,youtube,audio',
             'title' => 'nullable|string|max:255',
             'link' => 'nullable|url|max:1000',
             'sort_order' => 'nullable|integer|min:0',
@@ -98,11 +111,26 @@ class SliderController extends Controller
         if ($mediaType === 'image') {
             $data['video'] = null;
             $data['video_type'] = null;
+            $data['audio'] = null;
+            if ($request->hasFile('image')) {
+                $this->deleteImage($slider);
+                $data['image'] = $request->file('image')->store('sliders', 'public');
+            }
+        } elseif ($mediaType === 'audio') {
+            if ($request->hasFile('audio')) {
+                $this->deleteAudio($slider);
+                $data['audio'] = $request->file('audio')->store('sliders/audio', 'public');
+            } elseif (!$slider->isAudio()) {
+                return back()->withErrors(['audio' => 'An audio file is required when media type is Audio.'])->withInput();
+            }
+            $data['video'] = null;
+            $data['video_type'] = null;
             if ($request->hasFile('image')) {
                 $this->deleteImage($slider);
                 $data['image'] = $request->file('image')->store('sliders', 'public');
             }
         } elseif ($mediaType === 'video_upload') {
+            $data['audio'] = null;
             if ($request->hasFile('video')) {
                 $this->deleteVideo($slider);
                 $data['video'] = $request->file('video')->store('sliders/videos', 'public');
@@ -115,6 +143,7 @@ class SliderController extends Controller
                 $data['image'] = $request->file('image')->store('sliders', 'public');
             }
         } elseif ($mediaType === 'youtube') {
+            $data['audio'] = null;
             if ($request->filled('youtube_url')) {
                 $data['video'] = trim($request->input('youtube_url'));
                 $data['video_type'] = 'youtube';
@@ -136,6 +165,7 @@ class SliderController extends Controller
     {
         $this->deleteImage($slider);
         $this->deleteVideo($slider);
+        $this->deleteAudio($slider);
         $slider->delete();
 
         return redirect()->route('admin.sliders.index')->with('success', 'Slider item deleted successfully.');
@@ -152,6 +182,13 @@ class SliderController extends Controller
     {
         if ($slider->isUploadedVideo() && $slider->video) {
             Storage::disk('public')->delete($slider->video);
+        }
+    }
+
+    protected function deleteAudio(Slider $slider)
+    {
+        if ($slider->isAudio() && $slider->audio) {
+            Storage::disk('public')->delete($slider->audio);
         }
     }
 }

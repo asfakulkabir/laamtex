@@ -10,7 +10,7 @@ class CustomerController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::where('is_admin', false)->withCount('orders');
+        $query = User::customers()->withCount('orders');
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -37,7 +37,7 @@ class CustomerController extends Controller
 
     public function show(User $customer)
     {
-        abort_if($customer->is_admin, 404);
+        abort_if($customer->isAdmin(), 404);
 
         $orders = $customer->orders()->with('deliveryCharge')->latest()->get();
 
@@ -46,7 +46,7 @@ class CustomerController extends Controller
 
     public function destroy(User $customer)
     {
-        abort_if($customer->is_admin, 404);
+        abort_if($customer->isAdmin(), 404);
 
         $name = $customer->name;
         $customer->delete();

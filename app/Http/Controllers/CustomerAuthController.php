@@ -15,7 +15,7 @@ class CustomerAuthController extends Controller
     // ------------------------------------------------------------
     public function showRegister()
     {
-        if (Auth::check() && !Auth::user()->is_admin) {
+        if (Auth::check() && Auth::user()->isCustomer()) {
             return redirect()->route('customer.dashboard');
         }
         return view('store.register');
@@ -37,7 +37,7 @@ class CustomerAuthController extends Controller
             'phone'    => $request->input('phone'),
             'address'  => $request->input('address'),
             'password' => $request->input('password'),
-            'is_admin' => false,
+            'role'     => User::ROLE_CUSTOMER,
         ]);
 
         Auth::login($user);
@@ -52,7 +52,7 @@ class CustomerAuthController extends Controller
     // ------------------------------------------------------------
     public function showLogin()
     {
-        if (Auth::check() && !Auth::user()->is_admin) {
+        if (Auth::check() && Auth::user()->isCustomer()) {
             return redirect()->route('customer.dashboard');
         }
         return view('store.login');
@@ -68,7 +68,7 @@ class CustomerAuthController extends Controller
         $login = trim($credentials['login']);
         $user = User::where('email', $login)->orWhere('phone', $login)->first();
 
-        if ($user && !$user->is_admin && Hash::check($credentials['password'], $user->password)) {
+        if ($user && $user->isCustomer() && Hash::check($credentials['password'], $user->password)) {
             Auth::login($user, $request->boolean('remember'));
             $request->session()->regenerate();
 
@@ -111,7 +111,7 @@ class CustomerAuthController extends Controller
         $login = trim($request->input('login'));
         $user = User::where('email', $login)
             ->orWhere('phone', $login)
-            ->where('is_admin', false)
+            ->where('role', User::ROLE_CUSTOMER)
             ->first();
 
         if ($user && $user->email) {

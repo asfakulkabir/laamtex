@@ -1,6 +1,6 @@
 @extends('layouts.store')
 
-@section('title', 'চেকআউট - ' . site_name())
+@section('title', 'Checkout - ' . site_name())
 
 @section('pixel_events')
 <script>
@@ -21,7 +21,7 @@ fbq('track', 'InitiateCheckout', {
 @section('content')
 <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4" x-data="checkoutPage({{ $deliveryZones }})">
 
-    <h1 class="text-xl font-extrabold text-gray-900 mb-2 sm:mb-3">🔒 চেকআউট</h1>
+    <h1 class="text-xl font-extrabold text-gray-900 mb-2 sm:mb-3">🔒 Checkout</h1>
 
     @if(session('error'))
         <div class="mb-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm font-semibold">
@@ -31,8 +31,8 @@ fbq('track', 'InitiateCheckout', {
 
     @auth
         <div class="mb-3 bg-purple-50 border border-purple-200 text-purple-800 px-3 py-2 rounded-lg text-sm font-semibold flex flex-wrap items-center gap-2">
-            <span>👤 আপনার সংরক্ষিত তথ্য দিয়ে ফর্মটি পূরণ করা হয়েছে।</span>
-            <a href="{{ route('customer.profile.edit') }}" class="text-purple-600 underline font-bold">প্রোফাইল এডিট করুন</a>
+            <span>👤 We have filled this form in with your saved details.</span>
+            <a href="{{ route('customer.profile.edit') }}" class="text-purple-600 underline font-bold">Edit profile</a>
         </div>
     @endauth
 
@@ -47,19 +47,19 @@ fbq('track', 'InitiateCheckout', {
 
                 <!-- Customer Information -->
                 <div class="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 space-y-2.5 sm:space-y-3 shadow-sm">
-                    <h2 class="font-bold text-gray-900 text-base border-b border-gray-200 pb-2">📋 আপনার তথ্য</h2>
+                    <h2 class="font-bold text-gray-900 text-base border-b border-gray-200 pb-2">📋 Your Details</h2>
 
                     <div class="space-y-2.5 sm:space-y-3">
 
                         <!-- Full Name -->
                         <div>
                             <label for="customer_name" class="block text-sm font-bold text-gray-600 mb-1">
-                                আপনার নাম <span class="text-pink-500">*</span>
+                                Your Name <span class="text-pink-500">*</span>
                             </label>
                             <input type="text" id="customer_name" name="customer_name"
                                    value="{{ old('customer_name', $customer->name ?? '') }}" required
                                    class="w-full bg-white border-2 border-gray-400 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                                   placeholder="আপনার পুরো নাম লিখুন">
+                                   placeholder="Enter your full name">
                             @error('customer_name')
                                 <span class="text-sm text-red-500 mt-0.5 block">{{ $message }}</span>
                             @enderror
@@ -68,7 +68,7 @@ fbq('track', 'InitiateCheckout', {
                         <!-- Phone -->
                         <div>
                             <label for="customer_phone" class="block text-sm font-bold text-gray-600 mb-1">
-                                মোবাইল নম্বর <span class="text-pink-500">*</span>
+                                Mobile Number <span class="text-pink-500">*</span>
                             </label>
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 text-base font-semibold select-none">🇧🇩</span>
@@ -81,17 +81,17 @@ fbq('track', 'InitiateCheckout', {
                             @error('customer_phone')
                                 <span class="text-sm text-red-500 mt-0.5 block">{{ $message }}</span>
                             @enderror
-                            <p class="text-xs text-gray-400 mt-0.5">ফরম্যাট: 01XXXXXXXXX (বাংলাদেশি নম্বর)</p>
+                            <p class="text-xs text-gray-400 mt-0.5">Format: 01XXXXXXXXX (Bangladeshi number)</p>
                         </div>
 
                         <!-- Address (reduced height) -->
                         <div>
                             <label for="customer_address" class="block text-sm font-bold text-gray-600 mb-1">
-                                ঠিকানা <span class="text-pink-500">*</span>
+                                Address <span class="text-pink-500">*</span>
                             </label>
                             <textarea id="customer_address" name="customer_address" rows="2" required
                                       class="w-full bg-white border-2 border-gray-400 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                                      placeholder="বাসা / রাস্তা / এলাকা / শহর / জেলা">{{ old('customer_address', $customer->address ?? '') }}</textarea>
+                                      placeholder="House / Road / Area / City / District">{{ old('customer_address', $customer->address ?? '') }}</textarea>
                             @error('customer_address')
                                 <span class="text-sm text-red-500 mt-0.5 block">{{ $message }}</span>
                             @enderror
@@ -100,7 +100,7 @@ fbq('track', 'InitiateCheckout', {
                         <!-- Delivery Zone (radio buttons) -->
                         <div>
                             <label class="block text-sm font-bold text-gray-600 mb-2">
-                                ডেলিভারি জোন <span class="text-pink-500">*</span>
+                                Delivery Zone <span class="text-pink-500">*</span>
                             </label>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 @foreach($deliveryZones as $zone)
@@ -119,7 +119,7 @@ fbq('track', 'InitiateCheckout', {
                                                 <span class="font-bold text-primary text-sm">৳{{ number_format($zone->charge, 0) }}</span>
                                             </div>
                                             @if($zone->estimated_days)
-                                                <p class="text-xs text-gray-400">⏱ {{ $zone->estimated_days }}-এর মধ্যে ডেলিভারি</p>
+                                                <p class="text-xs text-gray-400">⏱ Delivery in {{ $zone->estimated_days }}</p>
                                             @endif
                                         </div>
                                     </label>
@@ -131,7 +131,7 @@ fbq('track', 'InitiateCheckout', {
 
                             <div x-show="selectedZoneDays" x-cloak
                                  class="mt-1.5 text-sm font-semibold text-primary bg-purple-50 border border-purple-200 px-3 py-1.5 rounded-md">
-                                🚚 আনুমানিক ডেলিভারি: <span x-text="selectedZoneDays" class="font-bold"></span>
+                                🚚 Estimated Delivery: <span x-text="selectedZoneDays" class="font-bold"></span>
                             </div>
                         </div>
 
@@ -143,7 +143,7 @@ fbq('track', 'InitiateCheckout', {
                     @php
                         $bkashNumber = App\Models\Setting::getValue('bkash_number', '');
                     @endphp
-                    <h2 class="font-bold text-gray-900 text-base mb-2">💳 পেমেন্ট মেথড</h2>
+                    <h2 class="font-bold text-gray-900 text-base mb-2">💳 Payment Method</h2>
 
                     <div class="space-y-2">
                         <!-- Cash on Delivery -->
@@ -157,8 +157,8 @@ fbq('track', 'InitiateCheckout', {
                             </div>
                             <div class="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center text-lg">💵</div>
                             <div>
-                                <p class="font-bold text-gray-900 text-sm">ক্যাশ অন ডেলিভারি</p>
-                                <p class="text-gray-500 text-xs">অর্ডার আপনার দরজায় পৌঁছালে পেমেন্ট করুন</p>
+                                <p class="font-bold text-gray-900 text-sm">Cash on Delivery</p>
+                                <p class="text-gray-500 text-xs">Pay when the order arrives at your door</p>
                             </div>
                         </label>
 
@@ -174,7 +174,7 @@ fbq('track', 'InitiateCheckout', {
                             <div class="w-9 h-9 rounded-full bg-pink-100 flex items-center justify-center text-lg">💳</div>
                             <div>
                                 <p class="font-bold text-gray-900 text-sm">bKash Send Money</p>
-                                <p class="text-gray-500 text-xs">bKash থেকে Send Money করে সম্পূর্ণ পেমেন্ট করুন</p>
+                                <p class="text-gray-500 text-xs">Send the full payment from bKash using Send Money</p>
                             </div>
                         </label>
                     </div>
@@ -185,18 +185,18 @@ fbq('track', 'InitiateCheckout', {
                          @keydown.escape.window="selectedPayment = 'cod'">
                         <div class="flex items-center justify-between gap-3">
                             <div>
-                                <p class="text-xs font-bold text-pink-700 uppercase tracking-wide">💯 Send Money করুন এই নম্বরে</p>
+                                <p class="text-xs font-bold text-pink-700 uppercase tracking-wide">💯 Send Money to this number</p>
                                 <p class="text-lg font-extrabold text-gray-900 mt-0.5 tracking-wide">{{ $bkashNumber }}</p>
                             </div>
                             <button type="button" @click="copyBkashNumber()"
                                     class="text-xs font-bold text-pink-600 border border-pink-300 bg-white px-3 py-1.5 rounded-lg hover:bg-pink-100 focus:outline-none transition">
-                                📋 কপি করুন
+                                📋 Copy
                             </button>
                         </div>
 
                         <div>
                             <label for="bkash_sender_last4" class="block text-sm font-bold text-gray-700 mb-1">
-                                কোন নম্বর থেকে Send Money করেছেন? (শেষ <span class="text-pink-500">৪ ডিজিট</span>)
+                                Which number did you Send Money from? (last <span class="text-pink-500">4 digits</span>)
                             </label>
                             <input type="text" id="bkash_sender_last4" name="bkash_sender_last4"
                                    inputmode="numeric" maxlength="4" autocomplete="off"
@@ -208,7 +208,7 @@ fbq('track', 'InitiateCheckout', {
                                    placeholder="XXXX">
                             <div x-show="bkashLast4.length > 0" x-cloak
                                  class="text-xs text-pink-600 mt-1 font-semibold">
-                                ✅ যেই নম্বর থেকে Send Money করেছেন তার শেষ ৪ ডিজিট: <span class="font-extrabold" x-text="bkashLast4"></span>
+                                ✅ Last 4 digits of the number you sent from: <span class="font-extrabold" x-text="bkashLast4"></span>
                             </div>
                             @error('bkash_sender_last4')
                                 <span class="text-sm text-red-500 mt-0.5 block">{{ $message }}</span>
@@ -222,7 +222,7 @@ fbq('track', 'InitiateCheckout', {
             <!-- Right: Order Summary -->
             <aside class="space-y-2 sm:space-y-3">
                 <div class="bg-white border border-gray-200 p-3 sm:p-4 rounded-xl shadow-sm space-y-2.5 sm:space-y-3 lg:sticky lg:top-20">
-                    <h3 class="font-bold text-gray-900 text-base">🛒 অর্ডার সারসংক্ষেপ</h3>
+                    <h3 class="font-bold text-gray-900 text-base">🛒 Order Summary</h3>
 
                     <!-- Cart Items -->
                     <div class="space-y-2">
@@ -257,29 +257,66 @@ fbq('track', 'InitiateCheckout', {
 
                     <div class="border-t border-gray-200 pt-3 space-y-1.5 text-sm">
                         <div class="flex justify-between text-gray-500">
-                            <span>সাবটোটাল</span>
+                            <span>Subtotal</span>
                             <span class="font-semibold text-gray-900">৳{{ number_format($subtotal, 0) }}</span>
                         </div>
+
+                        <!-- Coupon -->
+                        <div>
+                            <div x-show="!couponApplied" x-cloak>
+                                <div class="flex gap-2">
+                                    <input type="text" x-model="couponCode" @keydown.enter.prevent="applyCoupon()"
+                                           placeholder="Discount coupon code"
+                                           class="flex-1 bg-white border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500 transition-all uppercase">
+                                    <button type="button" @click="applyCoupon()" :disabled="couponLoading"
+                                            class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition disabled:opacity-50">
+                                        <span x-show="!couponLoading">Apply</span>
+                                        <span x-show="couponLoading" x-cloak>Checking...</span>
+                                    </button>
+                                </div>
+                                <p x-show="couponMessage" x-cloak
+                                   class="mt-1 text-xs font-semibold"
+                                   :class="couponError ? 'text-red-500' : 'text-green-600'" x-text="couponMessage"></p>
+                            </div>
+
+                            <div x-show="couponApplied" x-cloak
+                                 class="flex items-center justify-between gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                                <div class="text-xs font-bold text-green-700">
+                                    ✅ <span x-text="couponLabel"></span>
+                                    <span class="font-mono" x-text="couponCode"></span>
+                                    <span class="ml-1 text-green-600" x-text="couponDiscountLabel"></span>
+                                </div>
+                                <button type="button" @click="removeCoupon()" class="text-xs font-bold text-red-500 hover:underline">
+                                    ✕ Cancel
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between text-gray-500" x-show="discount > 0" x-cloak>
+                            <span>Discount</span>
+                            <span class="font-semibold text-green-600" x-text="'-৳' + Math.round(discount)"></span>
+                        </div>
+
                         <div class="flex justify-between text-gray-500">
-                            <span>ডেলিভারি চার্জ</span>
-                            <span class="font-semibold text-gray-900" x-text="formattedShippingCharge">জোন নির্বাচন করুন</span>
+                            <span>Delivery Charge</span>
+                            <span class="font-semibold text-gray-900" x-text="formattedShippingCharge">Select a zone</span>
                         </div>
                     </div>
 
                     <div class="border-t border-gray-200 pt-3 flex justify-between font-bold text-gray-900">
-                        <span>সর্বমোট</span>
-                        <span class="text-purple-600" x-text="formattedGrandTotal">৳{{ number_format($subtotal, 0) }}</span>
+                        <span>Total</span>
+                        <span class="text-purple-600" x-text="formattedGrandTotal">৳{{ number_format($subtotal - $discount, 0) }}</span>
                     </div>
 
                     <button type="submit" :disabled="submitting"
                             class="block w-full text-center py-4 bg-primary hover:bg-primary text-white rounded-lg font-bold transition shadow-md active:scale-95 text-lg disabled:opacity-60 disabled:cursor-not-allowed">
-                        <span x-show="!submitting">✅ অর্ডার কনফার্ম করুন</span>
-                        <span x-show="submitting" x-cloak>⏳ অর্ডার প্রসেস হচ্ছে...</span>
+                        <span x-show="!submitting">✅ Confirm Order</span>
+                        <span x-show="submitting" x-cloak>⏳ Processing your order...</span>
                     </button>
 
                     <a href="{{ route('cart') }}"
                        class="block w-full text-center py-1.5 text-xs font-bold text-gray-400 hover:text-gray-700 transition">
-                        ← কার্ট এডিট করুন
+                        ← Edit Cart
                     </a>
                 </div>
             </aside>
@@ -293,6 +330,8 @@ fbq('track', 'InitiateCheckout', {
 <script>
     function checkoutPage(zones) {
         const subtotal = {{ $subtotal ?? 0 }};
+        const initialDiscount = {{ (float) ($discount ?? 0) }};
+        const initialCoupon = @json($coupon ? ['code' => $coupon->code, 'label' => $coupon->value_label, 'discount' => $discount] : null) || { code: null, label: null, discount: 0 };
 
         const zoneMap = {};
         zones.forEach(z => {
@@ -309,6 +348,15 @@ fbq('track', 'InitiateCheckout', {
             bkashNumber: @json($bkashNumber ?? ''),
             submitting: false,
 
+            couponCode: initialCoupon.code || '',
+            couponLabel: initialCoupon.label || '',
+            couponApplied: !!initialCoupon.code,
+            discount: initialDiscount,
+            couponLoading: false,
+            couponMessage: '',
+            couponError: false,
+            couponDiscountLabel: initialCoupon.code ? ('-৳' + Math.round(initialDiscount)) : '',
+
             copyBkashNumber() {
                 if (!this.bkashNumber) return;
                 if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -323,6 +371,70 @@ fbq('track', 'InitiateCheckout', {
                 }
             },
 
+            async applyCoupon() {
+                const code = this.couponCode.trim();
+                if (!code) return;
+
+                this.couponLoading = true;
+                this.couponMessage = '';
+                this.couponError = false;
+
+                try {
+                    const response = await fetch('{{ route('checkout.coupon.apply') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ code: code })
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.couponCode = data.code;
+                        this.couponLabel = data.label;
+                        this.discount = parseFloat(data.discount) || 0;
+                        this.couponApplied = true;
+                        this.couponDiscountLabel = data.discount_label;
+                        this.couponMessage = 'Coupon applied!';
+                        this.couponError = false;
+                    } else {
+                        this.couponError = true;
+                        this.couponMessage = data.message || 'That coupon code is not valid.';
+                    }
+                } catch (e) {
+                    this.couponError = true;
+                    this.couponMessage = 'Something went wrong. Please try again.';
+                } finally {
+                    this.couponLoading = false;
+                }
+            },
+
+            async removeCoupon() {
+                this.couponLoading = true;
+                try {
+                    await fetch('{{ route('checkout.coupon.remove') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}'
+                        }
+                    });
+                } catch (e) {
+                    // ignore - the local state is reset either way
+                }
+
+                this.couponApplied = false;
+                this.couponCode = '';
+                this.couponLabel = '';
+                this.couponDiscountLabel = '';
+                this.discount = 0;
+                this.couponMessage = '';
+                this.couponLoading = false;
+            },
+
             init() {
                 if (this.selectedZone && zoneMap[this.selectedZone]) {
                     this.selectZone(this.selectedZone);
@@ -330,12 +442,12 @@ fbq('track', 'InitiateCheckout', {
             },
 
             get formattedShippingCharge() {
-                if (this.shippingCharge === 0) return 'জোন নির্বাচন করুন';
+                if (this.shippingCharge === 0) return 'Select a zone';
                 return '৳' + Math.round(this.shippingCharge);
             },
 
             get formattedGrandTotal() {
-                return '৳' + Math.round(this.subtotal + this.shippingCharge);
+                return '৳' + Math.max(0, Math.round(this.subtotal - this.discount + this.shippingCharge));
             },
 
             selectZone(zoneName) {

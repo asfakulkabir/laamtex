@@ -17,7 +17,7 @@ class SettingsSiteInfoTest extends TestCase
     {
         Storage::fake('public');
 
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = User::factory()->create(['role' => User::ROLE_SUPER_ADMIN]);
 
         $response = $this->actingAs($admin)->put(route('admin.settings.update'), [
             'site_name' => 'My Store',
@@ -42,7 +42,7 @@ class SettingsSiteInfoTest extends TestCase
 
     public function test_primary_color_is_rejected_when_not_hex()
     {
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = User::factory()->create(['role' => User::ROLE_SUPER_ADMIN]);
 
         $response = $this->actingAs($admin)->put(route('admin.settings.update'), [
             'site_name' => 'My Store',
@@ -54,7 +54,7 @@ class SettingsSiteInfoTest extends TestCase
 
     public function test_settings_page_renders_site_info()
     {
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = User::factory()->create(['role' => User::ROLE_SUPER_ADMIN]);
         Setting::setValue('site_name', 'Awesome Store');
         Setting::setValue('primary_color', '#e11d48');
 

@@ -35,7 +35,40 @@
                     @foreach($sliders as $i => $slider)
                         <div x-show="activeSlide === {{ $i }}" x-transition:enter="transition-opacity duration-700" @if($i > 0) x-cloak @endif
                              class="absolute inset-0 w-full">
-                            @if($slider->isVideo())
+                            @if($slider->isAudio())
+                                <div class="relative w-full h-full">
+                                    @if($slider->image)
+                                        @if($slider->link)<a href="{{ $slider->link }}" class="absolute inset-0 z-0" aria-label="{{ $slider->title ?? 'Shop now' }}"></a>@endif
+                                        <img src="{{ asset('storage/' . $slider->image) }}" alt="{{ $slider->title ?? 'Audio cover' }}"
+                                             class="w-full h-full object-cover" @load="imgLoaded({{ $i }}, $event)" loading="eager">
+                                    @else
+                                        <div class="w-full h-full bg-gradient-to-tr from-indigo-950 via-purple-900 to-pink-700"></div>
+                                    @endif
+                                    <audio x-ref="audio-{{ $i }}" src="{{ asset('storage/' . $slider->audio) }}" preload="none" loop
+                                           @timeupdate="syncAudio({{ $i }}, $event)"
+                                           @play="markAudioPlaying({{ $i }})"
+                                           @pause="markAudioPaused({{ $i }})"></audio>
+                                    <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 sm:gap-4 px-6 text-center z-10 pointer-events-none">
+                                        <button type="button" @click="toggleAudio({{ $i }})" class="pointer-events-auto h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-white/95 hover:bg-white text-gray-900 shadow-2xl ring-1 ring-black/10 flex items-center justify-center transition active:scale-95"
+                                                :aria-label="audioPlaying === {{ $i }} ? 'Pause audio' : 'Play audio'">
+                                            <svg x-show="audioPlaying !== {{ $i }}" class="ml-1 h-7 w-7 sm:h-9 sm:w-9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.54.84l10.3-6.86a1 1 0 0 0 0-1.68L9.54 4.3A1 1 0 0 0 8 5.14Z"/></svg>
+                                            <svg x-show="audioPlaying === {{ $i }}" x-cloak class="h-7 w-7 sm:h-9 sm:w-9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
+                                        </button>
+                                        <div class="pointer-events-auto w-40 sm:w-56">
+                                            <div class="h-1 w-full rounded-full bg-white/35 overflow-hidden">
+                                                <div class="h-full rounded-full bg-white transition-[width] duration-150" :style="'width:' + audioPercent({{ $i }}) + '%'"></div>
+                                            </div>
+                                            <div class="mt-1 flex justify-between text-[10px] sm:text-xs font-medium text-white/80">
+                                                <span x-text="audioTime({{ $i }}, 'current')">0:00</span>
+                                                <span x-text="audioTime({{ $i }}, 'duration')">0:00</span>
+                                            </div>
+                                        </div>
+                                        @if($slider->title)
+                                            <span class="text-sm sm:text-lg font-bold text-white drop-shadow">{{ $slider->title }}</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            @elseif($slider->isVideo())
                                 @if($slider->link)
                                     <a href="{{ $slider->link }}" class="block w-full h-full">
                                 @endif
@@ -171,6 +204,81 @@
         </div>
     </section>
 
+    <!-- Customer Testimonials -->
+    @if($testimonials->count() > 0)
+        <section class="mt-12 md:mt-16"
+                 x-data="testimonialSlider()"
+                 x-init="init()"
+                 @mouseenter="pause()" @mouseleave="play()"
+                 tabindex="0"
+                 @keydown.left.prevent="prevSlide()" @keydown.right.prevent="nextSlide()"
+                 aria-label="Customer testimonials">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-end justify-between gap-4 mb-6">
+                    <div class="space-y-1.5">
+                        <h2 class="text-lg sm:text-xl md:text-3xl font-bold md:font-extrabold tracking-tight text-gray-900">
+                            What Our Customers Say
+                        </h2>
+                        <p class="text-sm text-gray-500">Real messages and photos from happy customers.</p>
+                    </div>
+                    <div class="flex items-center gap-3 shrink-0">
+                        <div class="hidden sm:flex items-center gap-2">
+                            <button type="button" @click="prevSlide()" :disabled="!canPrev"
+                                    class="w-9 h-9 rounded-full ring-1 ring-gray-300 text-gray-600 hover:bg-gray-900 hover:text-white hover:ring-gray-900 flex items-center justify-center transition disabled:opacity-40 disabled:pointer-events-none"
+                                    aria-label="Previous testimonials">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                            </button>
+                            <button type="button" @click="nextSlide()" :disabled="!canNext"
+                                    class="w-9 h-9 rounded-full ring-1 ring-gray-300 text-gray-600 hover:bg-gray-900 hover:text-white hover:ring-gray-900 flex items-center justify-center transition disabled:opacity-40 disabled:pointer-events-none"
+                                    aria-label="Next testimonials">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div x-ref="track" @scroll.passive="sync()"
+                 class="flex gap-3 sm:gap-4 lg:gap-6 overflow-x-auto no-scrollbar scroll-smooth px-4 sm:px-6 lg:px-[max(1.5rem,calc((100vw-80rem)/2+2rem))] pb-2 snap-x snap-mandatory">
+                @foreach($testimonials as $testimonial)
+                    <figure class="slide-item snap-start shrink-0 w-[78vw] sm:w-[46vw] md:w-[31vw] lg:w-[calc((80rem-3rem)/4)] max-w-sm">
+                        <div class="h-full rounded-2xl bg-white ring-1 ring-gray-200 hover:ring-gray-300 hover:shadow-lg transition overflow-hidden">
+                            <img src="{{ $testimonial->image_url }}"
+                                 alt="Testimonial from a {{ site_name() }} customer"
+                                 loading="lazy" decoding="async"
+                                 class="w-full h-[260px] sm:h-[300px] lg:h-[320px] object-contain bg-white p-1.5">
+                        </div>
+                    </figure>
+                @endforeach
+            </div>
+
+            @if($testimonials->count() > 1)
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-5">
+                    <div class="flex sm:hidden items-center justify-center gap-2">
+                        <button type="button" @click="prevSlide()" :disabled="!canPrev"
+                                class="w-10 h-10 rounded-full ring-1 ring-gray-300 text-gray-600 flex items-center justify-center transition disabled:opacity-40"
+                                aria-label="Previous testimonials">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                        </button>
+                        <button type="button" @click="nextSlide()" :disabled="!canNext"
+                                class="w-10 h-10 rounded-full ring-1 ring-gray-300 text-gray-600 flex items-center justify-center transition disabled:opacity-40"
+                                aria-label="Next testimonials">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                    </div>
+                    <div class="hidden sm:flex items-center justify-center gap-2 mt-4">
+                        <template x-for="(dot, i) in pageCount" :key="i">
+                            <button type="button" @click="goToPage(i)"
+                                    class="h-2 rounded-full transition-all"
+                                    :class="i === page ? 'w-6 bg-gray-900' : 'w-2 bg-gray-300 hover:bg-gray-400'"
+                                    :aria-label="'Go to testimonials page ' + (i + 1)"></button>
+                        </template>
+                    </div>
+                </div>
+            @endif
+        </section>
+    @endif
+
     <!-- Info / Help Cards -->
     <section class="mx-auto max-w-[1280px] px-4 sm:px-6 mt-12">
         <div class="grid md:grid-cols-3 gap-4">
@@ -240,6 +348,8 @@
             timer: null,
             ratios: [],
             videoSlides: videoSlides || [],
+            audioPlaying: -1,
+            audioProgress: {},
             ratio: '2.4',
             init() {
                 if (count > 1) {
@@ -254,6 +364,7 @@
             },
             step(dir) {
                 this.activeSlide = (this.activeSlide + dir + count) % count;
+                this.pauseAllAudio();
                 this.resetTimer();
                 this.applyRatio();
             },
@@ -265,8 +376,69 @@
             },
             go(i) {
                 this.activeSlide = i;
+                this.pauseAllAudio();
                 this.resetTimer();
                 this.applyRatio();
+            },
+            audioEl(i) {
+                return this.$refs['audio-' + i] || null;
+            },
+            toggleAudio(i) {
+                const el = this.audioEl(i);
+                if (!el) return;
+
+                if (this.audioPlaying === i && !el.paused) {
+                    el.pause();
+                    return;
+                }
+
+                this.pauseAllAudio();
+                const started = el.play();
+                if (started && typeof started.catch === 'function') {
+                    started.catch(() => {
+                        this.audioPlaying = -1;
+                        this.resetTimer();
+                    });
+                }
+                this.audioPlaying = i;
+                this.stopTimer();
+            },
+            pauseAllAudio() {
+                Object.keys(this.$refs).forEach((key) => {
+                    if (key.indexOf('audio-') !== 0) return;
+                    const el = this.$refs[key];
+                    if (el && !el.paused) el.pause();
+                });
+                this.audioPlaying = -1;
+            },
+            markAudioPlaying(i) {
+                this.audioPlaying = i;
+                this.stopTimer();
+            },
+            markAudioPaused(i) {
+                if (this.audioPlaying === i) this.audioPlaying = -1;
+                if (this.activeSlide === i) this.resetTimer();
+            },
+            syncAudio(i, event) {
+                const el = event && event.currentTarget;
+                if (!el) return;
+                this.audioProgress[i] = { current: el.currentTime || 0, duration: el.duration || 0 };
+            },
+            audioPercent(i) {
+                const p = this.audioProgress[i];
+                if (!p || !p.duration) return 0;
+                return Math.min(100, Math.max(0, (p.current / p.duration) * 100));
+            },
+            audioTime(i, key) {
+                const p = this.audioProgress[i];
+                if (!p) return '0:00';
+                return this.formatTime(p[key]);
+            },
+            formatTime(seconds) {
+                const total = Math.max(0, Math.floor(seconds || 0));
+                const m = Math.floor(total / 60);
+                const s = total % 60;
+                return m + ':' + (s < 10 ? '0' : '') + s;
             },
             imgLoaded(i, event) {
                 const img = event && event.currentTarget;
@@ -287,9 +459,15 @@
                 const r = this.ratios[this.activeSlide];
                 this.ratio = r ? String(r) : '2.4';
             },
-            resetTimer() {
+            stopTimer() {
                 if (this.timer) {
                     clearInterval(this.timer);
+                    this.timer = null;
+                }
+            },
+            resetTimer() {
+                this.stopTimer();
+                if (count > 1) {
                     this.timer = setInterval(() => {
                         this.step(1);
                     }, 5000);
@@ -302,6 +480,102 @@
 
 @if($featuredProducts->count() > 0)
 <script>
+    function testimonialSlider() {
+        return {
+            timer: null,
+            page: 0,
+            pageCount: 1,
+            canPrev: false,
+            canNext: false,
+
+            init() {
+                this.measure();
+                window.addEventListener('resize', () => this.measure());
+                this.play();
+            },
+
+            measure() {
+                const track = this.$refs.track;
+                if (!track) return;
+
+                this.pageCount = Math.max(1, Math.round(track.scrollWidth / track.clientWidth));
+                this.sync();
+            },
+
+            sync() {
+                const track = this.$refs.track;
+                if (!track) return;
+
+                const max = track.scrollWidth - track.clientWidth;
+                this.canPrev = track.scrollLeft > 4;
+                this.canNext = track.scrollLeft < max - 4;
+
+                if (this.pageCount > 1) {
+                    const perPage = track.clientWidth / this.pageCount;
+                    this.page = Math.min(this.pageCount - 1, Math.round(track.scrollLeft / perPage));
+                } else {
+                    this.page = 0;
+                }
+            },
+
+            step() {
+                const track = this.$refs.track;
+                if (!track) return 0;
+
+                const item = track.querySelector('.slide-item');
+                if (!item) return track.clientWidth * 0.8;
+
+                const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+                return item.getBoundingClientRect().width + gap;
+            },
+
+            nudge(dir) {
+                const track = this.$refs.track;
+                if (!track || !track.scrollWidth) return;
+
+                const max = track.scrollWidth - track.clientWidth;
+
+                if (dir > 0) {
+                    const target = track.scrollLeft >= max - 4 ? 0 : Math.min(track.scrollLeft + this.step(), max);
+                    track.scrollTo({ left: target, behavior: 'smooth' });
+                } else {
+                    const target = track.scrollLeft <= 4 ? max : Math.max(track.scrollLeft - this.step(), 0);
+                    track.scrollTo({ left: target, behavior: 'smooth' });
+                }
+            },
+
+            goToPage(index) {
+                const track = this.$refs.track;
+                if (!track) return;
+
+                const perPage = track.clientWidth / this.pageCount;
+                track.scrollTo({ left: index * perPage, behavior: 'smooth' });
+            },
+
+            nextSlide() {
+                this.nudge(1);
+                this.play();
+            },
+
+            prevSlide() {
+                this.nudge(-1);
+                this.play();
+            },
+
+            play() {
+                if (this.timer || this.pageCount < 2) return;
+                this.timer = setInterval(() => this.nudge(1), 5000);
+            },
+
+            pause() {
+                if (this.timer) {
+                    clearInterval(this.timer);
+                    this.timer = null;
+                }
+            }
+        }
+    }
+
     function featuredSlider() {
         return {
             timer: null,

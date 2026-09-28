@@ -28,6 +28,8 @@
     $isHome = in_array($currentRoute, ['home']);
     $isShop = in_array($currentRoute, ['shop', 'categories', 'product.detail']);
     $isCart = in_array($currentRoute, ['cart', 'checkout', 'order.success']);
+
+    $popularSearches = ['T-Shirt', 'Polo', 'Hoodie', 'Joggers', 'Kurti', 'Shirt'];
 @endphp
 
 <!-- Mobile Top Nav -->
@@ -67,12 +69,9 @@
         <div class="search-section">
             <div class="search-section-header"><span>Popular Searches</span></div>
             <div class="search-section-items">
-                <a href="{{ route('shop', ['search' => 'T-Shirt']) }}" class="search-tag">T-Shirt</a>
-                <a href="{{ route('shop', ['search' => 'Polo']) }}" class="search-tag">Polo</a>
-                <a href="{{ route('shop', ['search' => 'Hoodie']) }}" class="search-tag">Hoodie</a>
-                <a href="{{ route('shop', ['search' => 'Joggers']) }}" class="search-tag">Joggers</a>
-                <a href="{{ route('shop', ['search' => 'Kurti']) }}" class="search-tag">Kurti</a>
-                <a href="{{ route('shop', ['search' => 'Shirt']) }}" class="search-tag">Shirt</a>
+                @foreach($popularSearches as $tag)
+                    <a href="{{ route('shop', ['search' => $tag]) }}" class="search-tag">{{ $tag }}</a>
+                @endforeach
             </div>
         </div>
     </div>
@@ -82,7 +81,7 @@
 <div class="mobile-side-menu" id="sideMenu">
     <div class="side-menu-header">
         <div class="guest-greeting">
-            @if(auth()->check() && !auth()->user()->is_admin)
+            @if(auth()->check() && auth()->user()->isCustomer())
                 <span class="welcome-text">Hello, {{ auth()->user()->name }}</span>
                 <div class="auth-buttons">
                     <a href="{{ route('customer.dashboard') }}" class="btn-login">My Account</a>
@@ -366,26 +365,27 @@
             </ul>
         </nav>
 
-        <form class="header-search" action="{{ route('shop') }}" method="get">
-            <div class="header-search-form">
-                <svg class="header-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
-                <input type="search" name="search" value="{{ request('search') }}" class="header-search-input" placeholder="Search for products, brands and more" autocomplete="off">
-            </div>
-        </form>
-
         <div class="header-actions">
+            <button class="header-action-item header-search-toggle" id="openDesktopSearch" type="button" aria-label="Search" aria-expanded="false" aria-controls="desktopSearchPanel">
+                <span class="header-action-icon">
+                    <svg class="header-search-glyph header-search-glyph-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                    <svg class="header-search-glyph header-search-glyph-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </span>
+                <span class="header-action-label">Search</span>
+            </button>
+
             <div class="header-action-item has-dropdown">
                 <span class="header-action-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 </span>
-                @if(auth()->check() && !auth()->user()->is_admin)
+                @if(auth()->check() && auth()->user()->isCustomer())
                     <span class="header-action-label">{{ \Illuminate\Support\Str::limit(auth()->user()->name, 10) }}</span>
                 @else
                     <span class="header-action-label">Profile</span>
                 @endif
                 <div class="header-profile-dropdown">
                     <div class="profile-dropdown-header">
-                        @if(auth()->check() && !auth()->user()->is_admin)
+                        @if(auth()->check() && auth()->user()->isCustomer())
                             <div class="welcome-text">Hello, {{ auth()->user()->name }}</div>
                             <div class="login-signup">
                                 <a href="{{ route('customer.dashboard') }}">My Account</a>
@@ -403,7 +403,7 @@
                         @endif
                     </div>
                     <div class="profile-dropdown-links">
-                        @if(auth()->check() && !auth()->user()->is_admin)
+                        @if(auth()->check() && auth()->user()->isCustomer())
                             <a href="{{ route('customer.dashboard') }}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                 My Account
@@ -436,6 +436,27 @@
                 </span>
                 <span class="header-action-label">Cart</span>
             </a>
+        </div>
+    </div>
+
+    <!-- Desktop search panel -->
+    <div class="desktop-search-panel" id="desktopSearchPanel">
+        <div class="desktop-search-panel-inner">
+            <form class="header-search-form" action="{{ route('shop') }}" method="get">
+                <svg class="header-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                <input type="search" name="search" id="desktopSearchInput" value="{{ request('search') }}" class="header-search-input" placeholder="Search for products, brands and more" autocomplete="off">
+                <button class="search-clear-btn header-search-clear" id="clearDesktopSearch" type="button" aria-label="Clear search">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </button>
+            </form>
+            <div class="desktop-search-tags">
+                <span class="desktop-search-label">Popular Searches</span>
+                <div class="search-section-items">
+                    @foreach($popularSearches as $tag)
+                        <a href="{{ route('shop', ['search' => $tag]) }}" class="search-tag">{{ $tag }}</a>
+                    @endforeach
+                </div>
+            </div>
         </div>
     </div>
 </header>
@@ -488,6 +509,47 @@
             searchInput.focus();
         });
     }
+
+    var desktopSearchToggle = document.getElementById('openDesktopSearch');
+    var desktopSearchPanel = document.getElementById('desktopSearchPanel');
+    var desktopSearchInput = document.getElementById('desktopSearchInput');
+    var desktopClearBtn = document.getElementById('clearDesktopSearch');
+
+    function setDesktopSearchOpen(open) {
+        if (!desktopSearchPanel) return;
+        toggle(desktopSearchPanel, open);
+        if (desktopSearchToggle) desktopSearchToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    on(desktopSearchToggle, 'click', function () {
+        var isOpen = desktopSearchPanel && desktopSearchPanel.classList.contains('open');
+        setDesktopSearchOpen(!isOpen);
+        if (!isOpen) {
+            setTimeout(function () {
+                if (desktopSearchInput) desktopSearchInput.focus();
+            }, 200);
+        }
+    });
+
+    if (desktopSearchInput && desktopClearBtn) {
+        function syncDesktopClear() {
+            desktopClearBtn.style.display = desktopSearchInput.value ? 'flex' : 'none';
+        }
+        syncDesktopClear();
+        on(desktopSearchInput, 'input', syncDesktopClear);
+        on(desktopClearBtn, 'click', function () {
+            desktopSearchInput.value = '';
+            syncDesktopClear();
+            desktopSearchInput.focus();
+        });
+    }
+
+    on(document, 'click', function (e) {
+        if (!desktopSearchPanel || !desktopSearchPanel.classList.contains('open')) return;
+        if (desktopSearchPanel.contains(e.target)) return;
+        if (desktopSearchToggle && desktopSearchToggle.contains(e.target)) return;
+        setDesktopSearchOpen(false);
+    });
 
     var megaMenu = document.getElementById('megaMenu');
     var megaBackdrop = document.getElementById('megaMenuBackdrop');
@@ -570,6 +632,7 @@
             closeSide();
             closeSearch();
             closeMega();
+            setDesktopSearchOpen(false);
         }
     });
 

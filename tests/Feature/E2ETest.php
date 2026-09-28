@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Attribute;
 use App\Models\Category;
 use App\Models\DeliveryCharge;
 use App\Models\Order;
@@ -34,7 +35,7 @@ class E2ETest extends TestCase
             'name' => 'Admin User',
             'email' => 'admin@outfitt.com',
             'password' => Hash::make('adminpassword'),
-            'is_admin' => true,
+            'role' => User::ROLE_SUPER_ADMIN,
         ]);
 
         // 2. Create Categories
@@ -68,26 +69,61 @@ class E2ETest extends TestCase
             'slug' => 'casual-summer-dress',
             'short_description' => 'A casual dress.',
             'product_type' => 'variable',
+            'regular_price' => 40.00,
             'is_active' => true,
         ]);
         $this->variableProduct->categories()->sync([$catDresses->id]);
 
-        $this->variationS = ProductVariation::create([
-            'product_id' => $this->variableProduct->id,
-            'size' => 'S',
-            'color' => 'Pink',
-            'price' => 30.00,
-            'stock' => 5,
+        // Build it the way the admin does: attributes, then variations.
+        $size = Attribute::create(['name' => 'Size', 'type' => Attribute::TYPE_SELECT]);
+        $sizeSmall = $size->values()->create(['name' => 'S', 'sort_order' => 1]);
+        $sizeMedium = $size->values()->create(['name' => 'M', 'sort_order' => 2]);
+
+        $color = Attribute::create(['name' => 'Color', 'type' => Attribute::TYPE_COLOR]);
+        $colorPink = $color->values()->create(['name' => 'Pink', 'color_code' => '#ffc0cb', 'sort_order' => 1]);
+
+        $variationService = app(\App\Services\VariationService::class);
+        $variationService->syncAttributes($this->variableProduct, [
+            ['attribute_id' => $size->id, 'value_ids' => [$sizeSmall->id, $sizeMedium->id], 'is_visible' => 1, 'is_variation' => 1],
+            ['attribute_id' => $color->id, 'value_ids' => [$colorPink->id], 'is_visible' => 1, 'is_variation' => 1],
+        ]);
+        $variationService->generateVariations($this->variableProduct);
+
+        $sizeAttribute = $this->variableProduct->productAttributes()->where('attribute_id', $size->id)->first();
+        $colorAttribute = $this->variableProduct->productAttributes()->where('attribute_id', $color->id)->first();
+
+        $variationService->saveVariations($this->variableProduct, [
+            [
+                'values' => [$sizeAttribute->id => $sizeSmall->id, $colorAttribute->id => $colorPink->id],
+                'regular_price' => 30.00,
+                'manage_stock' => 1,
+                'stock_quantity' => 5,
+                'status' => ProductVariation::STATUS_PUBLISH,
+            ],
+            [
+                'values' => [$sizeAttribute->id => $sizeMedium->id, $colorAttribute->id => $colorPink->id],
+                'regular_price' => 35.00,
+                'manage_stock' => 1,
+                'stock_quantity' => 8,
+                'status' => ProductVariation::STATUS_PUBLISH,
+            ],
         ]);
 
-        $this->variationM = ProductVariation::create([
-            'product_id' => $this->variableProduct->id,
-            'size' => 'M',
-            'color' => 'Pink',
-            'price' => 35.00,
-            'stock' => 8,
-        ]);
+        $this->variationS = $this->variableProduct->variations()
+            ->where('combo_key', $variationService->comboKey([
+                ['product_attribute_id' => $sizeAttribute->id, 'attribute_value_id' => $sizeSmall->id],
+                ['product_attribute_id' => $colorAttribute->id, 'attribute_value_id' => $colorPink->id],
+            ]))
+            ->firstOrFail();
 
+        $this->variationM = $this->variableProduct->variations()
+            ->where('combo_key', $variationService->comboKey([
+                ['product_attribute_id' => $sizeAttribute->id, 'attribute_value_id' => $sizeMedium->id],
+                ['product_attribute_id' => $colorAttribute->id, 'attribute_value_id' => $colorPink->id],
+            ]))
+            ->firstOrFail();
+
+        $variationService->refreshPriceRange($this->variableProduct);
         $this->variableProduct->updateStockFromVariations();
     }
 
@@ -163,10 +199,10 @@ class E2ETest extends TestCase
         // 9. Place Order
         $response = $this->post(route('checkout.place'), [
             'customer_name' => 'John Doe',
-            'customer_email' => 'john@example.com',
             'customer_phone' => '01712345678',
-            'shipping_address' => '123 Test Street, Dhaka',
-            'shipping_zone' => $this->deliveryZone->zone,
+            'customer_address' => '123 Test Street, Dhaka',
+            'delivery_zone' => $this->deliveryZone->zone,
+            'payment_method' => 'cod',
             'notes' => 'Deliver in afternoon please.',
         ]);
 
@@ -177,9 +213,10 @@ class E2ETest extends TestCase
         // Verify Order Details
         $this->assertEquals('John Doe', $order->customer_name);
         $this->assertEquals(180.00, $order->subtotal);
-        $this->assertEquals(60.00, $order->shipping_charge);
-        $this->assertEquals(240.00, $order->total);
-        $this->assertEquals('pending', $order->status);
+        $this->assertEquals(60.00, $order->delivery_charge_amount);
+        $this->assertEquals(240.00, (float) $order->total_amount);
+        $this->assertEquals(0.00, (float) $order->discount_amount);
+        $this->assertEquals('processing', $order->status);
 
         // Verify Order Items
         $this->assertEquals(2, $order->items()->count());
@@ -187,14 +224,15 @@ class E2ETest extends TestCase
         // Verify Stock Decrement
         $this->simpleProduct->refresh();
         $this->variationS->refresh();
+        $this->variationM->refresh();
         $this->variableProduct->refresh();
 
         // Handbag stock: 10 - 3 = 7
         $this->assertEquals(7, $this->simpleProduct->stock_quantity);
         // Variation S stock: 5 - 1 = 4
-        $this->assertEquals(4, $this->variationS->stock);
+        $this->assertEquals(4, $this->variationS->stock_quantity);
         // Variation M stock (untouched): 8
-        $this->assertEquals(8, $this->variationM->stock);
+        $this->assertEquals(8, $this->variationM->stock_quantity);
         // Variable Product total stock: 4 + 8 = 12
         $this->assertEquals(12, $this->variableProduct->stock_quantity);
 
@@ -229,14 +267,14 @@ class E2ETest extends TestCase
         $response = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
         $response->assertStatus(200);
         $response->assertSee('Dashboard Overview');
-        $response->assertSee('$0.00'); // Revenue is 0 since order is pending
-        $response->assertSee('pending'); // Order status in table
+        $response->assertSee('৳240.00'); // Revenue counts every non-cancelled order
+        $response->assertSee('processing'); // Order status in table
 
         // 15. View Orders list in Admin panel
         $response = $this->actingAs($this->adminUser)->get(route('admin.orders.index'));
         $response->assertStatus(200);
         $response->assertSee('John Doe');
-        $response->assertSee('$240.00');
+        $response->assertSee('৳240'); // The list formats amounts without decimals
 
         // 16. View Order Detail in Admin Panel
         $response = $this->actingAs($this->adminUser)->get(route('admin.orders.show', $order->id));
@@ -246,17 +284,17 @@ class E2ETest extends TestCase
 
         // 17. Update Order Status in Admin Panel
         $response = $this->actingAs($this->adminUser)->post(route('admin.orders.status', $order->id), [
-            'status' => 'processing',
+            'status' => 'delivered',
         ]);
         $response->assertRedirect();
 
         $order->refresh();
-        $this->assertEquals('processing', $order->status);
+        $this->assertEquals('delivered', $order->status);
 
-        // Verify revenue is updated on dashboard now
+        // Revenue stays the same while the order is not cancelled.
         $response = $this->actingAs($this->adminUser)->get(route('admin.dashboard'));
         $response->assertStatus(200);
-        $response->assertSee('$240.00'); // Revenue is now 240 since order is processing
+        $response->assertSee('৳240.00');
 
         // 18. Logout
         $response = $this->actingAs($this->adminUser)->post(route('admin.logout'));

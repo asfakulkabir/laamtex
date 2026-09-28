@@ -3,16 +3,222 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Attribute;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductAttribute;
 use App\Models\ProductImage;
 use App\Models\ProductVariation;
+use App\Services\VariationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
+    public function __construct(private readonly VariationService $variationService)
+    {
+    }
+
+    /**
+     * The new admin UI posts a `values` map keyed by product attribute id.
+     * The legacy UI only posted size/color/weight columns.
+     */
+    private function submittedVariationsAreAttributeBased(Request $request): bool
+    {
+        foreach ((array) $request->input('variations', []) as $row) {
+            if (array_key_exists('values', $row)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array<int, \Illuminate\Http\UploadedFile|null>
+     */
+    private function uploadedVariationImages(Request $request): array
+    {
+        $files = $request->file('variations');
+
+        if (! is_array($files)) {
+            return [];
+        }
+
+        $uploaded = [];
+
+        foreach ($files as $index => $fileSet) {
+            if (is_array($fileSet) && isset($fileSet['image'])) {
+                $uploaded[$index] = $fileSet['image'];
+            }
+        }
+
+        return $uploaded;
+    }
+
+    /**
+     * On the create screen the attributes have no database id yet, so the form
+     * keys each variation selection by the attribute's position in the submitted
+     * array. Turn those keys into the real product attribute ids now that
+     * `syncAttributes()` has created them.
+     *
+     * Custom attribute options are identified by name (their value rows are
+     * generated server side), global ones by value id.
+     */
+    private function remapCreateVariationValues(Product $product, Request $request): array
+    {
+        $rows = (array) $request->input('variations', []);
+
+        if ($rows === []) {
+            return [];
+        }
+
+        $productAttributes = $product->productAttributes()->with('values')->get()
+            ->keyBy(fn (ProductAttribute $attribute) => (int) $attribute->position);
+
+        $remapped = [];
+
+        foreach ($rows as $index => $row) {
+            $row = is_array($row) ? $row : [];
+            $values = [];
+
+            foreach ((array) ($row['values'] ?? []) as $position => $value) {
+                $productAttribute = $productAttributes[(int) $position] ?? null;
+
+                if ($productAttribute === null) {
+                    continue;
+                }
+
+                $valueId = $this->resolveCreateVariationValue($productAttribute, $value);
+
+                if ($valueId !== null) {
+                    $values[$productAttribute->id] = $valueId;
+                }
+            }
+
+            $row['values'] = $values;
+            $remapped[$index] = $row;
+        }
+
+        return $remapped;
+    }
+
+    private function resolveCreateVariationValue(ProductAttribute $productAttribute, $submitted): ?int
+    {
+        if (is_numeric($submitted) && ! $productAttribute->isCustom()) {
+            $id = (int) $submitted;
+
+            return $productAttribute->values->contains('id', $id) ? $id : null;
+        }
+
+        // Custom attributes send the option name.
+        $name = is_string($submitted) ? trim($submitted) : '';
+
+        if ($name === '') {
+            return null;
+        }
+
+        return optional(
+            $productAttribute->values->first(fn ($value) => $value->name === $name)
+        )->id;
+    }
+
+    /**
+     * Backwards compatible update of variations from the old size/color form.
+     */
+    private function updateLegacyVariations(Product $product, Request $request): void
+    {
+        $submittedVariationIds = [];
+
+        foreach ((array) $request->input('variations', []) as $variationData) {
+            if (empty($variationData['size']) && empty($variationData['color']) && empty($variationData['weight'])) {
+                continue; // Skip blanks
+            }
+
+            $stock = (int) ($variationData['stock'] ?? 0);
+            $fields = [
+                'size' => $variationData['size'] ?? null,
+                'weight' => $variationData['weight'] ?? null,
+                'color' => $variationData['color'] ?? null,
+                'price' => $variationData['price'] ?: null,
+                'regular_price' => $variationData['price'] ?: null,
+                'stock' => $stock,
+                'stock_quantity' => $stock,
+                'manage_stock' => true,
+                'stock_status' => $stock > 0 ? 'instock' : 'outofstock',
+            ];
+
+            if (!empty($variationData['id'])) {
+                // Only touch variations that actually belong to this product.
+                $variation = $product->variations()->where('id', $variationData['id'])->first();
+
+                if ($variation === null) {
+                    continue;
+                }
+
+                $variation->update($fields);
+            } else {
+                $variation = $product->variations()->create($fields);
+            }
+
+            $submittedVariationIds[] = $variation->id;
+        }
+
+        $product->variations()->whereNotIn('id', $submittedVariationIds ?: [0])->delete();
+    }
+
+    /**
+     * Create every missing combination of the variation attributes.
+     */
+    public function generateVariations(Request $request, Product $product)
+    {
+        if ($product->product_type !== 'variable') {
+            return back()->with('error', 'Variations can only be generated for variable products.');
+        }
+
+        if ($request->has('attributes')) {
+            $this->variationService->syncAttributes($product, $request->input('attributes', []));
+        }
+
+        $result = $this->variationService->generateVariations($product, $request->input('defaults', []));
+        $product->updateStockFromVariations();
+
+        $message = $result['created'] > 0
+            ? "{$result['created']} variation(s) created."
+            : 'No new variations to create; all combinations already exist.';
+
+        if ($result['skipped'] > 0) {
+            $message .= " {$result['skipped']} already existed.";
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * Apply a bulk action to the selected variations.
+     */
+    public function bulkVariationAction(Request $request, Product $product)
+    {
+        $request->validate([
+            'action' => 'required|string',
+            'variation_ids' => 'required|array',
+            'variation_ids.*' => 'integer',
+            'params' => 'nullable|array',
+        ]);
+
+        $affected = $this->variationService->applyBulkAction(
+            $product,
+            $request->input('action'),
+            $request->input('params', []),
+            $request->input('variation_ids', [])
+        );
+
+        $product->updateStockFromVariations();
+
+        return back()->with('success', "{$affected} variation(s) updated.");
+    }
+
     public function index(Request $request)
     {
         $query = Product::with(['categories', 'images']);
@@ -36,7 +242,8 @@ class ProductController extends Controller
     public function create()
     {
         $categories = Category::orderBy('name')->get();
-        return view('admin.products.create', compact('categories'));
+        $attributes = Attribute::with('values')->get();
+        return view('admin.products.create', compact('categories', 'attributes'));
     }
 
     public function store(Request $request)
@@ -44,9 +251,12 @@ class ProductController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'product_type' => 'required|in:simple,variable',
+            'sku' => 'nullable|string|max:255',
             'regular_price' => 'required|numeric|min:0',
             'sale_price' => 'nullable|numeric|min:0',
             'stock_quantity' => 'nullable|required_if:product_type,simple|integer|min:0',
+            'manage_stock' => 'nullable|boolean',
+            'stock_status' => 'nullable|in:instock,outofstock,onbackorder',
             'categories' => 'nullable|array',
             'categories.*' => 'exists:categories,id',
             'short_description' => 'nullable|string',
@@ -55,14 +265,28 @@ class ProductController extends Controller
             'is_featured' => 'nullable|boolean',
             'seo_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
-            
+
+            // Attributes
+            'attributes' => 'nullable|array',
+            'attributes.*.attribute_id' => 'nullable|exists:attributes,id',
+            'attributes.*.custom_name' => 'nullable|string|max:255',
+            'attributes.*.value_ids' => 'nullable|array',
+            'attributes.*.value_ids.*' => 'integer|exists:attribute_values,id',
+            'attributes.*.is_visible' => 'nullable|boolean',
+            'attributes.*.is_variation' => 'nullable|boolean',
+
             // Variations validation
             'variations' => 'nullable|array',
             'variations.*.size' => 'nullable|string|max:50',
             'variations.*.weight' => 'nullable|string|max:50',
             'variations.*.color' => 'nullable|string|max:50',
             'variations.*.price' => 'nullable|numeric|min:0',
-            'variations.*.stock' => 'required_with:variations|integer|min:0',
+            'variations.*.stock' => 'nullable|integer|min:0',
+            'variations.*.regular_price' => 'nullable|numeric|min:0',
+            'variations.*.sale_price' => 'nullable|numeric|min:0',
+            'variations.*.stock_quantity' => 'nullable|integer|min:0',
+            'variations.*.sku' => 'nullable|string|max:255',
+            'variations.*.image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
 
             // Images validation
             'images' => 'nullable|array',
@@ -73,13 +297,15 @@ class ProductController extends Controller
         ]);
 
         $productData = $request->only([
-            'name', 'product_type', 'short_description', 'description', 
-            'seo_title', 'meta_description'
+            'name', 'product_type', 'short_description', 'description',
+            'seo_title', 'meta_description', 'sku'
         ]);
         
         $productData['user_id'] = auth()->id();
         $productData['is_active'] = $request->boolean('is_active', true);
         $productData['is_featured'] = $request->boolean('is_featured', false);
+        $productData['manage_stock'] = $request->boolean('manage_stock', false);
+        $productData['stock_status'] = $request->input('stock_status', 'instock');
 
         $productData['regular_price'] = $request->input('regular_price');
         $productData['sale_price'] = $request->input('sale_price');
@@ -97,20 +323,25 @@ class ProductController extends Controller
             $product->categories()->sync($request->input('categories'));
         }
 
-        // Create Variations if variable
-        if ($product->product_type === 'variable' && $request->has('variations')) {
-            foreach ($request->input('variations') as $variationData) {
-                if (empty($variationData['size']) && empty($variationData['color']) && empty($variationData['weight'])) {
-                    continue; // Skip blank variations
-                }
-                $product->variations()->create([
-                    'size' => $variationData['size'],
-                    'weight' => $variationData['weight'],
-                    'color' => $variationData['color'],
-                    'price' => $variationData['price'] ?: null,
-                    'stock' => $variationData['stock'] ?: 0,
-                ]);
+        if ($product->product_type === 'variable') {
+            $this->variationService->syncAttributes($product, $request->input('attributes', []));
+
+            // Term selection alone is enough to create the variation rows.
+            $this->variationService->generateVariations($product);
+
+            if ($this->submittedVariationsAreAttributeBased($request)) {
+                $this->variationService->saveVariations(
+                    $product,
+                    $this->remapCreateVariationValues($product, $request),
+                    $this->uploadedVariationImages($request)
+                );
+            } elseif ($request->has('variations')) {
+                // Only touch the legacy rows when the old form actually sent
+                // them, otherwise the generated rows would be wiped.
+                $this->updateLegacyVariations($product, $request);
             }
+
+            $this->variationService->refreshPriceRange($product);
             $product->updateStockFromVariations();
         }
 
@@ -142,8 +373,9 @@ class ProductController extends Controller
     public function edit(Product $product)
     {
         $categories = Category::orderBy('name')->get();
-        $product->load(['categories', 'images', 'variations']);
-        return view('admin.products.edit', compact('product', 'categories'));
+        $attributes = Attribute::with('values')->get();
+        $product->load(['categories', 'images', 'variations.attributeValues', 'productAttributes.values']);
+        return view('admin.products.edit', compact('product', 'categories', 'attributes'));
     }
 
     public function update(Request $request, Product $product)
@@ -151,9 +383,12 @@ class ProductController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'product_type' => 'required|in:simple,variable',
+            'sku' => 'nullable|string|max:255',
             'regular_price' => 'required|numeric|min:0',
             'sale_price' => 'nullable|numeric|min:0',
             'stock_quantity' => 'nullable|required_if:product_type,simple|integer|min:0',
+            'manage_stock' => 'nullable|boolean',
+            'stock_status' => 'nullable|in:instock,outofstock,onbackorder',
             'categories' => 'nullable|array',
             'categories.*' => 'exists:categories,id',
             'short_description' => 'nullable|string',
@@ -163,14 +398,28 @@ class ProductController extends Controller
             'seo_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
 
+            // Attributes
+            'attributes' => 'nullable|array',
+            'attributes.*.attribute_id' => 'nullable|exists:attributes,id',
+            'attributes.*.custom_name' => 'nullable|string|max:255',
+            'attributes.*.value_ids' => 'nullable|array',
+            'attributes.*.value_ids.*' => 'integer|exists:attribute_values,id',
+            'attributes.*.is_visible' => 'nullable|boolean',
+            'attributes.*.is_variation' => 'nullable|boolean',
+
             // Variations
             'variations' => 'nullable|array',
-            'variations.*.id' => 'nullable|exists:product_variations,id',
+            'variations.*.id' => 'nullable|integer',
             'variations.*.size' => 'nullable|string|max:50',
             'variations.*.weight' => 'nullable|string|max:50',
             'variations.*.color' => 'nullable|string|max:50',
             'variations.*.price' => 'nullable|numeric|min:0',
-            'variations.*.stock' => 'required_with:variations|integer|min:0',
+            'variations.*.stock' => 'nullable|integer|min:0',
+            'variations.*.regular_price' => 'nullable|numeric|min:0',
+            'variations.*.sale_price' => 'nullable|numeric|min:0',
+            'variations.*.stock_quantity' => 'nullable|integer|min:0',
+            'variations.*.sku' => 'nullable|string|max:255',
+            'variations.*.image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
 
             // Existing images details updates
             'existing_images' => 'nullable|array',
@@ -194,12 +443,14 @@ class ProductController extends Controller
         $originalType = $product->product_type;
 
         $productData = $request->only([
-            'name', 'product_type', 'short_description', 'description', 
-            'seo_title', 'meta_description'
+            'name', 'product_type', 'short_description', 'description',
+            'seo_title', 'meta_description', 'sku'
         ]);
         
         $productData['is_active'] = $request->boolean('is_active', true);
         $productData['is_featured'] = $request->boolean('is_featured', false);
+        $productData['manage_stock'] = $request->boolean('manage_stock', false);
+        $productData['stock_status'] = $request->input('stock_status', 'instock');
         $productData['regular_price'] = $request->input('regular_price');
         $productData['sale_price'] = $request->input('sale_price');
 
@@ -223,41 +474,22 @@ class ProductController extends Controller
 
         // Manage Variations if variable
         if ($product->product_type === 'variable') {
-            $submittedVariationIds = [];
+            if ($request->has('attributes')) {
+                $this->variationService->syncAttributes($product, $request->input('attributes', []));
 
-            if ($request->has('variations')) {
-                foreach ($request->input('variations') as $variationData) {
-                    if (empty($variationData['size']) && empty($variationData['color']) && empty($variationData['weight'])) {
-                        continue; // Skip blanks
-                    }
-
-                    if (!empty($variationData['id'])) {
-                        // Update existing variation
-                        $variation = ProductVariation::findOrFail($variationData['id']);
-                        $variation->update([
-                            'size' => $variationData['size'],
-                            'weight' => $variationData['weight'],
-                            'color' => $variationData['color'],
-                            'price' => $variationData['price'] ?: null,
-                            'stock' => $variationData['stock'] ?: 0,
-                        ]);
-                        $submittedVariationIds[] = $variation->id;
-                    } else {
-                        // Create new variation
-                        $variation = $product->variations()->create([
-                            'size' => $variationData['size'],
-                            'weight' => $variationData['weight'],
-                            'color' => $variationData['color'],
-                            'price' => $variationData['price'] ?: null,
-                            'stock' => $variationData['stock'] ?: 0,
-                        ]);
-                        $submittedVariationIds[] = $variation->id;
-                    }
-                }
+                // Adding terms auto-generates the matching variation rows, the
+                // same way WooCommerce does it. Already existing combinations
+                // are left untouched by the idempotent generator.
+                $this->variationService->generateVariations($product);
             }
 
-            // Delete variations not submitted
-            $product->variations()->whereNotIn('id', $submittedVariationIds)->delete();
+            if ($this->submittedVariationsAreAttributeBased($request)) {
+                $this->variationService->saveVariations($product, $request->input('variations', []), $this->uploadedVariationImages($request));
+            } elseif ($request->has('variations')) {
+                $this->updateLegacyVariations($product, $request);
+            }
+
+            $this->variationService->refreshPriceRange($product);
             $product->updateStockFromVariations();
         }
 

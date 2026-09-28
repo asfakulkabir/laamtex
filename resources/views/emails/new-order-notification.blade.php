@@ -83,6 +83,9 @@
             </table>
 
             <div class="total">
+                @if($order->discount_amount > 0)
+                    Coupon {{ $order->coupon_code }}: -৳{{ number_format($order->discount_amount, 2) }}<br>
+                @endif
                 Total: ৳{{ number_format($order->total_amount, 2) }}
             </div>
         </div>

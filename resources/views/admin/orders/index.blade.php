@@ -2,81 +2,166 @@
 
 @section('title', 'Manage Orders - laamtex')
 @section('page_title', 'Orders Management')
-
 @section('content')
 <div class="space-y-6">
 
-    <!-- Filter Bar -->
-    <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
-        <form action="{{ route('admin.orders.index') }}" method="GET" class="flex flex-wrap items-center gap-3 flex-grow">
-            <div class="relative w-64">
-                <input type="text" name="search" placeholder="Search ID, name, phone..." value="{{ request('search') }}"
-                       class="w-full bg-slate-900/80 border border-slate-700/50 rounded-lg px-4 py-2 pl-9 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all placeholder:text-slate-300">
-                <svg class="w-4 h-4 text-slate-300 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    @php
+        $periods = \App\Http\Controllers\Admin\OrderController::PERIODS;
+        $sorts = \App\Http\Controllers\Admin\OrderController::SORTS;
+        $isCustomPeriod = $period['key'] === 'custom';
+        $baseQuery = request()->except(['page', 'status']);
+        $statusCards = [
+            '' => ['label' => 'All Statuses', 'class' => 'text-white', 'ring' => 'ring-purple-500/60 bg-purple-500/10'],
+            'processing' => ['label' => 'Processing', 'class' => 'text-blue-300', 'ring' => 'ring-blue-500/60 bg-blue-500/10'],
+            'shipped' => ['label' => 'Shipped', 'class' => 'text-purple-300', 'ring' => 'ring-purple-500/60 bg-purple-500/10'],
+            'delivered' => ['label' => 'Delivered', 'class' => 'text-emerald-300', 'ring' => 'ring-emerald-500/60 bg-emerald-500/10'],
+            'cancelled' => ['label' => 'Cancelled', 'class' => 'text-pink-300', 'ring' => 'ring-pink-500/60 bg-pink-500/10'],
+        ];
+    @endphp
+
+    <!-- Totals for the selected period -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <a href="{{ route('admin.orders.index', array_merge($baseQuery, ['status' => null])) }}"
+           class="rounded-2xl border p-4 md:p-5 transition-all {{ request('status') === null ? 'border-purple-500/60 bg-purple-500/10' : 'border-slate-800/50 bg-slate-900/60 hover:border-purple-500/40' }}">
+            <p class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">Total Orders</p>
+            <p class="text-2xl md:text-3xl font-extrabold text-white mt-1">{{ number_format($stats['total']) }}</p>
+            <p class="text-[10px] md:text-xs text-slate-400 mt-1">{{ $period['label'] }}</p>
+        </a>
+
+        <div class="rounded-2xl border border-slate-800/50 bg-slate-900/60 p-4 md:p-5">
+            <p class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">Revenue (excl. cancelled)</p>
+            <p class="text-2xl md:text-3xl font-extrabold text-emerald-400 mt-1">৳{{ number_format($stats['revenue'], 0) }}</p>
+            <p class="text-[10px] md:text-xs text-slate-400 mt-1">Discounts given: ৳{{ number_format($stats['discount'], 0) }}</p>
+        </div>
+
+        @foreach(['delivered' => 'Delivered', 'cancelled' => 'Cancelled'] as $key => $label)
+            <a href="{{ route('admin.orders.index', array_merge($baseQuery, ['status' => $key])) }}"
+               class="rounded-2xl border p-4 md:p-5 transition-all {{ request('status') === $key ? $statusCards[$key]['ring'] . ' ' . $statusCards[$key]['class'] : 'border-slate-800/50 bg-slate-900/60 hover:border-slate-600' }}">
+                <p class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400">{{ $label }}</p>
+                <p class="text-2xl md:text-3xl font-extrabold mt-1 {{ $statusCards[$key]['class'] }}">{{ number_format($stats['byStatus'][$key] ?? 0) }}</p>
+                <p class="text-[10px] md:text-xs text-slate-400 mt-1">in {{ strtolower($period['label']) }}</p>
+            </a>
+        @endforeach
+    </div>
+
+    <!-- Single filter form: search, status, period, custom dates, payment, sort -->
+    <form action="{{ route('admin.orders.index') }}" method="GET" class="rounded-2xl border border-slate-800/50 bg-slate-900/60 p-4 space-y-4">
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            <!-- Search -->
+            <div class="relative lg:col-span-4">
+                <input type="text" name="search" placeholder="Search order ID, name, phone, coupon..." value="{{ request('search') }}"
+                       class="w-full bg-slate-900/80 border border-slate-700/50 rounded-lg px-4 py-2.5 pl-9 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all placeholder:text-slate-300">
+                <svg class="w-4 h-4 text-slate-300 absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
             </div>
 
-            <select name="status" class="bg-slate-900/80 border border-slate-700/50 rounded-lg px-4 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500">
-                <option value="">-- All Statuses --</option>
-                <option value="processing" {{ request('status') === 'processing' ? 'selected' : '' }}>🔷 Processing</option>
-                <option value="shipped"    {{ request('status') === 'shipped'    ? 'selected' : '' }}>🚚 Shipped</option>
-                <option value="delivered"  {{ request('status') === 'delivered'  ? 'selected' : '' }}>✅ Delivered</option>
-                <option value="cancelled"  {{ request('status') === 'cancelled'  ? 'selected' : '' }}>❌ Cancelled</option>
-            </select>
+            <!-- Status -->
+            <div class="lg:col-span-3">
+                <select name="status" onchange="this.form.submit()"
+                        class="w-full bg-slate-900/80 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <option value="">All Statuses</option>
+                    @foreach(\App\Models\Order::STATUSES as $val => $label)
+                        <option value="{{ $val }}" {{ request('status') === $val ? 'selected' : '' }}>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
 
-            <button type="submit" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-semibold transition">
-                Filter
-            </button>
-            @if(request()->filled('search') || request()->filled('status') || request()->filled('from') || request()->filled('to') || request('range'))
-                <a href="{{ route('admin.orders.index') }}" class="text-sm font-semibold text-pink-400 hover:underline">Clear Filters</a>
-            @endif
-        </form>
-        <div class="flex items-center gap-3 flex-wrap">
-            <a href="{{ route('admin.orders.export-csv') }}"
-               class="px-5 py-2.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded-lg text-sm font-bold shadow transition-all whitespace-nowrap">
-                ⬇ Export CSV
-            </a>
-            <label class="px-5 py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm font-bold shadow transition-all cursor-pointer whitespace-nowrap">
-                ⬆ Import CSV
-                <input type="file" accept=".csv,.txt" class="hidden" id="csvFileInput">
-            </label>
+            <!-- Payment method -->
+            <div class="lg:col-span-2">
+                <select name="payment" onchange="this.form.submit()"
+                        class="w-full bg-slate-900/80 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <option value="">All Payments</option>
+                    <option value="Cash on Delivery" {{ request('payment') === 'Cash on Delivery' ? 'selected' : '' }}>Cash on Delivery</option>
+                    <option value="bKash Send Money" {{ request('payment') === 'bKash Send Money' ? 'selected' : '' }}>bKash Send Money</option>
+                </select>
+            </div>
+
+            <!-- Sort -->
+            <div class="lg:col-span-3">
+                <select name="sort" onchange="this.form.submit()"
+                        class="w-full bg-slate-900/80 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    @foreach($sorts as $val => $label)
+                        <option value="{{ $val }}" {{ $sort === $val ? 'selected' : '' }}>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
         </div>
-    </div>
 
-    <!-- Date Range Filter -->
-    <form action="{{ route('admin.orders.index') }}" method="GET" class="rounded-2xl border border-slate-800/50 bg-slate-900/60 p-4 flex flex-wrap items-center gap-x-4 gap-y-3">
-        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Period:</span>
-        <div class="flex items-center gap-1 rounded-lg border border-slate-700/50 bg-slate-900/80 p-1">
-            @php
-                $periods = ['today' => 'Today', 'week' => 'This Week', 'month' => 'This Month', 'all' => 'All Time'];
-                $customDates = request()->filled('from') || request()->filled('to');
-            @endphp
-            @foreach($periods as $val => $label)
-                @php
-                    $isActive = !$customDates && (request()->input('range', 'today') === $val);
-                @endphp
+        <!-- Period presets -->
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-3">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Period:</span>
+            <div class="flex flex-wrap items-center gap-1 rounded-lg border border-slate-700/50 bg-slate-900/80 p-1">
+                @foreach($periods as $val => $label)
+                    @continue($val === 'custom')
+                    <label class="cursor-pointer">
+                        <input type="radio" name="range" value="{{ $val }}" class="sr-only peer"
+                               onchange="document.getElementById('orderCustomDates').classList.add('hidden'); this.form.querySelectorAll('input[name=from],input[name=to]').forEach(function(i){i.value=''}); this.form.submit();"
+                               @checked(!$isCustomPeriod && $period['key'] === $val)>
+                        <span class="px-3 py-1.5 rounded-md text-sm font-semibold text-slate-300 peer-checked:bg-purple-500 peer-checked:text-white transition">{{ $label }}</span>
+                    </label>
+                @endforeach
                 <label class="cursor-pointer">
-                    <input type="radio" name="range" value="{{ $val }}" class="sr-only peer" onchange="this.form.submit()" {{ $isActive ? 'checked' : '' }}>
-                    <span class="px-3 py-1.5 rounded-md text-sm font-semibold text-slate-300 peer-checked:bg-purple-500 peer-checked:text-white transition">{{ $label }}</span>
+                    <input type="radio" name="range" value="custom" class="sr-only peer"
+                           onchange="document.getElementById('orderCustomDates').classList.remove('hidden')"
+                           @checked($isCustomPeriod)>
+                    <span class="px-3 py-1.5 rounded-md text-sm font-semibold text-slate-300 peer-checked:bg-purple-500 peer-checked:text-white transition">Custom</span>
                 </label>
-            @endforeach
+            </div>
+
+            <div id="orderCustomDates" class="flex flex-wrap items-center gap-2 {{ $isCustomPeriod ? '' : 'hidden' }}">
+                <input type="date" name="from" value="{{ $period['from'] ?? request('from') }}" aria-label="From date"
+                       class="bg-slate-900/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark]">
+                <span class="text-slate-500 text-sm">→</span>
+                <input type="date" name="to" value="{{ $period['to'] ?? request('to') }}" aria-label="To date"
+                       class="bg-slate-900/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark]">
+                <button type="submit"
+                        class="px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 border border-purple-500/30 rounded-lg text-sm font-bold transition">
+                    Apply Dates
+                </button>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 ml-auto">
+                <select name="per_page" onchange="this.form.submit()"
+                        class="bg-slate-900/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    @foreach([10, 15, 25, 50, 100] as $size)
+                        <option value="{{ $size }}" {{ $perPage === $size ? 'selected' : '' }}>{{ $size }} / page</option>
+                    @endforeach
+                </select>
+                <button type="submit"
+                        class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white rounded-lg text-sm font-bold uppercase tracking-wider transition">
+                    Apply
+                </button>
+                <a href="{{ route('admin.orders.index') }}" class="text-sm font-semibold text-pink-400 hover:underline">Reset</a>
+            </div>
         </div>
-        <div class="flex items-center gap-2">
-            <input type="date" name="from" value="{{ request('from') }}" aria-label="From date"
-                   class="bg-slate-900/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark]">
-            <span class="text-slate-500 text-sm">→</span>
-            <input type="date" name="to" value="{{ request('to') }}" aria-label="To date"
-                   class="bg-slate-900/80 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark]">
-            <button type="submit"
-                    class="px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 border border-purple-500/30 rounded-lg text-sm font-bold transition">
-                Apply Dates
-            </button>
+
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400 border-t border-slate-800/50 pt-3">
+            <span>
+                Period: <strong class="text-white">{{ $period['label'] }}</strong>
+                @if($period['from'] || $period['to'])
+                    <span class="text-slate-300">({{ $period['from'] ?? 'start' }} → {{ $period['to'] ?? 'today' }})</span>
+                @endif
+            </span>
+            <span>·</span>
+            <span>Matching orders: <strong class="text-white">{{ $orders->total() }}</strong></span>
+            <span>·</span>
+            <span>Revenue on this view: <strong class="text-emerald-400">৳{{ number_format($stats['revenue'], 0) }}</strong></span>
         </div>
-        <span class="text-sm text-slate-400">
-            Showing: <strong class="text-white">{{ $orders->total() }}</strong> orders
-        </span>
     </form>
+
+    <!-- Export / Import -->
+    <div class="flex items-center justify-end gap-3 flex-wrap">
+        <a href="{{ route('admin.orders.export-csv', request()->query()) }}"
+           class="px-5 py-2.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded-lg text-sm font-bold shadow transition-all whitespace-nowrap">
+            ⬇ Export CSV (this view)
+        </a>
+        <label class="px-5 py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm font-bold shadow transition-all cursor-pointer whitespace-nowrap">
+            ⬆ Import CSV
+            <input type="file" accept=".csv,.txt" class="hidden" id="csvFileInput">
+        </label>
+    </div>
 
     <!-- Hidden Import Form -->
     <form id="importForm" action="{{ route('admin.orders.import-csv') }}" method="POST" enctype="multipart/form-data" class="hidden">
@@ -122,7 +207,12 @@
                             <td class="px-8 py-4 text-sm font-semibold text-purple-400">
                                 {{ $zoneName }}
                             </td>
-                            <td class="px-8 py-4 font-bold text-white">৳{{ number_format($order->total_amount, 0) }}</td>
+                            <td class="px-8 py-4 font-bold text-white">
+                                ৳{{ number_format($order->total_amount, 0) }}
+                                @if($order->discount_amount > 0)
+                                    <div class="text-xs font-semibold text-emerald-400">coupon: -৳{{ number_format($order->discount_amount, 0) }}</div>
+                                @endif
+                            </td>
                             <td class="px-8 py-4">
                                 @php
                                     $statusClasses = [
@@ -177,6 +267,13 @@
                                             <span class="text-xs font-bold uppercase text-slate-400 block">Delivery Zone</span>
                                             <span class="font-semibold text-slate-200">{{ $zoneName }}</span>
                                         </div>
+                                        @if($order->coupon_code)
+                                        <div>
+                                            <span class="text-xs font-bold uppercase text-slate-400 block">Coupon</span>
+                                            <span class="font-semibold text-emerald-400">{{ $order->coupon_code }}
+                                                (-৳{{ number_format($order->discount_amount, 0) }})</span>
+                                        </div>
+                                        @endif
                                         <div class="col-span-2 md:col-span-4">
                                             <span class="text-xs font-bold uppercase text-slate-400 block">Address</span>
                                             <span class="font-semibold text-slate-200">{{ $order->customer_address }}</span>
@@ -235,15 +332,17 @@
                                                 </button>
                                             </form>
                                             @endif
-                                            <form action="{{ route('admin.orders.destroy', $order->id) }}" method="POST" class="flex-shrink-0" onsubmit="return confirm('Are you sure you want to delete Order #{{ $order->id }}? This action cannot be undone.');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <label class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">&nbsp;</label>
-                                                <button type="submit"
-                                                        class="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 rounded-lg text-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap">
-                                                    Delete
-                                                </button>
-                                            </form>
+                                            @if(auth()->user()->isSuperAdmin())
+                                                <form action="{{ route('admin.orders.destroy', $order->id) }}" method="POST" class="flex-shrink-0" onsubmit="return confirm('Are you sure you want to delete Order #{{ $order->id }}? This action cannot be undone.');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <label class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">&nbsp;</label>
+                                                    <button type="submit"
+                                                            class="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 rounded-lg text-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap">
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                            @endif
                                         </div>
                                     </div>
 
@@ -294,13 +393,23 @@
                                                 @endforeach
                                             </tbody>
                                         </table>
-                                        <div class="flex justify-end mt-2 text-sm">
-                                            <span class="text-slate-400">Delivery ({{ $zoneName }}):</span>
-                                            <span class="font-semibold text-slate-200 ml-4">৳{{ number_format($chargeAmount, 0) }}</span>
+                                        <div class="flex justify-end mt-2 text-sm flex-wrap gap-x-6">
+                                            <span class="text-slate-400">Subtotal:</span>
+                                            <span class="font-semibold text-slate-200">৳{{ number_format($order->subtotal, 0) }}</span>
                                         </div>
-                                        <div class="flex justify-end mt-1 text-base font-bold text-white">
+                                        @if($order->discount_amount > 0)
+                                        <div class="flex justify-end mt-1 text-sm flex-wrap gap-x-6">
+                                            <span class="text-slate-400">Discount ({{ $order->coupon_code }}):</span>
+                                            <span class="font-semibold text-emerald-400">-৳{{ number_format($order->discount_amount, 0) }}</span>
+                                        </div>
+                                        @endif
+                                        <div class="flex justify-end mt-1 text-sm flex-wrap gap-x-6">
+                                            <span class="text-slate-400">Delivery ({{ $zoneName }}):</span>
+                                            <span class="font-semibold text-slate-200">৳{{ number_format($chargeAmount, 0) }}</span>
+                                        </div>
+                                        <div class="flex justify-end mt-1 text-base font-bold text-white flex-wrap gap-x-6">
                                             <span>Grand Total:</span>
-                                            <span class="text-purple-400 ml-4">৳{{ number_format($order->total_amount, 0) }}</span>
+                                            <span class="text-purple-400">৳{{ number_format($order->total_amount, 0) }}</span>
                                         </div>
                                     </div>
 

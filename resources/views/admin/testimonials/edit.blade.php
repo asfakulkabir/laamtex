@@ -1,0 +1,81 @@
+@extends('layouts.admin')
+
+@section('title', 'Replace Testimonial - laamtex')
+@section('page_title', 'Replace Testimonial Image')
+
+@section('content')
+<div class="max-w-xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800/50 p-8 rounded-2xl shadow-lg">
+
+    <div class="mb-6">
+        <h3 class="font-bold text-white text-lg">Current Image</h3>
+        <p class="text-sm text-slate-300 mt-1">Upload a new image to replace the current one, or leave the field empty to keep it.</p>
+    </div>
+
+    <div class="mb-6">
+        <img src="{{ $testimonial->image_url }}" alt="Current testimonial"
+             class="w-40 h-40 object-cover rounded-xl border border-slate-700/50">
+    </div>
+
+    <form action="{{ route('admin.testimonials.update', $testimonial->id) }}" method="POST" enctype="multipart/form-data" class="space-y-6" x-data="testimonialUpload()">
+        @csrf
+        @method('PUT')
+
+        <div>
+            <label for="image" class="block text-sm font-bold uppercase tracking-wider text-slate-300 mb-2">Replace With</label>
+
+            <label for="image"
+                   class="flex flex-col items-center justify-center gap-3 w-full px-4 py-10 rounded-xl border-2 border-dashed cursor-pointer transition"
+                   :class="preview ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-700/60 bg-slate-800/30 hover:border-purple-500/50'">
+                <template x-if="!preview">
+                    <div class="flex flex-col items-center gap-2 text-center">
+                        <svg class="w-10 h-10 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-.41-8.98 4.5 4.5 0 018.08-3.05 5.25 5.25 0 011.58 4.61 4.5 4.5 0 01-.41 8.98H6.75z"/>
+                        </svg>
+                        <span class="text-sm font-bold text-slate-300">Click to choose a new image</span>
+                    </div>
+                </template>
+                <template x-if="preview">
+                    <img :src="preview" alt="Selected testimonial" class="max-h-64 w-auto rounded-lg border border-slate-700/50">
+                </template>
+                <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/webp"
+                       class="sr-only" @change="handleFile($event)">
+            </label>
+
+            <p x-show="fileName" x-cloak class="mt-2 text-xs font-semibold text-emerald-400">Selected: <span x-text="fileName"></span></p>
+            @error('image')
+                <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
+            @enderror
+        </div>
+
+        <div class="flex items-center space-x-4 pt-4 border-t border-slate-800/50">
+            <button type="submit"
+                    class="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-bold rounded-lg text-sm transition-all shadow-md">
+                Save
+            </button>
+            <a href="{{ route('admin.testimonials.index') }}" class="px-6 py-2.5 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 font-bold rounded-lg text-sm transition-all">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+@endsection
+
+@section('scripts')
+<script>
+    function testimonialUpload() {
+        return {
+            preview: null,
+            fileName: '',
+
+            handleFile(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                this.fileName = file.name;
+                if (this.preview) URL.revokeObjectURL(this.preview);
+                this.preview = URL.createObjectURL(file);
+            }
+        };
+    }
+</script>
+@endsection

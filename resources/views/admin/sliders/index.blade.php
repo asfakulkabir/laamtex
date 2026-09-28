@@ -7,7 +7,7 @@
 <div class="max-w-5xl space-y-6">
     
     <div class="flex justify-between items-center">
-        <p class="text-sm text-slate-300">Manage the hero slider items (images or videos) on the home page. Recommended image size: <strong class="text-purple-400">1920 x 800 px</strong>.</p>
+        <p class="text-sm text-slate-300">Manage the hero slider items (images, videos or audio) on the home page. Recommended image size: <strong class="text-purple-400">1920 x 800 px</strong>.</p>
         <a href="{{ route('admin.sliders.create') }}" class="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white rounded-lg text-sm font-bold shadow transition-all active:scale-[0.98]">
             + Add Slider
         </a>
@@ -38,6 +38,17 @@
                                     <video src="{{ asset('storage/' . $slider->video) }}" muted playsinline
                                            class="w-32 h-16 object-cover rounded-lg border border-slate-700/50 bg-black"></video>
                                     <span class="absolute top-1 right-1"><span class="bg-purple-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">▶ Video</span></span>
+                                </div>
+                            @elseif($slider->isAudio())
+                                <div class="relative w-32">
+                                    @if($slider->image)
+                                        <img src="{{ asset('storage/' . $slider->image) }}" alt="{{ $slider->title ?? 'Audio cover' }}"
+                                             class="w-32 h-16 object-cover rounded-lg border border-slate-700/50">
+                                    @else
+                                        <span class="flex w-32 h-16 items-center justify-center rounded-lg border border-slate-700/50 bg-slate-800/50 text-slate-500 text-xs">No cover</span>
+                                    @endif
+                                    <audio src="{{ asset('storage/' . $slider->audio) }}" preload="none" class="w-32 h-8 mt-1"></audio>
+                                    <span class="absolute top-1 right-1"><span class="bg-emerald-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">&#9835; Audio</span></span>
                                 </div>
                             @elseif($slider->image)
                                 <img src="{{ asset('storage/' . $slider->image) }}" alt="{{ $slider->title ?? 'Slider' }}"

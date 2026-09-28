@@ -10,14 +10,19 @@ use Symfony\Component\HttpFoundation\Response;
 class IsAdmin
 {
     /**
-     * Handle an incoming request.
+     * Allows any staff member (super admin or moderator) into the panel.
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::check() && Auth::user()->is_admin) {
+        if (Auth::check() && Auth::user()->isAdmin()) {
             return $next($request);
         }
 
-        return redirect()->route('admin.login')->with('error', 'You do not have administrative access.');
+        if (Auth::check() && Auth::user()->isCustomer()) {
+            return redirect()->route('admin.login')
+                ->with('error', 'You do not have administrative access.');
+        }
+
+        return redirect()->route('admin.login')->with('error', 'Please login to access the admin panel.');
     }
 }
