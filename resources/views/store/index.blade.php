@@ -6,20 +6,62 @@
 <div class="pb-16">
 
     <!-- Hero Slider -->
+    <style>
+        .yt-cover-iframe {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #000;
+            border: 0;
+        }
+        @media (max-width: 639.98px) {
+            .yt-cover-iframe { width: 111.112%; height: 100%; }
+        }
+        @media (min-width: 640px) and (max-width: 767.98px) {
+            .yt-cover-iframe { width: 118.52%; height: 100%; }
+        }
+        @media (min-width: 768px) {
+            .yt-cover-iframe {
+                width: max(100%, calc(100% * 1.7777778 / var(--hero-ratio, 2.4)));
+                height: max(100%, calc(100% * var(--hero-ratio, 2.4) * 0.5625));
+            }
+        }
+    </style>
     @if($sliders->count() > 0)
         <section class="w-full">
-            <div class="relative overflow-hidden bg-gray-900" x-data="heroSlider({{ $sliders->count() }})" x-init="init()">
-                <div class="relative w-full 2xl:max-h-[min(68vh,600px)]" :style="'aspect-ratio:' + ratio + ';'">
+            <div class="relative overflow-hidden bg-gray-900" x-data="heroSlider({{ $sliders->count() }}, @json($sliders->map(fn($s) => $s->isVideo())->values()->all()))" x-init="init()">
+                <div class="relative w-full [aspect-ratio:16/10] sm:[aspect-ratio:3/2] md:[aspect-ratio:var(--hero-ratio)] 2xl:max-h-[min(68vh,600px)]" :style="'--hero-ratio:' + ratio + ';'">
                     @foreach($sliders as $i => $slider)
                         <div x-show="activeSlide === {{ $i }}" x-transition:enter="transition-opacity duration-700" @if($i > 0) x-cloak @endif
                              class="absolute inset-0 w-full">
-                            @if($slider->link)
-                                <a href="{{ $slider->link }}">
-                            @endif
-                            <img src="{{ asset('storage/' . $slider->image) }}" alt="{{ $slider->title ?? 'Slider ' . ($i + 1) }}"
-                                 class="w-full h-full object-cover" @load="imgLoaded({{ $i }}, $event)" loading="eager">
-                            @if($slider->link)
-                                </a>
+                            @if($slider->isVideo())
+                                @if($slider->link)
+                                    <a href="{{ $slider->link }}" class="block w-full h-full">
+                                @endif
+                                <template x-if="activeSlide === {{ $i }}">
+                                    @if($slider->isYoutubeVideo())
+                                        <iframe :src="'https://www.youtube.com/embed/{{ $slider->youtube_id }}?autoplay=1&mute=1&loop=1&playlist={{ $slider->youtube_id }}&controls=0&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3&disablekb=1&fs=0'"
+                                                class="yt-cover-iframe" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" title="{{ $slider->title ?? 'Hero video' }}"></iframe>
+                                    @else
+                                        <video src="{{ asset('storage/' . $slider->video) }}"
+                                               @if($slider->image) poster="{{ asset('storage/' . $slider->image) }}" @endif
+                                               autoplay muted loop playsinline
+                                               class="w-full h-full object-cover bg-black" @loadedmetadata="videoLoaded({{ $i }}, $event)"></video>
+                                    @endif
+                                </template>
+                                @if($slider->link)
+                                    </a>
+                                @endif
+                            @else
+                                @if($slider->link)
+                                    <a href="{{ $slider->link }}">
+                                @endif
+                                <img src="{{ asset('storage/' . $slider->image) }}" alt="{{ $slider->title ?? 'Slider ' . ($i + 1) }}"
+                                     class="w-full h-full object-cover" @load="imgLoaded({{ $i }}, $event)" loading="eager">
+                                @if($slider->link)
+                                    </a>
+                                @endif
                             @endif
                         </div>
                     @endforeach
@@ -192,11 +234,12 @@
 @section('scripts')
 @if($sliders->count() > 0)
 <script>
-    function heroSlider(count) {
+    function heroSlider(count, videoSlides) {
         return {
             activeSlide: 0,
             timer: null,
             ratios: [],
+            videoSlides: videoSlides || [],
             ratio: '2.4',
             init() {
                 if (count > 1) {
@@ -204,6 +247,10 @@
                         this.step(1);
                     }, 5000);
                 }
+                this.videoSlides.forEach((isVideo, i) => {
+                    if (isVideo) this.ratios[i] = '2.2';
+                });
+                this.applyRatio();
             },
             step(dir) {
                 this.activeSlide = (this.activeSlide + dir + count) % count;
@@ -224,7 +271,15 @@
             imgLoaded(i, event) {
                 const img = event && event.currentTarget;
                 if (!img || !img.naturalWidth) return;
+                if (this.videoSlides[i]) return;
                 const r = img.naturalWidth / img.naturalHeight;
+                this.ratios[i] = Math.max(1.25, Math.min(3.4, r)).toFixed(3);
+                if (i === this.activeSlide) this.applyRatio();
+            },
+            videoLoaded(i, event) {
+                const video = event && event.currentTarget;
+                if (!video || !video.videoWidth) return;
+                const r = video.videoWidth / video.videoHeight;
                 this.ratios[i] = Math.max(1.25, Math.min(3.4, r)).toFixed(3);
                 if (i === this.activeSlide) this.applyRatio();
             },

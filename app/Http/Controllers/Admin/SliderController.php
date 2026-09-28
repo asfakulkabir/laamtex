@@ -23,7 +23,10 @@ class SliderController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'video' => 'nullable|file|mimes:mp4,webm,mov,ogv,m4v|max:51200',
+            'youtube_url' => 'nullable|url|max:1000',
+            'media_type' => 'required|in:image,video_upload,youtube',
             'title' => 'nullable|string|max:255',
             'link' => 'nullable|url|max:1000',
             'sort_order' => 'nullable|integer|min:0',
@@ -31,13 +34,41 @@ class SliderController extends Controller
         ]);
 
         $data = $request->only(['title', 'link', 'sort_order', 'is_active']);
-        $data['image'] = $request->file('image')->store('sliders', 'public');
         $data['is_active'] = $request->boolean('is_active', true);
         $data['sort_order'] = $request->input('sort_order', 0);
 
+        $mediaType = $request->input('media_type', 'image');
+
+        $data['image'] = null;
+        $data['video'] = null;
+        $data['video_type'] = null;
+
+        if ($mediaType === 'image') {
+            if (!$request->hasFile('image')) {
+                return back()->withErrors(['image' => 'An image is required when media type is Image.'])->withInput();
+            }
+            $data['image'] = $request->file('image')->store('sliders', 'public');
+        } elseif ($mediaType === 'video_upload' && $request->hasFile('video')) {
+            $data['video'] = $request->file('video')->store('sliders/videos', 'public');
+            $data['video_type'] = 'upload';
+            if ($request->hasFile('image')) {
+                $data['image'] = $request->file('image')->store('sliders', 'public');
+            }
+        } elseif ($mediaType === 'video_upload') {
+            return back()->withErrors(['video' => 'A video file is required when media type is Video Upload.'])->withInput();
+        } elseif ($mediaType === 'youtube' && $request->filled('youtube_url')) {
+            $data['video'] = trim($request->input('youtube_url'));
+            $data['video_type'] = 'youtube';
+            if ($request->hasFile('image')) {
+                $data['image'] = $request->file('image')->store('sliders', 'public');
+            }
+        } elseif ($mediaType === 'youtube') {
+            return back()->withErrors(['youtube_url' => 'A YouTube video URL is required when media type is YouTube.'])->withInput();
+        }
+
         Slider::create($data);
 
-        return redirect()->route('admin.sliders.index')->with('success', 'Slider image added successfully.');
+        return redirect()->route('admin.sliders.index')->with('success', 'Slider item added successfully.');
     }
 
     public function edit(Slider $slider)
@@ -49,6 +80,9 @@ class SliderController extends Controller
     {
         $request->validate([
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'video' => 'nullable|file|mimes:mp4,webm,mov,ogv,m4v|max:51200',
+            'youtube_url' => 'nullable|url|max:1000',
+            'media_type' => 'required|in:image,video_upload,youtube',
             'title' => 'nullable|string|max:255',
             'link' => 'nullable|url|max:1000',
             'sort_order' => 'nullable|integer|min:0',
@@ -59,25 +93,65 @@ class SliderController extends Controller
         $data['is_active'] = $request->boolean('is_active', true);
         $data['sort_order'] = $request->input('sort_order', 0);
 
-        if ($request->hasFile('image')) {
-            if ($slider->image) {
-                Storage::disk('public')->delete($slider->image);
+        $mediaType = $request->input('media_type', 'image');
+
+        if ($mediaType === 'image') {
+            $data['video'] = null;
+            $data['video_type'] = null;
+            if ($request->hasFile('image')) {
+                $this->deleteImage($slider);
+                $data['image'] = $request->file('image')->store('sliders', 'public');
             }
-            $data['image'] = $request->file('image')->store('sliders', 'public');
+        } elseif ($mediaType === 'video_upload') {
+            if ($request->hasFile('video')) {
+                $this->deleteVideo($slider);
+                $data['video'] = $request->file('video')->store('sliders/videos', 'public');
+                $data['video_type'] = 'upload';
+            } elseif (!$slider->isUploadedVideo()) {
+                return back()->withErrors(['video' => 'A video file is required when media type is Video Upload.'])->withInput();
+            }
+            if ($request->hasFile('image')) {
+                $this->deleteImage($slider);
+                $data['image'] = $request->file('image')->store('sliders', 'public');
+            }
+        } elseif ($mediaType === 'youtube') {
+            if ($request->filled('youtube_url')) {
+                $data['video'] = trim($request->input('youtube_url'));
+                $data['video_type'] = 'youtube';
+            } elseif (!$slider->isYoutubeVideo()) {
+                return back()->withErrors(['youtube_url' => 'A YouTube video URL is required when media type is YouTube.'])->withInput();
+            }
+            if ($request->hasFile('image')) {
+                $this->deleteImage($slider);
+                $data['image'] = $request->file('image')->store('sliders', 'public');
+            }
         }
 
         $slider->update($data);
 
-        return redirect()->route('admin.sliders.index')->with('success', 'Slider image updated successfully.');
+        return redirect()->route('admin.sliders.index')->with('success', 'Slider item updated successfully.');
     }
 
     public function destroy(Slider $slider)
     {
+        $this->deleteImage($slider);
+        $this->deleteVideo($slider);
+        $slider->delete();
+
+        return redirect()->route('admin.sliders.index')->with('success', 'Slider item deleted successfully.');
+    }
+
+    protected function deleteImage(Slider $slider)
+    {
         if ($slider->image) {
             Storage::disk('public')->delete($slider->image);
         }
-        $slider->delete();
+    }
 
-        return redirect()->route('admin.sliders.index')->with('success', 'Slider image deleted successfully.');
+    protected function deleteVideo(Slider $slider)
+    {
+        if ($slider->isUploadedVideo() && $slider->video) {
+            Storage::disk('public')->delete($slider->video);
+        }
     }
 }

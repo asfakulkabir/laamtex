@@ -1,0 +1,71 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>pending</title></head>
+<body>
+<form id="seed" method="POST" action="/cart/add">
+  <input type="hidden" name="_token" id="tok">
+  <input type="hidden" name="product_id" value="5">
+  <input type="hidden" name="quantity" value="1">
+</form>
+<pre id="out">pending</pre>
+<script>
+const out = document.getElementById('out');
+const log = m => { out.textContent = m; };
+
+function getTok() {
+  // grab a CSRF token from any rendered page
+  return fetch('/login').then(r => r.text()).then(t => {
+    const m = t.match(/name="_token"[^>]*value="([^"]+)"/);
+    return m ? m[1] : null;
+  });
+}
+
+getTok().then(tok => {
+  document.getElementById('tok').value = tok;
+  const fd = new FormData(document.getElementById('seed'));
+  return fetch('/cart/add', { method: 'POST', body: new FormData(document.getElementById('seed')), redirect: 'follow' });
+}).then(() => {
+  const fr = document.createElement('iframe');
+  fr.style.width = '1200px'; fr.style.height = '900px';
+  fr.src = '/checkout';
+  document.body.appendChild(fr);
+  fr.addEventListener('load', () => {
+    setTimeout(() => {
+      const d = fr.contentDocument;
+      const w = fr.contentWindow;
+      const f = d.getElementById('checkout-form');
+      if (!f) { log('RESULT no form found'); return; }
+
+      const bk = d.getElementById('bkash_sender_last4');
+      const payment = f.querySelector('input[name=payment_method]:checked');
+      const zone = f.querySelector('input[name=delivery_zone]');
+
+      const report = {
+        payment_selected: payment ? payment.value : null,
+        zone_selected: zone ? zone.value : null,
+        bkash_has_static_required: bk.hasAttribute('required'),
+        bkash_display: w.getComputedStyle(bk.parentElement.parentElement).display,
+        form_checkValidity: f.checkValidity(),
+        invalid_fields: [...f.elements].filter(e => e.willValidate && !e.checkValidity()).map(e => e.name),
+      };
+
+      // fill the form like a real customer, leave bkash empty (COD default)
+      f.customer_name.value = 'Headless Test';
+      f.customer_phone.value = '01712345678';
+      f.customer_address.value = 'Some address, Dhaka';
+      if (!zone) f.querySelector('input[name=delivery_zone]').click();
+      if (payment) payment.click();
+      report.invalid_fields_before_submit = [...f.elements].filter(e => e.willValidate && !e.checkValidity()).map(e => e.name);
+      report.form_checkValidity_after_fill = f.checkValidity();
+
+      // wait for Alpine to apply :required, then submit for real
+      setTimeout(() => {
+        report.bkash_required_attr_after_alpine = bk.required;
+        report.form_checkValidity_final = f.checkValidity();
+        f.requestSubmit();
+        setTimeout(() => log('RESULT ' + JSON.stringify(report, null, 2)), 1500);
+      }, 800);
+    }, 1500);
+  });
+});
+</script>
+</body></html>

@@ -13,6 +13,7 @@ use App\Models\Slider;
 use App\Mail\NewOrderNotification;
 use App\Services\MetaPixelService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
@@ -24,6 +25,10 @@ class StoreController extends Controller
         $featuredProducts = Product::with(['images', 'categories'])->where('is_active', true)->where('is_featured', true)->orderBy('sort_order')->latest()->limit(8)->get();
         $latestProducts = Product::with(['images', 'categories'])->where('is_active', true)->orderBy('sort_order')->latest()->limit(8)->get();
         $sliders = Slider::active()->get();
+        $videoSliders = $sliders->filter(fn (Slider $slider) => $slider->isVideo())->values();
+        if ($videoSliders->isNotEmpty()) {
+            $sliders = $videoSliders;
+        }
 
         return view('store.index', compact('featuredCategories', 'featuredProducts', 'latestProducts', 'sliders'));
     }
@@ -368,7 +373,11 @@ class StoreController extends Controller
             'customer_address' => 'required|string',
             'delivery_zone'    => 'required|exists:delivery_charges,zone',
             'payment_method'   => 'required|in:cod,bkash',
-            'bkash_sender_last4' => 'required_if:payment_method,bkash|digits:4',
+            'bkash_sender_last4' => Rule::when(
+                $request->input('payment_method') === 'bkash',
+                ['required', 'digits:4'],
+                'nullable'
+            ),
         ]);
 
         $cart = session()->get('cart', []);

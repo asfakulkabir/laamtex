@@ -36,7 +36,8 @@ fbq('track', 'InitiateCheckout', {
         </div>
     @endauth
 
-    <form action="{{ route('checkout.place') }}" method="POST" id="checkout-form">
+    <form action="{{ route('checkout.place') }}" method="POST" id="checkout-form"
+          x-on:submit="submitting = true">
         @csrf
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
@@ -199,7 +200,10 @@ fbq('track', 'InitiateCheckout', {
                             </label>
                             <input type="text" id="bkash_sender_last4" name="bkash_sender_last4"
                                    inputmode="numeric" maxlength="4" autocomplete="off"
-                                   value="{{ old('bkash_sender_last4') }}" x-model="bkashLast4" required
+                                   value="{{ old('bkash_sender_last4') }}" x-model="bkashLast4"
+                                   :required="selectedPayment === 'bkash'"
+                                   :disabled="selectedPayment !== 'bkash'"
+                                   :pattern="selectedPayment === 'bkash' ? '[0-9]{4}' : null"
                                    class="w-full bg-white border-2 border-gray-400 rounded-lg px-3 py-2.5 text-base text-center font-bold tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all"
                                    placeholder="XXXX">
                             <div x-show="bkashLast4.length > 0" x-cloak
@@ -267,9 +271,10 @@ fbq('track', 'InitiateCheckout', {
                         <span class="text-purple-600" x-text="formattedGrandTotal">৳{{ number_format($subtotal, 0) }}</span>
                     </div>
 
-                    <button type="submit"
-                            class="block w-full text-center py-4 bg-primary hover:bg-primary text-white rounded-lg font-bold transition shadow-md active:scale-95 text-lg">
-                        ✅ অর্ডার কনফার্ম করুন
+                    <button type="submit" :disabled="submitting"
+                            class="block w-full text-center py-4 bg-primary hover:bg-primary text-white rounded-lg font-bold transition shadow-md active:scale-95 text-lg disabled:opacity-60 disabled:cursor-not-allowed">
+                        <span x-show="!submitting">✅ অর্ডার কনফার্ম করুন</span>
+                        <span x-show="submitting" x-cloak>⏳ অর্ডার প্রসেস হচ্ছে...</span>
                     </button>
 
                     <a href="{{ route('cart') }}"
@@ -302,6 +307,7 @@ fbq('track', 'InitiateCheckout', {
             selectedPayment: '{{ old('payment_method', 'cod') }}',
             bkashLast4: '{{ old('bkash_sender_last4') }}',
             bkashNumber: @json($bkashNumber ?? ''),
+            submitting: false,
 
             copyBkashNumber() {
                 if (!this.bkashNumber) return;
