@@ -9,12 +9,26 @@
     <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
         <p class="text-sm text-slate-300">
             Upload customer testimonial images. They appear in the "What Our Customers Say" slider on the home page,
-            just below Latest Arrivals. Recommended size: <strong class="text-purple-400">800 x 800 px</strong>.
+            just below Latest Arrivals. Recommended size:
+            <strong class="text-purple-400">{{ \App\Models\Testimonial::RECOMMENDED_WIDTH }} x {{ \App\Models\Testimonial::RECOMMENDED_HEIGHT }} px (landscape, 16:9)</strong>.
+            The home page shows two side by side on desktop and one on mobile, so the image must be wider than it is tall.
         </p>
         <a href="{{ route('admin.testimonials.create') }}" class="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white rounded-lg text-sm font-bold shadow transition-all whitespace-nowrap">
             + Upload Testimonial
         </a>
     </div>
+
+    @if($testimonials->contains(fn ($t) => ! $t->isLandscape()))
+        <div class="flex items-start gap-3 px-4 py-3 rounded-xl border border-amber-500/30 bg-amber-500/5">
+            <svg class="w-5 h-5 text-amber-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+            </svg>
+            <p class="text-sm text-amber-200/90">
+                Some images are not landscape, so they will be letterboxed in the slider. Replace them with a
+                <strong>{{ \App\Models\Testimonial::RECOMMENDED_WIDTH }} x {{ \App\Models\Testimonial::RECOMMENDED_HEIGHT }} px</strong> image.
+            </p>
+        </div>
+    @endif
 
     @if($testimonials->count() > 1)
         <div class="flex justify-end">
@@ -44,10 +58,11 @@
         <div id="sortable-testimonials" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             @foreach($testimonials as $testimonial)
                 <div data-id="{{ $testimonial->id }}"
-                     class="group bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800/50 rounded-2xl shadow-lg overflow-hidden relative">
-                    <div class="relative aspect-square bg-slate-800/50">
+                     class="group bg-gradient-to-br from-slate-900 to-slate-950 border {{ $testimonial->isLandscape() ? 'border-slate-800/50' : 'border-amber-500/40' }} rounded-2xl shadow-lg overflow-hidden relative">
+                    <div class="relative aspect-video bg-slate-800/50">
                         <img src="{{ $testimonial->image_url }}" alt="Customer testimonial"
-                             class="w-full h-full object-cover">
+                             @if($testimonial->width) width="{{ $testimonial->width }}" height="{{ $testimonial->height }}" @endif
+                             class="w-full h-full object-contain">
                         <div class="absolute inset-0 bg-slate-950/0 group-hover:bg-slate-950/40 transition-colors"></div>
                         <span class="drag-handle absolute top-2 left-2 cursor-grab active:cursor-grabbing p-1.5 rounded-lg bg-slate-900/80 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
                               title="Drag to reorder">
@@ -58,28 +73,39 @@
                         @if(!$testimonial->is_active)
                             <span class="absolute top-2 right-2 px-2 py-1 rounded-lg bg-slate-900/85 text-slate-300 text-[10px] font-bold uppercase tracking-wider">Hidden</span>
                         @endif
+                        <span class="absolute bottom-2 left-2 px-2 py-1 rounded-lg bg-slate-900/85 text-[10px] font-bold uppercase tracking-wider
+                                     {{ $testimonial->isLandscape() ? 'text-emerald-400' : 'text-amber-400' }}">
+                            {{ $testimonial->orientation }}
+                        </span>
                     </div>
 
-                    <div class="p-3 flex items-center gap-2">
-                        <a href="{{ route('admin.testimonials.edit', $testimonial->id) }}"
-                           class="flex-1 text-center px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 rounded-lg text-xs font-bold transition">
-                            Replace
-                        </a>
-                        <form action="{{ route('admin.testimonials.toggle', $testimonial->id) }}" method="POST">
-                            @csrf
-                            <button type="submit" title="{{ $testimonial->is_active ? 'Hide on site' : 'Show on site' }}"
-                                    class="px-3 py-1.5 rounded-lg text-xs font-bold border transition {{ $testimonial->is_active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-slate-500/10 text-slate-400 border-slate-500/20 hover:bg-slate-500/20' }}">
-                                {{ $testimonial->is_active ? 'Shown' : 'Hidden' }}
-                            </button>
-                        </form>
-                        <form action="{{ route('admin.testimonials.destroy', $testimonial->id) }}" method="POST"
-                              onsubmit="return confirm('Delete this testimonial image?');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-bold border transition bg-pink-500/10 text-pink-400 border-pink-500/20 hover:bg-pink-500/20">
-                                Delete
-                            </button>
-                        </form>
+                    <div class="p-3 space-y-2">
+                        <div class="flex items-center justify-between gap-2 text-[11px]">
+                            <span class="font-mono font-semibold text-slate-300">{{ $testimonial->dimensions }}</span>
+                            <span class="font-semibold text-slate-500">{{ $testimonial->size_label }}</span>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <a href="{{ route('admin.testimonials.edit', $testimonial->id) }}"
+                               class="flex-1 text-center px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 rounded-lg text-xs font-bold transition">
+                                Replace
+                            </a>
+                            <form action="{{ route('admin.testimonials.toggle', $testimonial->id) }}" method="POST">
+                                @csrf
+                                <button type="submit" title="{{ $testimonial->is_active ? 'Hide on site' : 'Show on site' }}"
+                                        class="px-3 py-1.5 rounded-lg text-xs font-bold border transition {{ $testimonial->is_active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-slate-500/10 text-slate-400 border-slate-500/20 hover:bg-slate-500/20' }}">
+                                    {{ $testimonial->is_active ? 'Shown' : 'Hidden' }}
+                                </button>
+                            </form>
+                            <form action="{{ route('admin.testimonials.destroy', $testimonial->id) }}" method="POST"
+                                  onsubmit="return confirm('Delete this testimonial image?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-bold border transition bg-pink-500/10 text-pink-400 border-pink-500/20 hover:bg-pink-500/20">
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             @endforeach

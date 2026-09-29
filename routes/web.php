@@ -118,9 +118,12 @@ Route::prefix('admin')->group(function () {
             Route::get('/products/export-csv', [ProductController::class, 'exportCsv'])->name('admin.products.export-csv');
             Route::post('/products/import-csv', [ProductController::class, 'importCsv'])->name('admin.products.import-csv');
 
-            // Variable product variations
-            Route::post('/products/{product}/generate-variations', [ProductController::class, 'generateVariations'])->name('admin.products.generate-variations');
-            Route::post('/products/{product}/variations/bulk', [ProductController::class, 'bulkVariationAction'])->name('admin.products.variations.bulk');
+            // Variable product variations. The "Generate from Attributes" button
+            // lives inside the product form, which carries a hidden _method=PUT
+            // for the update route, so Laravel would spoof this request as a PUT.
+            // Both verbs are accepted to keep that button working.
+            Route::match(['post', 'put'], '/products/{product}/generate-variations', [ProductController::class, 'generateVariations'])->name('admin.products.generate-variations');
+            Route::match(['post', 'put'], '/products/{product}/variations/bulk', [ProductController::class, 'bulkVariationAction'])->name('admin.products.variations.bulk');
 
             // Global Attributes CRUD
             Route::get('/attributes', [AttributeController::class, 'index'])->name('admin.attributes.index');

@@ -27,11 +27,16 @@ class TestimonialController extends Controller
             'image' => ['required', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
         ]);
 
-        Testimonial::create([
-            'image'      => $request->file('image')->store('testimonials', 'public'),
-            'sort_order' => (int) Testimonial::max('sort_order') + 1,
-            'is_active'  => true,
-        ]);
+        $upload = $request->file('image');
+
+        Testimonial::create(array_merge(
+            Testimonial::readImageMeta($upload),
+            [
+                'image'      => $upload->store('testimonials', 'public'),
+                'sort_order' => (int) Testimonial::max('sort_order') + 1,
+                'is_active'  => true,
+            ]
+        ));
 
         return redirect()->route('admin.testimonials.index')
             ->with('success', 'Testimonial image uploaded successfully.');
@@ -49,8 +54,14 @@ class TestimonialController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
+            $upload = $request->file('image');
+
             $this->deleteImage($testimonial);
-            $testimonial->update(['image' => $request->file('image')->store('testimonials', 'public')]);
+
+            $testimonial->update(array_merge(
+                Testimonial::readImageMeta($upload),
+                ['image' => $upload->store('testimonials', 'public')]
+            ));
         }
 
         return redirect()->route('admin.testimonials.index')

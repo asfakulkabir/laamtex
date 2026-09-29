@@ -14,6 +14,49 @@
     <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" class="space-y-8">
         @csrf
 
+        {{-- Every validation error is listed here. Without this a rejected
+             field (an oversized variation image, a bad SKU, ...) silently
+             discards the submission and the admin has no idea why. --}}
+        @php
+            $detailedVariationErrors = $errors->get('variations');
+            $salePriceErrors = collect($errors->getMessages())
+                ->filter(fn ($messages, $key) => str_starts_with($key, 'variations.') && str_ends_with($key, '.sale_price'));
+
+            $variationFieldLabels = [
+                'image' => 'image', 'sku' => 'SKU', 'regular_price' => 'regular price',
+                'stock_quantity' => 'stock quantity', 'weight_value' => 'weight',
+                'stock_status' => 'stock status', 'status' => 'status',
+            ];
+
+            $otherErrors = [];
+
+            foreach ($errors->getMessages() as $key => $messages) {
+                if ($key === 'variations' || $salePriceErrors->has($key)) {
+                    continue;
+                }
+
+                foreach ($messages as $message) {
+                    if (preg_match('/^variations\.(\d+)\.([a-z_]+)$/', $key, $m)) {
+                        $label = $variationFieldLabels[$m[2]] ?? str_replace('_', ' ', $m[2]);
+                        $message = preg_replace('/\s*field\s/mi', ' ' . $label . ' ', $message);
+                        $otherErrors[] = 'Row ' . ((int) $m[1] + 1) . ' — ' . $message;
+                    } else {
+                        $otherErrors[] = $message;
+                    }
+                }
+            }
+        @endphp
+        @if($otherErrors)
+            <div class="px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/5 space-y-1">
+                <p class="text-sm font-bold text-red-300">Please fix the following to save this product</p>
+                <ul class="list-disc list-inside space-y-0.5 text-xs text-red-200/90">
+                    @foreach($otherErrors as $message)
+                        <li>{{ $message }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             <!-- Left 2 Columns: Product Info -->
@@ -62,6 +105,25 @@
                         @error('sale_price')
                             <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
                         @enderror
+                    </div>
+                </div>
+
+                <!-- Internal costing: never shown on the storefront -->
+                <div class="bg-slate-800/30 p-6 rounded-xl border border-slate-700/50">
+                    <div class="flex items-start gap-3">
+                        <div class="flex-1">
+                            <label for="cost_price" class="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-400 mb-2">
+                                Costing Price (৳)
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30">Admin only</span>
+                            </label>
+                            <input type="number" step="0.01" min="0" id="cost_price" name="cost_price" value="{{ old('cost_price') }}"
+                                   class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-slate-900/80 transition-all text-slate-200 placeholder-slate-600"
+                                   placeholder="Leave blank if unknown">
+                            <p class="text-xs text-slate-500 mt-1.5">Your purchase or production cost. Used for internal margin reporting, never shown to customers.</p>
+                            @error('cost_price')
+                                <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
+                            @enderror
+                        </div>
                     </div>
                 </div>
 
@@ -168,6 +230,11 @@
                                 Every combination of the ticked values is created automatically.
                                 Set the price, stock and image for each row, then save.
                             </p>
+                            @php $perImage = ini_get('upload_max_filesize') ?: '2M'; $perRequest = ini_get('post_max_size') ?: '8M'; @endphp
+                            <p class="mt-1 text-xs text-amber-300/80">
+                                Images: up to {{ $perImage }} each, and {{ $perRequest }} for all images in one save.
+                                If a save comes back with nothing stored, the images together were too large.
+                            </p>
                         </div>
                         <div class="flex items-center gap-3">
                             <span class="text-xs text-slate-400" x-show="variations.length > 0"
@@ -178,6 +245,38 @@
                             </button>
                         </div>
                     </div>
+
+                    {{-- Fills the price boxes of the rows below so a price can be
+                         typed once instead of once per combination. Still saved by
+                         the normal Save button below. --}}
+                    <div class="flex flex-col md:flex-row md:items-end gap-3 p-4 rounded-xl border border-purple-500/20 bg-purple-500/5">
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold uppercase text-slate-300 mb-1" for="bulkRegularPrice">Regular price (৳)</label>
+                            <input type="number" step="0.01" min="0" id="bulkRegularPrice" x-model="bulkPrice.regular"
+                                   placeholder="e.g. 1200"
+                                   class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold uppercase text-slate-300 mb-1" for="bulkSalePrice">Sale price (৳)</label>
+                            <input type="number" step="0.01" min="0" id="bulkSalePrice" x-model="bulkPrice.sale"
+                                   placeholder="leave blank for none"
+                                   class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" @click="applyPriceToAll()"
+                                    class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white rounded-lg text-sm font-bold transition">
+                                Fill All Rows
+                            </button>
+                            <button type="button" @click="applyPriceToSelected()"
+                                    class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-bold transition">
+                                Fill Selected
+                            </button>
+                        </div>
+                    </div>
+
+                    <p x-show="priceMessage" x-cloak class="text-xs font-semibold"
+                       :class="priceMessageIsError ? 'text-red-400' : 'text-emerald-400'"
+                       x-text="priceMessage"></p>
 
                     <template x-if="variationAttributes().length > 0 && variations.length === 0">
                         <div class="flex items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
@@ -214,6 +313,11 @@
                                         </template>
                                     </div>
                                     <div class="flex items-center gap-3">
+                                        <label class="flex items-center gap-1.5 text-xs text-slate-300">
+                                            <input type="checkbox" :value="v.combo_key" x-model="fillTargets"
+                                                   class="h-3.5 w-3.5 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
+                                            Fill
+                                        </label>
                                         <label class="flex items-center gap-1.5 text-xs text-slate-300">
                                             <input type="hidden" :name="`variations[${index}][status]`" x-model="v.status">
                                             <input type="checkbox" value="1"
@@ -283,9 +387,28 @@
                                                 class="px-3 py-1.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-400 rounded text-xs font-bold transition">
                                             Remove row
                                         </button>
-                                    </div>
-                                </div>
-                            </div>
+                        </div>
+                    </div>
+
+                    {{-- The variation set was rejected, e.g. duplicate
+                         combinations. Nothing was saved, so say so plainly. --}}
+                    @foreach($detailedVariationErrors as $message)
+                        <div class="px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/5">
+                            <p class="text-sm font-bold text-red-300">Variations were not saved</p>
+                            <p class="mt-1 text-xs text-red-200/90">{{ $message }}</p>
+                        </div>
+                    @endforeach
+
+                    @if($salePriceErrors->isNotEmpty())
+                        <div class="px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/5">
+                            <p class="text-sm font-bold text-red-300">Some sale prices were not saved</p>
+                            <p class="mt-1 text-xs text-red-200/90">
+                                Row {{ $salePriceErrors->keys()->map(fn ($key) => (int) str_replace(['variations.', '.sale_price'], '', $key) + 1)->implode(', ') }}
+                                — the sale price must be lower than the regular price.
+                            </p>
+                        </div>
+                    @endif
+                </div>
                         </template>
                     </div>
                 </div>
@@ -450,6 +573,98 @@
             uploadImages: [
                 { name: 'front_view', alt_text: '' }
             ],
+
+            // Prices typed once and copied into the variation rows below.
+            bulkPrice: {
+                regular: '',
+                sale: '',
+            },
+            priceMessage: '',
+            priceMessageIsError: false,
+
+            // Combo keys of the rows ticked for "Fill Selected". These rows are
+            // not saved yet, so the combination key is the stable handle.
+            fillTargets: [],
+
+            /**
+             * Read the two price boxes and check them the same way the server
+             * does: a sale price has to be lower than the regular one, and
+             * anything that is not a number is rejected before it can reach the
+             * rows.
+             */
+            resolveBulkPrice() {
+                const regular = this.bulkPrice.regular === '' ? null : Number(this.bulkPrice.regular);
+                const sale = this.bulkPrice.sale === '' ? null : Number(this.bulkPrice.sale);
+
+                if (regular !== null && (!Number.isFinite(regular) || regular < 0)) {
+                    return { error: 'Enter a valid regular price, or clear the box.' };
+                }
+
+                if (sale !== null && (!Number.isFinite(sale) || sale < 0)) {
+                    return { error: 'Enter a valid sale price, or clear the box.' };
+                }
+
+                if (regular === null && sale === null) {
+                    return { error: 'Type a regular price, a sale price, or both first.' };
+                }
+
+                if (regular === null) {
+                    return { error: 'A sale price needs a regular price to be lower than.' };
+                }
+
+                if (sale !== null && sale >= regular) {
+                    return { error: 'The sale price must be lower than the regular price.' };
+                }
+
+                return { regular: regular, sale: sale };
+            },
+
+            setPriceMessage(text, isError) {
+                this.priceMessage = text;
+                this.priceMessageIsError = !!isError;
+            },
+
+            applyPriceToAll() {
+                const price = this.resolveBulkPrice();
+                if (price.error) return this.setPriceMessage(price.error, true);
+
+                this.variations.forEach(variation => {
+                    variation.regular_price = price.regular;
+                    variation.sale_price = price.sale;
+                });
+
+                this.setPriceMessage(
+                    `Filled ${this.variations.length} row(s) with regular ${price.regular}` +
+                    (price.sale === null ? '.' : ` and sale ${price.sale}.`) +
+                    ' Remember to press Save to store it.',
+                    false
+                );
+            },
+
+            applyPriceToSelected() {
+                const price = this.resolveBulkPrice();
+                if (price.error) return this.setPriceMessage(price.error, true);
+
+                const selected = this.variations.filter(
+                    variation => variation.combo_key && this.fillTargets.includes(variation.combo_key)
+                );
+
+                if (selected.length === 0) {
+                    return this.setPriceMessage('Tick “Fill” on a row first.', true);
+                }
+
+                selected.forEach(variation => {
+                    variation.regular_price = price.regular;
+                    variation.sale_price = price.sale;
+                });
+
+                this.setPriceMessage(
+                    `Filled ${selected.length} selected row(s)` +
+                    (price.sale === null ? '.' : ` with sale ${price.sale}.`) +
+                    ' Remember to press Save to store it.',
+                    false
+                );
+            },
 
             addAttribute() {
                 this.attributes.push({

@@ -21,6 +21,21 @@ class ProductController extends Controller
     }
 
     /**
+     * The internal costing price. An empty number input posts "", which means
+     * "not set" rather than zero, so it is stored as null.
+     */
+    private function parseCostPrice(Request $request): ?string
+    {
+        $value = trim((string) $request->input('cost_price', ''));
+
+        if ($value === '') {
+            return null;
+        }
+
+        return number_format((float) $value, 2, '.', '');
+    }
+
+    /**
      * The new admin UI posts a `values` map keyed by product attribute id.
      * The legacy UI only posted size/color/weight columns.
      */
@@ -38,6 +53,44 @@ class ProductController extends Controller
     /**
      * @return array<int, \Illuminate\Http\UploadedFile|null>
      */
+    /**
+     * Count the files that actually arrived.
+     *
+     * PHP silently drops everything past `max_file_uploads`, so a product with
+     * more images than that saves fewer images than the admin uploaded without
+     * ever saying so.
+     */
+    private function countUploadedFiles(Request $request): int
+    {
+        $count = 0;
+
+        $walk = function ($files) use (&$walk, &$count) {
+            foreach ((array) $files as $file) {
+                if (is_array($file)) {
+                    $walk($file);
+                } else {
+                    $count++;
+                }
+            }
+        };
+
+        $walk($request->allFiles());
+
+        return $count;
+    }
+
+    /**
+     * Warn when the upload was clipped by the server's file count limit.
+     */
+    private function warnIfUploadsWereClipped(Request $request): void
+    {
+        $max = (int) (ini_get('max_file_uploads') ?: 20);
+
+        if ($max > 0 && $this->countUploadedFiles($request) >= $max) {
+            session()->flash('error', "Only the first {$max} uploaded files were kept: this server accepts at most {$max} files per submission, so some images were skipped. Raise max_file_uploads in php.ini to upload more at once.");
+        }
+    }
+
     private function uploadedVariationImages(Request $request): array
     {
         $files = $request->file('variations');
@@ -165,7 +218,14 @@ class ProductController extends Controller
             $submittedVariationIds[] = $variation->id;
         }
 
-        $product->variations()->whereNotIn('id', $submittedVariationIds ?: [0])->delete();
+        // Nothing usable was submitted. That is a form that sent an empty or
+        // blank variation set, not a request to delete every row, so the
+        // existing variations are left alone.
+        if ($submittedVariationIds === []) {
+            return;
+        }
+
+        $product->variations()->whereNotIn('id', $submittedVariationIds)->delete();
     }
 
     /**
@@ -254,6 +314,7 @@ class ProductController extends Controller
             'sku' => 'nullable|string|max:255',
             'regular_price' => 'required|numeric|min:0',
             'sale_price' => 'nullable|numeric|min:0',
+            'cost_price' => 'nullable|numeric|min:0',
             'stock_quantity' => 'nullable|required_if:product_type,simple|integer|min:0',
             'manage_stock' => 'nullable|boolean',
             'stock_status' => 'nullable|in:instock,outofstock,onbackorder',
@@ -283,7 +344,7 @@ class ProductController extends Controller
             'variations.*.price' => 'nullable|numeric|min:0',
             'variations.*.stock' => 'nullable|integer|min:0',
             'variations.*.regular_price' => 'nullable|numeric|min:0',
-            'variations.*.sale_price' => 'nullable|numeric|min:0',
+            'variations.*.sale_price' => ['nullable', 'numeric', 'min:0', 'lt:variations.*.regular_price'],
             'variations.*.stock_quantity' => 'nullable|integer|min:0',
             'variations.*.sku' => 'nullable|string|max:255',
             'variations.*.image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
@@ -309,6 +370,7 @@ class ProductController extends Controller
 
         $productData['regular_price'] = $request->input('regular_price');
         $productData['sale_price'] = $request->input('sale_price');
+        $productData['cost_price'] = $this->parseCostPrice($request);
 
         if ($request->input('product_type') === 'simple') {
             $productData['stock_quantity'] = $request->input('stock_quantity', 10);
@@ -326,13 +388,31 @@ class ProductController extends Controller
         if ($product->product_type === 'variable') {
             $this->variationService->syncAttributes($product, $request->input('attributes', []));
 
+            $createRows = $this->submittedVariationsAreAttributeBased($request)
+                ? $this->remapCreateVariationValues($product, $request)
+                : [];
+
+            // Two rows for one combination cannot both be stored, so this
+            // would silently keep the last one. Report it instead.
+            if ($createRows !== []) {
+                $duplicates = $this->variationService->duplicateCombinationLabels($product, $createRows);
+
+                if ($duplicates !== []) {
+                    $product->delete();
+
+                    return back()
+                        ->withInput()
+                        ->withErrors(['variations' => 'Duplicate option combinations: ' . implode(', ', $duplicates) . '. Each combination can only be used once.']);
+                }
+            }
+
             // Term selection alone is enough to create the variation rows.
             $this->variationService->generateVariations($product);
 
-            if ($this->submittedVariationsAreAttributeBased($request)) {
+            if ($createRows !== []) {
                 $this->variationService->saveVariations(
                     $product,
-                    $this->remapCreateVariationValues($product, $request),
+                    $createRows,
                     $this->uploadedVariationImages($request)
                 );
             } elseif ($request->has('variations')) {
@@ -367,6 +447,8 @@ class ProductController extends Controller
             }
         }
 
+        $this->warnIfUploadsWereClipped($request);
+
         return redirect()->route('admin.products.index')->with('success', 'Product created successfully.');
     }
 
@@ -386,6 +468,7 @@ class ProductController extends Controller
             'sku' => 'nullable|string|max:255',
             'regular_price' => 'required|numeric|min:0',
             'sale_price' => 'nullable|numeric|min:0',
+            'cost_price' => 'nullable|numeric|min:0',
             'stock_quantity' => 'nullable|required_if:product_type,simple|integer|min:0',
             'manage_stock' => 'nullable|boolean',
             'stock_status' => 'nullable|in:instock,outofstock,onbackorder',
@@ -416,7 +499,7 @@ class ProductController extends Controller
             'variations.*.price' => 'nullable|numeric|min:0',
             'variations.*.stock' => 'nullable|integer|min:0',
             'variations.*.regular_price' => 'nullable|numeric|min:0',
-            'variations.*.sale_price' => 'nullable|numeric|min:0',
+            'variations.*.sale_price' => ['nullable', 'numeric', 'min:0', 'lt:variations.*.regular_price'],
             'variations.*.stock_quantity' => 'nullable|integer|min:0',
             'variations.*.sku' => 'nullable|string|max:255',
             'variations.*.image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
@@ -453,6 +536,20 @@ class ProductController extends Controller
         $productData['stock_status'] = $request->input('stock_status', 'instock');
         $productData['regular_price'] = $request->input('regular_price');
         $productData['sale_price'] = $request->input('sale_price');
+        $productData['cost_price'] = $this->parseCostPrice($request);
+
+        // Two rows for one combination cannot both be stored, so saving would
+        // silently keep the last one and discard the other. Report it instead.
+        if ($request->input('product_type') === 'variable' && is_array($request->input('variations'))) {
+            $duplicates = $this->variationService
+                ->duplicateCombinationLabels($product, $request->input('variations', []));
+
+            if ($duplicates !== []) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['variations' => 'Duplicate option combinations: ' . implode(', ', $duplicates) . '. Each combination can only be used once.']);
+            }
+        }
 
         if ($request->input('product_type') === 'simple') {
             $productData['stock_quantity'] = $request->input('stock_quantity', 10);
@@ -562,6 +659,8 @@ class ProductController extends Controller
             $firstImg->is_featured = true;
             $firstImg->saveQuietly();
         }
+
+        $this->warnIfUploadsWereClipped($request);
 
         return redirect()->route('admin.products.index')->with('success', 'Product updated successfully.');
     }

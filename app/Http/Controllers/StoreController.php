@@ -160,7 +160,9 @@ class StoreController extends Controller
         $attributesJson = [];
 
         if ($product->product_type === 'variable') {
-            // Only purchasable, enabled variations are offered to customers.
+            // Published variations are offered to customers, including the ones
+            // that cannot be bought yet, so the page can explain why instead of
+            // showing an option that the cart would reject.
             $variations = $product->publishedVariations()->get();
 
             $variationsJson = $variations->map(function (ProductVariation $variation) {
@@ -177,8 +179,10 @@ class StoreController extends Controller
                     'id' => $variation->id,
                     'values' => $values,
                     'price' => $variation->active_price,
-                    'stock' => (int) $variation->effectiveStockQuantity(),
+                    'stock' => $variation->isStockTracked() ? (int) $variation->effectiveStockQuantity() : null,
                     'in_stock' => $variation->isInStock(),
+                    'purchasable' => $variation->isPurchasable(),
+                    'unavailable_reason' => $variation->unavailabilityReason(),
                     'sku' => $variation->sku,
                     'image' => $variation->image ? Storage::url($variation->image) : null,
                 ];
@@ -244,12 +248,12 @@ class StoreController extends Controller
             }
 
             if (! $variation->isPurchasable()) {
-                return back()->with('error', 'Sorry, this option is currently unavailable.');
+                return back()->with('error', $variation->unavailabilityReason() ?? 'Sorry, this option is currently unavailable.');
             }
 
             $available = (int) $variation->effectiveStockQuantity();
 
-            if ($available < $qty) {
+            if ($variation->isStockTracked() && $available < $qty) {
                 return back()->with('error', "Only {$available} items left in stock for this option.");
             }
 
@@ -257,14 +261,10 @@ class StoreController extends Controller
             // variable product has no price of its own.
             $price = $variation->active_price;
 
-            if ($price === null) {
-                return back()->with('error', 'This option does not have a price yet.');
-            }
-
             $variationDetails = $variation->attribute_label ?: null;
             $cartKey = "product_{$product->id}_var_{$variationId}";
         } else {
-            if ($product->stock_quantity < $qty) {
+            if ($product->manage_stock && $product->stock_quantity < $qty) {
                 return back()->with('error', "Only {$product->stock_quantity} items left in stock.");
             }
             $price = $product->getDisplayPrice();
@@ -276,10 +276,10 @@ class StoreController extends Controller
 
         if (isset($cart[$cartKey])) {
             $newQty = $cart[$cartKey]['quantity'] + $qty;
-            // Validate stock again
-            if ($variation && (int) $variation->effectiveStockQuantity() < $newQty) {
+            // Validate stock again. Untracked stock has no ceiling.
+            if ($variation && $variation->isStockTracked() && (int) $variation->effectiveStockQuantity() < $newQty) {
                 return back()->with('error', "Cannot add more. Only {$variation->effectiveStockQuantity()} items available in total.");
-            } elseif (!$variation && $product->stock_quantity < $newQty) {
+            } elseif (!$variation && $product->manage_stock && $product->stock_quantity < $newQty) {
                 return back()->with('error', "Cannot add more. Only {$product->stock_quantity} items available in total.");
             }
             $cart[$cartKey]['quantity'] = $newQty;
@@ -345,14 +345,14 @@ class StoreController extends Controller
         if ($cartItem['variation_id']) {
             $variation = ProductVariation::findOrFail($cartItem['variation_id']);
             $available = (int) $variation->effectiveStockQuantity();
-            if ($available < $qty) {
+            if ($variation->isStockTracked() && $available < $qty) {
                 return response()->json([
                     'success' => false,
                     'message' => "Only {$available} items available for this option."
                 ], 422);
             }
         } else {
-            if ($product->stock_quantity < $qty) {
+            if ($product->manage_stock && $product->stock_quantity < $qty) {
                 return response()->json([
                     'success' => false, 
                     'message' => "Only {$product->stock_quantity} items available."
@@ -563,11 +563,11 @@ class StoreController extends Controller
 
                 if ($item['variation_id']) {
                     $variation = ProductVariation::findOrFail($item['variation_id']);
-                    if ((int) $variation->effectiveStockQuantity() < $item['quantity']) {
+                    if ($variation->isStockTracked() && (int) $variation->effectiveStockQuantity() < $item['quantity']) {
                         throw new \Exception("{$product->name} ({$item['variation_details']}) is out of stock.");
                     }
                 } else {
-                    if ($product->stock_quantity < $item['quantity']) {
+                    if ($product->manage_stock && $product->stock_quantity < $item['quantity']) {
                         throw new \Exception("{$product->name} is out of stock.");
                     }
                 }

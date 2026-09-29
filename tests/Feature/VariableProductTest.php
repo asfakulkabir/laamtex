@@ -201,10 +201,41 @@ class VariableProductTest extends TestCase
 
         $service->syncAttributes($product, [
             ['attribute_id' => $size->id, 'value_ids' => [$size->values[0]->id], 'is_variation' => 1],
+            ['attribute_id' => $color->id, 'value_ids' => [$color->values[0]->id], 'is_variation' => 1],
         ]);
-        $service->syncAttributes($product, []);
 
-        $this->assertSame(0, $product->productAttributes()->count());
+        $this->assertSame(2, $product->productAttributes()->count());
+
+        // Dropping one row from the set removes that attribute.
+        $service->syncAttributes($product, [
+            ['attribute_id' => $size->id, 'value_ids' => [$size->values[0]->id], 'is_variation' => 1],
+        ]);
+
+        $this->assertSame(1, $product->productAttributes()->count());
+        $this->assertSame($size->id, $product->productAttributes()->first()->attribute_id);
+    }
+
+    public function test_an_empty_attribute_payload_never_deletes_anything()
+    {
+        [$size] = $this->attributes();
+        $product = $this->product();
+        $service = app(VariationService::class);
+
+        $service->syncAttributes($product, [
+            ['attribute_id' => $size->id, 'value_ids' => $size->values->pluck('id')->all(), 'is_variation' => 1],
+        ]);
+        $service->generateVariations($product);
+
+        $variationCount = $product->variations()->count();
+        $this->assertGreaterThan(0, $variationCount);
+
+        // A form that sends no usable attributes must not be read as
+        // "delete them all", which would cascade the variations away.
+        $service->syncAttributes($product, []);
+        $service->syncAttributes($product, [['attribute_id' => '', 'custom_name' => '', 'options' => '', 'value_ids' => []]]);
+
+        $this->assertSame(1, $product->productAttributes()->count());
+        $this->assertSame($variationCount, $product->variations()->count());
     }
 
     public function test_value_ids_from_another_attribute_are_ignored()
@@ -501,12 +532,44 @@ class VariableProductTest extends TestCase
             'price' => '10.00',
         ]);
 
-        $service->saveVariations($product, []);
+        // Omitting the ordered row from the submitted set disables it rather
+        // than deleting it, so the order keeps its history.
+        $other = $product->variations()->skip(1)->first();
+
+        $service->saveVariations($product, [[
+            'id' => $other->id,
+            'values' => [$product->productAttributes()->first()->id => $size->values[1]->id],
+            'regular_price' => '10',
+        ]]);
 
         $this->assertDatabaseHas('product_variations', [
             'id' => $variation->id,
             'status' => ProductVariation::STATUS_PRIVATE,
         ]);
+    }
+
+    public function test_an_empty_variation_payload_never_deletes_anything()
+    {
+        [$size] = $this->attributes();
+        $product = $this->product();
+        $service = app(VariationService::class);
+
+        $service->syncAttributes($product, [
+            ['attribute_id' => $size->id, 'value_ids' => $size->values->pluck('id')->all(), 'is_variation' => 1],
+        ]);
+        $service->generateVariations($product);
+
+        $variationCount = $product->variations()->count();
+        $this->assertGreaterThan(0, $variationCount);
+
+        // Rows that no longer match the product's attributes are not the same
+        // as a request to delete every variation.
+        $service->saveVariations($product, []);
+        $service->saveVariations($product, [
+            ['values' => [999999 => 999999], 'regular_price' => '10'],
+        ]);
+
+        $this->assertSame($variationCount, $product->variations()->count());
     }
 
     // -------------------------------------------------------------------
@@ -570,6 +633,163 @@ class VariableProductTest extends TestCase
 
         $this->assertFalse($variation->isEnabled());
         $this->assertFalse($variation->isPurchasable());
+    }
+
+    // -------------------------------------------------------------------
+    // Published but unbuyable variations
+    // -------------------------------------------------------------------
+
+    public function test_a_published_variation_with_no_price_explains_itself()
+    {
+        $variation = new ProductVariation([
+            'status' => ProductVariation::STATUS_PUBLISH,
+            'manage_stock' => true,
+            'stock_quantity' => 10,
+            'regular_price' => null,
+        ]);
+
+        $this->assertTrue($variation->isEnabled());
+        $this->assertTrue($variation->isInStock(), 'It has stock, only the price is missing.');
+        $this->assertFalse($variation->isPurchasable());
+        $this->assertSame('This option has no price yet.', $variation->unavailabilityReason());
+    }
+
+    public function test_unavailability_reason_names_the_actual_problem()
+    {
+        $disabled = new ProductVariation([
+            'status' => ProductVariation::STATUS_PRIVATE,
+            'regular_price' => '10.00',
+        ]);
+        $this->assertSame('This option is not available.', $disabled->unavailabilityReason());
+
+        $outOfStock = new ProductVariation([
+            'status' => ProductVariation::STATUS_PUBLISH,
+            'regular_price' => '10.00',
+            'manage_stock' => true,
+            'stock_quantity' => 0,
+            'stock_status' => ProductVariation::STOCK_OUT_OF_STOCK,
+        ]);
+        $this->assertSame('This option is out of stock.', $outOfStock->unavailabilityReason());
+
+        $fine = new ProductVariation([
+            'status' => ProductVariation::STATUS_PUBLISH,
+            'regular_price' => '10.00',
+            'manage_stock' => true,
+            'stock_quantity' => 5,
+            'stock_status' => ProductVariation::STOCK_IN_STOCK,
+        ]);
+        $this->assertNull($fine->unavailabilityReason());
+        $this->assertTrue($fine->isPurchasable());
+    }
+
+    public function test_product_page_marks_a_priceless_variation_as_unbuyable()
+    {
+        [$size] = $this->attributes();
+
+        $product = $this->product();
+        $value = $size->values()->first();
+        $product->productAttributes()->create([
+            'attribute_id' => $size->id,
+            'position' => 1,
+            'is_visible' => true,
+            'is_variation' => true,
+        ]);
+
+        $variation = $product->variations()->create([
+            'combo_key' => "1:{$value->id}",
+            'regular_price' => null,
+            'manage_stock' => true,
+            'stock_quantity' => 10,
+            'stock_status' => ProductVariation::STOCK_IN_STOCK,
+            'status' => ProductVariation::STATUS_PUBLISH,
+        ]);
+        $variation->attributeValues()->create([
+            'product_attribute_id' => $product->productAttributes()->first()->id,
+            'attribute_value_id' => $value->id,
+        ]);
+
+        $response = $this->get(route('product.detail', $product->slug));
+        $response->assertOk();
+
+        $json = json_decode($response->viewData('variationsJson'), true);
+        $this->assertCount(1, $json);
+        $this->assertFalse($json[0]['purchasable']);
+        $this->assertTrue($json[0]['in_stock'], 'It really is in stock.');
+        $this->assertNull($json[0]['price']);
+        $this->assertSame('This option has no price yet.', $json[0]['unavailable_reason']);
+    }
+
+    public function test_adding_a_priceless_variation_to_the_cart_says_why()
+    {
+        $product = $this->product();
+        $variation = $product->variations()->create([
+            'combo_key' => '1:1',
+            'regular_price' => null,
+            'manage_stock' => true,
+            'stock_quantity' => 10,
+            'stock_status' => ProductVariation::STOCK_IN_STOCK,
+            'status' => ProductVariation::STATUS_PUBLISH,
+        ]);
+
+        $this->post(route('cart.add'), [
+            'product_id' => $product->id,
+            'variation_id' => $variation->id,
+            'quantity' => 1,
+        ])->assertRedirect()->assertSessionHas('error', 'This option has no price yet.');
+
+        $this->assertSame(0, count(session('cart', [])));
+    }
+
+    public function test_admin_product_page_warns_about_priceless_variations()
+    {
+        [$size] = $this->attributes();
+        $value = $size->values()->first();
+
+        $product = $this->product();
+        $productAttribute = $product->productAttributes()->create([
+            'attribute_id' => $size->id,
+            'position' => 1,
+            'is_visible' => true,
+            'is_variation' => true,
+        ]);
+
+        $variation = $product->variations()->create([
+            'combo_key' => "1:{$value->id}",
+            'regular_price' => null,
+            'manage_stock' => true,
+            'stock_quantity' => 4,
+            'stock_status' => ProductVariation::STOCK_IN_STOCK,
+            'status' => ProductVariation::STATUS_PUBLISH,
+        ]);
+        $variation->attributeValues()->create([
+            'product_attribute_id' => $productAttribute->id,
+            'attribute_value_id' => $value->id,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->get(route('admin.products.edit', $product))
+            ->assertOk()
+            ->assertSee('option(s) cannot be bought by customers yet')
+            ->assertSee('This option has no price yet.')
+            ->assertSee('(published)');
+    }
+
+    public function test_admin_product_page_has_no_warning_when_every_variation_is_priced()
+    {
+        $product = $this->product();
+        $product->variations()->create([
+            'combo_key' => '1:1',
+            'regular_price' => '25.00',
+            'manage_stock' => true,
+            'stock_quantity' => 4,
+            'stock_status' => ProductVariation::STOCK_IN_STOCK,
+            'status' => ProductVariation::STATUS_PUBLISH,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->get(route('admin.products.edit', $product))
+            ->assertOk()
+            ->assertDontSee('option(s) cannot be bought by customers yet');
     }
 
     public function test_variation_falls_back_to_the_parent_image()

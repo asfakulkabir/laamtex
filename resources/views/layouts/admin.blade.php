@@ -50,6 +50,7 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        [x-cloak] { display: none !important; }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-300 flex min-h-screen scroll-smooth" x-data="{ sidebarOpen: false }">
@@ -89,20 +90,39 @@
             </a>
 
             @if($isSuperAdmin)
-                <a href="{{ route('admin.categories.index') }}" class="flex items-center space-x-3 px-3 md:px-4 py-3 md:py-3.5 rounded-xl text-base md:text-base font-semibold transition-all duration-200 {{ request()->routeIs('admin.categories.*') ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 border border-purple-500/30 text-purple-300 shadow-sm shadow-purple-500/5' : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-pink-500/10 hover:border hover:border-purple-500/30 hover:text-purple-300 border border-transparent' }}">
-                    <span class="text-lg">📂</span>
-                    <span>Categories</span>
-                </a>
+                @php
+                    $productMenuActive = request()->routeIs('admin.products.*')
+                        || request()->routeIs('admin.categories.*')
+                        || request()->routeIs('admin.attributes.*');
+                @endphp
+                <div x-data="{ open: @js($productMenuActive) }">
+                    <button type="button" @click="open = !open"
+                        class="w-full flex items-center space-x-3 px-3 md:px-4 py-3 md:py-3.5 rounded-xl text-base md:text-base font-semibold transition-all duration-200 {{ $productMenuActive ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 border border-purple-500/30 text-purple-300 shadow-sm shadow-purple-500/5' : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-pink-500/10 hover:border hover:border-purple-500/30 hover:text-purple-300 border border-transparent' }}">
+                        <span class="text-lg">📦</span>
+                        <span class="flex-1 text-left">Products</span>
+                        <svg class="w-4 h-4 flex-shrink-0 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
 
-                <a href="{{ route('admin.products.index') }}" class="flex items-center space-x-3 px-3 md:px-4 py-3 md:py-3.5 rounded-xl text-base md:text-base font-semibold transition-all duration-200 {{ request()->routeIs('admin.products.*') ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 border border-purple-500/30 text-purple-300 shadow-sm shadow-purple-500/5' : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-pink-500/10 hover:border hover:border-purple-500/30 hover:text-purple-300 border border-transparent' }}">
-                    <span class="text-lg">📦</span>
-                    <span>Products</span>
-                </a>
+                    <div x-show="open" x-cloak x-transition class="mt-1 space-y-0.5 pl-4 md:pl-5 border-l border-slate-800/80 ml-[1.4rem] md:ml-[1.6rem]">
+                        <a href="{{ route('admin.products.index') }}" class="block py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 {{ request()->routeIs('admin.products.index') ? 'bg-purple-500/10 text-purple-300' : 'text-slate-400 hover:bg-slate-800/60 hover:text-purple-300' }}">
+                            All Products
+                        </a>
 
-                <a href="{{ route('admin.attributes.index') }}" class="flex items-center space-x-3 px-3 md:px-4 py-3 md:py-3.5 rounded-xl text-base md:text-base font-semibold transition-all duration-200 {{ request()->routeIs('admin.attributes.*') ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 border border-purple-500/30 text-purple-300 shadow-sm shadow-purple-500/5' : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-pink-500/10 hover:border hover:border-purple-500/30 hover:text-purple-300 border border-transparent' }}">
-                    <span class="text-lg">🏷️</span>
-                    <span>Attributes</span>
-                </a>
+                        <a href="{{ route('admin.products.create') }}" class="block py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 {{ request()->routeIs('admin.products.create') ? 'bg-purple-500/10 text-purple-300' : 'text-slate-400 hover:bg-slate-800/60 hover:text-purple-300' }}">
+                            Add New Product
+                        </a>
+
+                        <a href="{{ route('admin.categories.index') }}" class="block py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 {{ request()->routeIs('admin.categories.*') ? 'bg-purple-500/10 text-purple-300' : 'text-slate-400 hover:bg-slate-800/60 hover:text-purple-300' }}">
+                            Categories
+                        </a>
+
+                        <a href="{{ route('admin.attributes.index') }}" class="block py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 {{ request()->routeIs('admin.attributes.*') ? 'bg-purple-500/10 text-purple-300' : 'text-slate-400 hover:bg-slate-800/60 hover:text-purple-300' }}">
+                            Attributes
+                        </a>
+                    </div>
+                </div>
 
                 <a href="{{ route('admin.coupons.index') }}" class="flex items-center space-x-3 px-3 md:px-4 py-3 md:py-3.5 rounded-xl text-base md:text-base font-semibold transition-all duration-200 {{ request()->routeIs('admin.coupons.*') ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 border border-purple-500/30 text-purple-300 shadow-sm shadow-purple-500/5' : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-pink-500/10 hover:border hover:border-purple-500/30 hover:text-purple-300 border border-transparent' }}">
                     <span class="text-lg">🎟️</span>

@@ -73,9 +73,17 @@ class VariationService
             $this->syncProductAttributeValues($productAttribute, $row, $customOptions);
         }
 
+        // An empty or unusable payload is far more likely to be a form that did
+        // not send its attributes than a deliberate "delete them all". Pruning
+        // here would cascade away every variation, and with them any order
+        // history, so leave the existing attributes untouched instead.
+        if ($keptIds === []) {
+            return;
+        }
+
         // Drop attributes that were removed in the UI. Their variation rows
         // cascade away with them.
-        $product->productAttributes()->whereNotIn('id', $keptIds ?: [0])->get()->each->delete();
+        $product->productAttributes()->whereNotIn('id', $keptIds)->get()->each->delete();
 
         $product->unsetRelation('productAttributes');
         $this->refreshPriceRange($product);
@@ -346,6 +354,59 @@ class VariationService
     /**
      * Persist the variations submitted from the admin Variations tab.
      */
+    /**
+     * Combinations that appear more than once in a single submit.
+     *
+     * Two rows for the same combination cannot both exist, so saving silently
+     * keeps the last one and discards the other. The admin is told instead.
+     *
+     * @return array<int, string> Human readable labels, e.g. "Pink / S".
+     */
+    public function duplicateCombinationLabels(Product $product, array $rows): array
+    {
+        $variationAttributes = $product->variationAttributes()->with('values')->get();
+        $seen = [];
+        $duplicates = [];
+
+        foreach (array_values($rows) as $row) {
+            $selected = $this->normaliseSelection($row['values'] ?? [], $variationAttributes);
+
+            if ($selected === []) {
+                continue;
+            }
+
+            $comboKey = $this->comboKey($selected);
+
+            if (isset($seen[$comboKey])) {
+                $duplicates[] = $this->describeCombination($selected, $variationAttributes);
+                continue;
+            }
+
+            $seen[$comboKey] = true;
+        }
+
+        return array_values(array_unique($duplicates));
+    }
+
+    /**
+     * @return string The option names in a combination, e.g. "Pink / S".
+     */
+    private function describeCombination(array $selected, Collection $attributes): string
+    {
+        $parts = [];
+
+        foreach ($selected as $item) {
+            $attribute = $attributes->firstWhere('id', $item['product_attribute_id']);
+            $value = $item['attribute_value_id'] === null
+                ? null
+                : $attribute?->values->firstWhere('id', $item['attribute_value_id']);
+
+            $parts[] = $value?->name ?? 'Any';
+        }
+
+        return implode(' / ', $parts);
+    }
+
     public function saveVariations(Product $product, array $rows, array $uploadedImages = []): void
     {
         $variationAttributes = $product->variationAttributes()->with('values')->get();
@@ -417,9 +478,20 @@ class VariationService
             $keptIds[] = $variation->id;
         }
 
+        // Rows that resolve to no valid selection are dropped above. If that
+        // left nothing at all, the submitted values no longer match the
+        // product's attributes, which is not the same as the admin asking for
+        // every row to be deleted. Deleting here would silently wipe the whole
+        // variation set, so it is left alone.
+        if ($keptIds === []) {
+            $this->refreshPriceRange($product);
+
+            return;
+        }
+
         // Rows removed in the UI are deleted, unless they are referenced by
         // orders. Those are disabled instead so old orders stay intact.
-        $product->variations()->whereNotIn('id', $keptIds ?: [0])->get()->each(function (ProductVariation $variation) {
+        $product->variations()->whereNotIn('id', $keptIds)->get()->each(function (ProductVariation $variation) {
             if ($variation->orderItems()->exists()) {
                 $variation->update(['status' => ProductVariation::STATUS_PRIVATE]);
             } else {

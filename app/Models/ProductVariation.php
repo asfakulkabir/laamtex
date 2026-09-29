@@ -108,6 +108,17 @@ class ProductVariation extends Model
     }
 
     /**
+     * Whether a quantity limit applies to this variation at all.
+     *
+     * With "Manage stock" off on both the variation and its parent, nothing is
+     * counted, so a quantity of 0 must not be read as "none left" by the cart.
+     */
+    public function isStockTracked(): bool
+    {
+        return (bool) ($this->manage_stock || $this->product?->manage_stock);
+    }
+
+    /**
      * Stock status with inheritance from the parent. The raw column is
      * always `$stock_status`.
      */
@@ -147,9 +158,32 @@ class ProductVariation extends Model
         return $this->effectiveStockStatus() !== self::STOCK_OUT_OF_STOCK;
     }
 
+    /**
+     * Why this variation cannot be bought, or null when it can.
+     *
+     * The storefront sends this to the product page so a shopper is never
+     * offered an option that the cart is going to reject.
+     */
+    public function unavailabilityReason(): ?string
+    {
+        if (! $this->isEnabled()) {
+            return 'This option is not available.';
+        }
+
+        if (! $this->isInStock()) {
+            return 'This option is out of stock.';
+        }
+
+        if ($this->active_price === null) {
+            return 'This option has no price yet.';
+        }
+
+        return null;
+    }
+
     public function isPurchasable(): bool
     {
-        return $this->isEnabled() && $this->isInStock() && $this->active_price !== null;
+        return $this->unavailabilityReason() === null;
     }
 
     /**

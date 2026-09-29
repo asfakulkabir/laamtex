@@ -20,6 +20,7 @@ class Product extends Model
         'product_type',
         'regular_price',
         'sale_price',
+        'cost_price',
         'min_price',
         'max_price',
         'stock_quantity',
@@ -36,6 +37,7 @@ class Product extends Model
     protected $casts = [
         'regular_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
+        'cost_price' => 'decimal:2',
         'min_price' => 'decimal:2',
         'max_price' => 'decimal:2',
         'stock_quantity' => 'integer',
@@ -43,6 +45,15 @@ class Product extends Model
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
         'sort_order' => 'integer',
+    ];
+
+    /**
+     * Internal costing. Never rendered on the storefront and never serialised,
+     * so a stray toArray()/toJson() cannot leak it. Admin views read the
+     * attribute directly.
+     */
+    protected $hidden = [
+        'cost_price',
     ];
 
     public function vendor()
@@ -162,6 +173,9 @@ class Product extends Model
             }
             if ($product->sale_price !== null && $product->sale_price < 0) {
                 $product->sale_price = 0;
+            }
+            if ($product->cost_price !== null && $product->cost_price < 0) {
+                $product->cost_price = 0;
             }
 
             if ($product->manage_stock && $product->stock_quantity !== null && $product->stock_quantity <= 0) {

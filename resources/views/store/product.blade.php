@@ -217,7 +217,7 @@ fbq('track', 'ViewContent', {
                     @endif
                 @else
                     <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full border"
-                          :class="variationStock > 0 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'"
+                          :class="variationStock === null || variationStock > 0 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'"
                           x-text="stockStatusText">
                     </span>
                 @endif
@@ -260,7 +260,9 @@ fbq('track', 'ViewContent', {
     @if($relatedProducts->count() > 0)
         <section class="mt-8 md:mt-16 border-t border-gray-200 pt-6 md:pt-12 space-y-4 md:space-y-6">
             <h2 class="text-lg md:text-2xl font-extrabold text-gray-900 text-center">See more</h2>
-            <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2 md:gap-6">
+            {{-- Exactly 4 related products are fetched, so the grid stays at 4
+                 columns on desktop. A 5th column would leave a gap. --}}
+            <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-6">
                 @foreach($relatedProducts as $rel)
                     @include('store.partials.product-card', ['product' => $rel])
                 @endforeach
@@ -419,10 +421,11 @@ fbq('track', 'ViewContent', {
             qty: 1,
             selectedVariationId: '',
             variationStock: 0,
+            variationOutOfStock: false,
             variationPrice: 0,
 
             productType: '{{ $product->product_type }}',
-            simpleInStock: {{ $product->product_type === 'simple' ? ($product->stock_quantity > 0 ? 'true' : 'false') : 'true' }},
+            simpleInStock: {{ $product->product_type === 'simple' ? ($product->manage_stock ? ($product->stock_quantity > 0 ? 'true' : 'false') : 'true') : 'true' }},
             
             formattedPrice: '৳{{ number_format($product->getDisplayPrice(), 2) }}',
             stockStatusText: 'Select an option',
@@ -539,6 +542,7 @@ fbq('track', 'ViewContent', {
 
                 this.selectedVariationId = '';
                 this.variationStock = 0;
+                this.variationOutOfStock = false;
                 this.variationPrice = basePrice;
                 this.formattedPrice = '৳' + Number(basePrice).toFixed(2);
                 this.stockStatusText = 'Select an option';
@@ -574,7 +578,19 @@ fbq('track', 'ViewContent', {
                     return;
                 }
 
+                // A published option can still be unbuyable, for instance when it
+                // has no price yet. Never show the parent's price for it and
+                // never let the shopper submit it.
+                if (match.purchasable === false) {
+                    this.stockStatusText = match.unavailable_reason || 'This option is unavailable';
+                    this.formattedPrice = 'N/A';
+                    this.buttonText = '❌ Unavailable';
+                    return;
+                }
+
                 this.selectedVariationId = match.id;
+                // null means stock is not tracked for this option, so the
+                // quantity display is left to the in-stock badge below.
                 this.variationStock = match.stock;
 
                 if (match.price !== null && match.price !== undefined) {
@@ -599,11 +615,19 @@ fbq('track', 'ViewContent', {
                     this.stockStatusText = '❌ Out of Stock';
                     this.buttonText = '❌ Out of Stock';
                 }
+
+                this.variationOutOfStock = !match.in_stock;
             },
 
             get canOrder() {
                 if (this.productType === 'simple') return this.simpleInStock;
-                return !!this.selectedVariationId && this.variationStock > 0;
+                if (!this.selectedVariationId) return false;
+                // A null quantity means stock is not tracked for this option,
+                // so availability comes from the option's stock badge alone.
+                if (this.variationStock === null || this.variationStock === undefined) {
+                    return !this.variationOutOfStock;
+                }
+                return this.variationStock > 0;
             },
 
             addCart() {

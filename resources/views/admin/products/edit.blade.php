@@ -26,6 +26,52 @@
         @csrf
         @method('PUT')
 
+        {{-- Every validation error is listed here. Without this a rejected
+             field (an oversized variation image, a bad SKU, ...) silently
+             discards the submission and the admin has no idea why. --}}
+        @php
+            $detailedVariationErrors = $errors->get('variations');
+            $salePriceErrors = collect($errors->getMessages())
+                ->filter(fn ($messages, $key) => str_starts_with($key, 'variations.') && str_ends_with($key, '.sale_price'));
+
+            // "variations.3.image" is meaningless to an admin, so the row and
+            // the field are named instead.
+            $variationFieldLabels = [
+                'image' => 'image', 'sku' => 'SKU', 'regular_price' => 'regular price',
+                'stock_quantity' => 'stock quantity', 'weight_value' => 'weight',
+                'stock_status' => 'stock status', 'status' => 'status',
+            ];
+
+            $otherErrors = [];
+
+            foreach ($errors->getMessages() as $key => $messages) {
+                if ($key === 'variations' || $salePriceErrors->has($key)) {
+                    continue;
+                }
+
+                foreach ($messages as $message) {
+                    if (preg_match('/^variations\.(\d+)\.([a-z_]+)$/', $key, $m)) {
+                        $label = $variationFieldLabels[$m[2]] ?? str_replace('_', ' ', $m[2]);
+                        // Strip the raw key from the tail of the message.
+                        $message = preg_replace('/\s*field\s/mi', ' ' . $label . ' ', $message);
+                        $otherErrors[] = 'Row ' . ((int) $m[1] + 1) . ' — ' . $message;
+                    } else {
+                        $otherErrors[] = $message;
+                    }
+                }
+            }
+        @endphp
+        @if($otherErrors || $detailedVariationErrors)
+            <div class="px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/5 space-y-1">
+                <p class="text-sm font-bold text-red-300">Please fix the following to save this product</p>
+                <ul class="list-disc list-inside space-y-0.5 text-xs text-red-200/90">
+                    @foreach($otherErrors as $message)
+                        <li>{{ $message }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             <!-- Left 2 Columns -->
@@ -72,6 +118,46 @@
                             <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
                         @enderror
                     </div>
+                </div>
+
+                <!-- Internal costing: never shown on the storefront -->
+                <div class="bg-slate-800/30 p-6 rounded-xl border border-slate-700/50">
+                    <label for="cost_price" class="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-400 mb-2">
+                        Costing Price (৳)
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30">Admin only</span>
+                    </label>
+                    <input type="number" step="0.01" min="0" id="cost_price" name="cost_price" value="{{ old('cost_price', $product->cost_price) }}"
+                           class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-slate-900/80 transition-all text-slate-200 placeholder-slate-600"
+                           placeholder="Leave blank if unknown">
+                    <p class="text-xs text-slate-500 mt-1.5">Your purchase or production cost. Used for internal margin reporting, never shown to customers.</p>
+                    @error('cost_price')
+                        <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
+                    @enderror
+
+                    @if ($product->cost_price !== null)
+                        @php
+                            $marginBase = (float) ($product->sale_price ?? $product->regular_price ?? 0);
+                            $cost = (float) $product->cost_price;
+                            $margin = $marginBase - $cost;
+                            $marginPct = $marginBase > 0 ? round($margin / $marginBase * 100, 1) : null;
+                        @endphp
+                        <div class="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-700/50">
+                            <div>
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Cost</p>
+                                <p class="text-sm font-bold text-slate-300">৳{{ number_format($cost, 2) }}</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Margin</p>
+                                <p class="text-sm font-bold {{ $margin >= 0 ? 'text-emerald-400' : 'text-red-400' }}">৳{{ number_format($margin, 2) }}</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Margin %</p>
+                                <p class="text-sm font-bold {{ ($marginPct ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400' }}">
+                                    {{ $marginPct !== null ? $marginPct . '%' : '—' }}
+                                </p>
+                            </div>
+                        </div>
+                    @endif
                 </div>
 
                 <!-- Simple Product Stock -->
@@ -168,6 +254,14 @@
                 </div>
 
                 <!-- Variable Product: Variations -->
+                @php
+                    // Built here so the sale price error below can name the
+                    // option that failed instead of the raw field key.
+                    $variationRowsPayload = $product->variations->map(fn ($variation) => [
+                        'id' => $variation->id,
+                        'label' => $variation->attribute_label,
+                    ])->values();
+                @endphp
                 <div x-show="productType === 'variable'" class="space-y-4 bg-purple-500/5 p-6 rounded-xl border border-purple-500/20">
                     <div class="flex flex-wrap justify-between items-center gap-3 pb-2 border-b border-purple-500/20">
                         <h4 class="font-bold text-slate-200 text-sm">Variations</h4>
@@ -175,9 +269,13 @@
                             <button type="button" @click="addVariation()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-sm font-bold transition">
                                 + Add Variation
                             </button>
+                            {{-- This posts to a different route, which accepts
+                                 both verbs because the form's hidden
+                                 _method=PUT would otherwise spoof the request. --}}
                             <button type="submit"
                                     formaction="{{ route('admin.products.generate-variations', $product) }}"
                                     formmethod="POST"
+                                    formnovalidate
                                     class="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white rounded text-sm font-bold transition">
                                 Generate from Attributes
                             </button>
@@ -185,8 +283,106 @@
                     </div>
 
                     <p class="text-xs text-slate-400">
-                        Each row is one combination of attribute values. Untick a row and save to delete it.
+                        Each row is one combination of attribute values. The name above each row is the combination
+                        that was created for this product. Untick a row and save to delete it.
                     </p>
+                    @php $perImage = ini_get('upload_max_filesize') ?: '2M'; $perRequest = ini_get('post_max_size') ?: '8M'; @endphp
+                    <p class="mt-1 text-xs text-amber-300/80">
+                        Images: up to {{ $perImage }} each, and {{ $perRequest }} for all images in one save.
+                        If a save comes back with nothing stored, the images together were too large.
+                    </p>
+
+                    {{-- Fills the price boxes of the rows below so a price can be
+                         typed once instead of once per combination. Still saved by
+                         the normal Save button below. --}}
+                    <div class="flex flex-col md:flex-row md:items-end gap-3 p-4 rounded-xl border border-purple-500/20 bg-purple-500/5">
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold uppercase text-slate-300 mb-1" for="bulkRegularPrice">Regular price (৳)</label>
+                            <input type="number" step="0.01" min="0" id="bulkRegularPrice" x-model="bulkPrice.regular"
+                                   placeholder="e.g. 1200"
+                                   class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold uppercase text-slate-300 mb-1" for="bulkSalePrice">Sale price (৳)</label>
+                            <input type="number" step="0.01" min="0" id="bulkSalePrice" x-model="bulkPrice.sale"
+                                   placeholder="leave blank for none"
+                                   class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" @click="applyPriceToAll()"
+                                    class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white rounded-lg text-sm font-bold transition">
+                                Fill All Rows
+                            </button>
+                            <button type="button" @click="applyPriceToSelected()"
+                                    class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-bold transition">
+                                Fill Selected
+                            </button>
+                        </div>
+                    </div>
+
+                    <p x-show="priceMessage" x-cloak class="text-xs font-semibold"
+                       :class="priceMessageIsError ? 'text-red-400' : 'text-emerald-400'"
+                       x-text="priceMessage"></p>
+
+                    {{-- The whole variation set was rejected, e.g. duplicate
+                         combinations. Nothing was saved, so say so plainly. --}}
+                    @foreach($detailedVariationErrors as $message)
+                        <div class="px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/5">
+                            <p class="text-sm font-bold text-red-300">Variations were not saved</p>
+                            <p class="mt-1 text-xs text-red-200/90">{{ $message }}</p>
+                        </div>
+                    @endforeach
+
+                    {{-- A sale price that is not below the regular price is
+                         rejected, so the row is named instead of the raw
+                         "variations.1.sale_price" key. --}}
+                    @if($salePriceErrors->isNotEmpty())
+                        <div class="px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/5">
+                            <p class="text-sm font-bold text-red-300">Some sale prices were not saved</p>
+                            <ul class="mt-1 space-y-0.5 text-xs text-red-200/90">
+                                @foreach($salePriceErrors as $key => $messages)
+                                    @php $rowIndex = (int) str_replace(['variations.', '.sale_price'], '', $key); @endphp
+                                    <li>
+                                        <strong>{{ $variationRowsPayload[$rowIndex]['label'] ?? 'Row '.($rowIndex + 1) }}</strong>
+                                        — the sale price must be lower than the regular price.
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    @php
+                        $unbuyableVariations = $product->variations()->get()
+                            ->reject(fn ($variation) => $variation->isPurchasable())
+                            ->values();
+                    @endphp
+
+                    @if($unbuyableVariations->isNotEmpty())
+                        <div class="flex items-start gap-3 px-4 py-3 rounded-xl border border-amber-500/30 bg-amber-500/5">
+                            <svg class="w-5 h-5 text-amber-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+                            </svg>
+                            <div class="text-sm">
+                                <p class="font-bold text-amber-300">
+                                    {{ $unbuyableVariations->count() }} option(s) cannot be bought by customers yet:
+                                </p>
+                                <ul class="mt-1 space-y-0.5 text-amber-200/90">
+                                    @foreach($unbuyableVariations as $variation)
+                                        <li>
+                                            <strong>{{ $variation->attribute_label ?: 'Variation #'.$variation->id }}</strong>
+                                            — {{ $variation->unavailabilityReason() }}
+                                            @if($variation->status === \App\Models\ProductVariation::STATUS_PUBLISH)
+                                                <span class="text-amber-300/70">(published)</span>
+                                            @endif
+                                        </li>
+                                    @endforeach
+                                </ul>
+                                <p class="mt-1.5 text-xs text-amber-200/70">
+                                    Give each one a regular price, or untick it to hide it from customers.
+                                </p>
+                            </div>
+                        </div>
+                    @endif
 
                     <div class="space-y-3">
                         <template x-if="variationAttributes().length === 0">
@@ -199,17 +395,24 @@
                             <div class="bg-slate-900/60 border border-slate-800/50 rounded-lg p-4 space-y-3">
                                 <input type="hidden" :name="`variations[${index}][id]`" x-model="v.id">
 
+                                <div class="flex items-center gap-2 pb-2 border-b border-slate-800/50">
+                                    <span class="text-sm font-bold text-purple-300 truncate" x-text="variationLabel(v)"></span>
+                                    <span class="text-[10px] uppercase tracking-wider text-slate-500" x-show="v.status === 'private'">Disabled</span>
+                                    <span class="text-[10px] uppercase tracking-wider text-amber-400" x-show="v.manage_stock && Number(v.stock_quantity) === 0">Out of stock</span>
+                                </div>
+
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                                     <template x-for="pa in variationAttributes()" :key="pa.product_attribute_id">
                                         <div>
                                             <label class="block text-xs font-bold uppercase text-slate-400 mb-1" x-text="pa.name"></label>
                                             <select :name="`variations[${index}][values][${pa.product_attribute_id}]`"
-                                                    :value="v.values[pa.product_attribute_id] || ''"
                                                     @change="v.values[pa.product_attribute_id] = $event.target.value"
                                                     class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
-                                                <option value="">— Any —</option>
+                                                <option value="" :selected="!v.values[pa.product_attribute_id]">— Any —</option>
                                                 <template x-for="o in optionsForProductAttribute(pa)" :key="o.id">
-                                                    <option :value="o.id" x-text="o.name"></option>
+                                                    <option :value="o.id"
+                                                            :selected="String(o.id) === String(v.values[pa.product_attribute_id] ?? '')"
+                                                            x-text="o.name"></option>
                                                 </template>
                                             </select>
                                         </div>
@@ -276,6 +479,7 @@
                                     <div class="flex items-center justify-between gap-2">
                                         <label class="flex items-center gap-1.5 text-xs text-slate-400">
                                             <input type="checkbox" form="bulkVariationForm" :name="`bulk_variation_ids[]`" :value="v.id"
+                                                   x-model="selectedVariationIds"
                                                    class="h-3.5 w-3.5 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
                                             Select
                                         </label>
@@ -567,8 +771,9 @@
         ])->values(),
     ])->values();
 
-    $variationRowsPayload = $product->variations->map(fn ($variation) => [
+    $variationRows = $product->variations->map(fn ($variation) => [
         'id' => $variation->id,
+        'label' => $variation->attribute_label,
         'values' => $variation->attributeValues
             ->mapWithKeys(fn ($value) => [$value->product_attribute_id => (string) $value->attribute_value_id])
             ->all(),
@@ -595,14 +800,109 @@
         'is_variation' => (bool) $productAttribute->is_variation,
     ])->values();
 @endphp
-<script>
+    <script>
     function productForm() {
         return {
             productType: '{{ $product->product_type }}',
             allAttributes: {!! json_encode($allAttributesPayload) !!},
             variationOptions: {!! json_encode($variationOptionsPayload) !!},
             attributes: {!! json_encode($attributeRowsPayload) !!},
-            variations: {!! json_encode($variationRowsPayload) !!},
+            variations: {!! json_encode($variationRows) !!},
+
+            // Prices typed once and copied into the variation rows below.
+            bulkPrice: {
+                regular: '',
+                sale: '',
+            },
+            priceMessage: '',
+            priceMessageIsError: false,
+
+            // Ids of the rows ticked in the bulk actions form, so the price
+            // filler can target just those.
+            selectedVariationIds: [],
+
+            /**
+             * Read the two price boxes and check them the same way the server
+             * does: a sale price has to be lower than the regular one, and
+             * anything that is not a number is rejected before it can reach the
+             * rows.
+             */
+            resolveBulkPrice() {
+                const regular = this.bulkPrice.regular === '' ? null : Number(this.bulkPrice.regular);
+                const sale = this.bulkPrice.sale === '' ? null : Number(this.bulkPrice.sale);
+
+                if (regular !== null && (!Number.isFinite(regular) || regular < 0)) {
+                    return { error: 'Enter a valid regular price, or clear the box.' };
+                }
+
+                if (sale !== null && (!Number.isFinite(sale) || sale < 0)) {
+                    return { error: 'Enter a valid sale price, or clear the box.' };
+                }
+
+                if (regular === null && sale === null) {
+                    return { error: 'Type a regular price, a sale price, or both first.' };
+                }
+
+                if (regular === null) {
+                    return { error: 'A sale price needs a regular price to be lower than.' };
+                }
+
+                if (sale !== null && sale >= regular) {
+                    return { error: 'The sale price must be lower than the regular price.' };
+                }
+
+                return { regular: regular, sale: sale };
+            },
+
+            setPriceMessage(text, isError) {
+                this.priceMessage = text;
+                this.priceMessageIsError = !!isError;
+            },
+
+            applyPriceToAll() {
+                const price = this.resolveBulkPrice();
+                if (price.error) return this.setPriceMessage(price.error, true);
+
+                this.variations.forEach(variation => {
+                    variation.regular_price = price.regular;
+                    variation.sale_price = price.sale;
+                });
+
+                this.setPriceMessage(
+                    `Filled ${this.variations.length} row(s) with regular ${price.regular}` +
+                    (price.sale === null ? '.' : ` and sale ${price.sale}.`) +
+                    ' Remember to press Save to store it.',
+                    false
+                );
+            },
+
+            applyPriceToSelected() {
+                const price = this.resolveBulkPrice();
+                if (price.error) return this.setPriceMessage(price.error, true);
+
+                const selected = this.variations.filter(variation => variation.id && this.isRowSelected(variation.id));
+
+                if (selected.length === 0) {
+                    return this.setPriceMessage('Tick “Select” on a row first.', true);
+                }
+
+                selected.forEach(variation => {
+                    variation.regular_price = price.regular;
+                    variation.sale_price = price.sale;
+                });
+
+                this.setPriceMessage(
+                    `Filled ${selected.length} selected row(s)` +
+                    (price.sale === null ? '.' : ` with sale ${price.sale}.`) +
+                    ' Remember to press Save to store it.',
+                    false
+                );
+            },
+
+            /** Mirror of the "Select" checkboxes inside the bulk actions form. */
+            isRowSelected(id) {
+                return this.selectedVariationIds.map(String).includes(String(id));
+            },
 
             addAttribute() {
                 this.attributes.push({
@@ -645,6 +945,28 @@
                 }
 
                 return productAttribute.values;
+            },
+
+            /**
+             * The option names a row currently selects, e.g. "S / Red". A slot
+             * left on "— Any —" reads as "Any" so it is obvious the row is a
+             * wildcard rather than a blank row.
+             */
+            variationLabel(variation) {
+                const parts = this.variationAttributes().map(pa => {
+                    const selectedId = variation.values[pa.product_attribute_id];
+
+                    if (selectedId === undefined || selectedId === null || selectedId === '') {
+                        return 'Any';
+                    }
+
+                    const option = this.optionsForProductAttribute(pa)
+                        .find(o => String(o.id) === String(selectedId));
+
+                    return option ? option.name : 'Any';
+                });
+
+                return parts.length ? parts.join(' / ') : (variation.label || 'Any');
             },
 
             addVariation() {

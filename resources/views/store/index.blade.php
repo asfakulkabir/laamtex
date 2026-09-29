@@ -241,12 +241,13 @@
             <div x-ref="track" @scroll.passive="sync()"
                  class="flex gap-3 sm:gap-4 lg:gap-6 overflow-x-auto no-scrollbar scroll-smooth px-4 sm:px-6 lg:px-[max(1.5rem,calc((100vw-80rem)/2+2rem))] pb-2 snap-x snap-mandatory">
                 @foreach($testimonials as $testimonial)
-                    <figure class="slide-item snap-start shrink-0 w-[78vw] sm:w-[46vw] md:w-[31vw] lg:w-[calc((80rem-3rem)/4)] max-w-sm">
-                        <div class="h-full rounded-2xl bg-white ring-1 ring-gray-200 hover:ring-gray-300 hover:shadow-lg transition overflow-hidden">
+                    <figure class="slide-item snap-start shrink-0 w-[85vw] sm:w-[62vw] md:w-[55vw] lg:w-[calc(50%_-_0.75rem)]">
+                        <div class="aspect-video rounded-2xl bg-white ring-1 ring-gray-200 hover:ring-gray-300 hover:shadow-lg transition overflow-hidden">
                             <img src="{{ $testimonial->image_url }}"
                                  alt="Testimonial from a {{ site_name() }} customer"
                                  loading="lazy" decoding="async"
-                                 class="w-full h-[260px] sm:h-[300px] lg:h-[320px] object-contain bg-white p-1.5">
+                                 @if($testimonial->width) width="{{ $testimonial->width }}" height="{{ $testimonial->height }}" @endif
+                                 class="w-full h-full object-contain bg-white p-1.5">
                         </div>
                     </figure>
                 @endforeach

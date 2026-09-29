@@ -4,6 +4,10 @@
 @section('page_title', 'Replace Testimonial Image')
 
 @section('content')
+@php
+    $recommendedWidth = \App\Models\Testimonial::RECOMMENDED_WIDTH;
+    $recommendedHeight = \App\Models\Testimonial::RECOMMENDED_HEIGHT;
+@endphp
 <div class="max-w-xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800/50 p-8 rounded-2xl shadow-lg">
 
     <div class="mb-6">
@@ -13,7 +17,24 @@
 
     <div class="mb-6">
         <img src="{{ $testimonial->image_url }}" alt="Current testimonial"
-             class="w-40 h-40 object-cover rounded-xl border border-slate-700/50">
+             @if($testimonial->width) width="{{ $testimonial->width }}" height="{{ $testimonial->height }}" @endif
+             class="w-full aspect-video object-contain bg-white rounded-xl border border-slate-700/50">
+
+        <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+            <span class="px-2 py-1 rounded-lg bg-slate-800/60 font-mono font-semibold text-slate-200">{{ $testimonial->dimensions }}</span>
+            <span class="px-2 py-1 rounded-lg bg-slate-800/60 font-semibold text-slate-300">{{ $testimonial->size_label }}</span>
+            <span class="px-2 py-1 rounded-lg font-bold uppercase tracking-wider
+                         {{ $testimonial->isLandscape() ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400' }}">
+                {{ $testimonial->orientation }}
+            </span>
+        </div>
+
+        <p class="mt-2 text-xs text-slate-400">
+            Recommended: <strong class="text-purple-400">{{ $recommendedWidth }} x {{ $recommendedHeight }} px</strong> landscape.
+            @unless($testimonial->isLandscape())
+                <span class="text-amber-400">This one is not landscape, so it is letterboxed in the slider.</span>
+            @endunless
+        </p>
     </div>
 
     <form action="{{ route('admin.testimonials.update', $testimonial->id) }}" method="POST" enctype="multipart/form-data" class="space-y-6" x-data="testimonialUpload()">
@@ -35,11 +56,24 @@
                     </div>
                 </template>
                 <template x-if="preview">
-                    <img :src="preview" alt="Selected testimonial" class="max-h-64 w-auto rounded-lg border border-slate-700/50">
+                    <img :src="preview" alt="Selected testimonial"
+                         class="w-full aspect-video object-contain bg-white rounded-lg border border-slate-700/50">
                 </template>
                 <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/webp"
                        class="sr-only" @change="handleFile($event)">
             </label>
+
+            <div x-show="dimensions" x-cloak class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                <span class="px-2 py-1 rounded-lg bg-slate-800/60 font-mono font-semibold text-slate-200" x-text="dimensions"></span>
+                <span class="px-2 py-1 rounded-lg bg-slate-800/60 font-semibold text-slate-300" x-text="sizeLabel"></span>
+                <span class="px-2 py-1 rounded-lg font-bold uppercase tracking-wider"
+                      :class="isLandscape ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'"
+                      x-text="orientation"></span>
+            </div>
+            <p x-show="dimensions && ! isLandscape" x-cloak class="mt-2 text-xs text-amber-400">
+                This image is taller than it is wide, so it will be letterboxed in the slider. Use a
+                {{ $recommendedWidth }} x {{ $recommendedHeight }} px landscape image instead.
+            </p>
 
             <p x-show="fileName" x-cloak class="mt-2 text-xs font-semibold text-emerald-400">Selected: <span x-text="fileName"></span></p>
             @error('image')
@@ -66,14 +100,52 @@
         return {
             preview: null,
             fileName: '',
+            width: null,
+            height: null,
+            sizeLabel: '',
+
+            get dimensions() {
+                return this.width ? this.width + ' x ' + this.height + ' px' : '';
+            },
+
+            get orientation() {
+                if (!this.width || !this.height) return '';
+                if (this.width > this.height) return 'landscape';
+                return this.width === this.height ? 'square' : 'portrait';
+            },
+
+            get isLandscape() {
+                return this.orientation === 'landscape';
+            },
+
+            setPreview(url) {
+                if (this.preview) URL.revokeObjectURL(this.preview);
+                this.preview = url;
+            },
 
             handleFile(event) {
                 const file = event.target.files[0];
                 if (!file) return;
 
                 this.fileName = file.name;
-                if (this.preview) URL.revokeObjectURL(this.preview);
-                this.preview = URL.createObjectURL(file);
+                this.sizeLabel = file.size >= 1048576
+                    ? (file.size / 1048576).toFixed(1) + ' MB'
+                    : Math.max(1, Math.round(file.size / 1024)) + ' KB';
+
+                const url = URL.createObjectURL(file);
+                const probe = new Image();
+
+                probe.onload = () => {
+                    this.width = probe.naturalWidth;
+                    this.height = probe.naturalHeight;
+                    this.setPreview(url);
+                };
+                probe.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    this.width = this.height = null;
+                    this.setPreview(null);
+                };
+                probe.src = url;
             }
         };
     }
