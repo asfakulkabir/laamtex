@@ -16,11 +16,13 @@ class ProductImage extends Model
         'name',
         'alt_text',
         'is_featured',
+        'is_secondary',
         'order',
     ];
 
     protected $casts = [
         'is_featured' => 'boolean',
+        'is_secondary' => 'boolean',
         'order' => 'integer',
     ];
 

@@ -1,6 +1,8 @@
 @php
-    $featuredImg = $product->images->where('is_featured', true)->first() ?? $product->images->first();
-    $imageUrl = $featuredImg ? Storage::url($featuredImg->image) : null;
+    $mainImage = $product->mainImage();
+    $imageUrl = $mainImage ? Storage::url($mainImage->image) : null;
+    $hoverImage = $product->hoverImage();
+    $hoverUrl = $hoverImage ? Storage::url($hoverImage->image) : null;
 @endphp
 
 <a href="{{ $product->slug ? route('product.detail', $product->slug) : '#' }}" class="group relative block h-full flex flex-col rounded-2xl bg-white ring-1 ring-gray-300 hover:ring-gray-900 hover:shadow-md transition-all duration-300 ease-in-out overflow-hidden">
@@ -9,7 +11,11 @@
             <img src="{{ $imageUrl }}" alt="" aria-hidden="true" loading="lazy" decoding="async"
                  class="absolute inset-0 h-full w-full object-cover blur-2xl scale-110">
             <img src="{{ $imageUrl }}" alt="{{ $product->name }}" loading="lazy" decoding="async"
-                 class="absolute inset-0 h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.03]">
+                 class="absolute inset-0 h-full w-full object-contain transition duration-500 ease-out {{ $hoverUrl ? 'group-hover:opacity-0' : 'group-hover:scale-[1.03]' }}">
+            @if($hoverUrl)
+                <img src="{{ $hoverUrl }}" alt="" aria-hidden="true" loading="lazy" decoding="async"
+                     class="absolute inset-0 h-full w-full object-contain opacity-0 transition duration-500 ease-out group-hover:opacity-100 group-hover:scale-[1.03]">
+            @endif
         @else
             <div class="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 text-slate-300">
                 <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">

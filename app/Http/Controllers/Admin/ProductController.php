@@ -91,6 +91,43 @@ class ProductController extends Controller
         }
     }
 
+    /**
+     * Keep the gallery marks consistent: exactly one main image, at most one
+     * second (hover) image, and the two can never land on the same row.
+     *
+     * The form posts two independent radio groups, so the same row can be
+     * picked for both, and picking a new image as the main one used to leave
+     * the previous main image flagged as well.
+     */
+    private function reconcileGalleryMarks(Product $product): void
+    {
+        $images = $product->images()->orderBy('order')->orderBy('id')->get();
+
+        if ($images->isEmpty()) {
+            return;
+        }
+
+        $main = $images->firstWhere('is_featured', true) ?? $images->first();
+        $second = $images->firstWhere('is_secondary', true);
+
+        if ($second && $second->id === $main->id) {
+            $second = null;
+        }
+
+        foreach ($images as $image) {
+            $isMain = $image->id === $main->id;
+            $isSecond = $second !== null && $image->id === $second->id;
+
+            if ($image->is_featured === $isMain && $image->is_secondary === $isSecond) {
+                continue;
+            }
+
+            $image->is_featured = $isMain;
+            $image->is_secondary = $isSecond;
+            $image->saveQuietly();
+        }
+    }
+
     private function uploadedVariationImages(Request $request): array
     {
         $files = $request->file('variations');
@@ -355,6 +392,7 @@ class ProductController extends Controller
             'image_names' => 'nullable|array',
             'image_alts' => 'nullable|array',
             'image_featured_index' => 'nullable|integer',
+            'image_secondary_index' => 'nullable|integer',
         ]);
 
         $productData = $request->only([
@@ -428,6 +466,7 @@ class ProductController extends Controller
         // Upload Images
         if ($request->hasFile('images')) {
             $featuredIndex = $request->input('image_featured_index', 0);
+            $secondaryIndex = $request->input('image_secondary_index');
             $uploadedFiles = $request->file('images');
 
             foreach ($uploadedFiles as $index => $file) {
@@ -435,6 +474,7 @@ class ProductController extends Controller
                 $name = $request->input("image_names.{$index}") ?: ('image_' . Str::random(5));
                 $alt = $request->input("image_alts.{$index}") ?: $product->name;
                 $isFeatured = ($index == $featuredIndex);
+                $isSecondary = ($secondaryIndex !== null && $index == $secondaryIndex);
 
                 ProductImage::create([
                     'product_id' => $product->id,
@@ -442,9 +482,12 @@ class ProductController extends Controller
                     'name' => $name,
                     'alt_text' => $alt,
                     'is_featured' => $isFeatured,
+                    'is_secondary' => $isSecondary,
                     'order' => $index,
                 ]);
             }
+
+            $this->reconcileGalleryMarks($product);
         }
 
         $this->warnIfUploadsWereClipped($request);
@@ -511,6 +554,7 @@ class ProductController extends Controller
             'existing_images.*.alt_text' => 'nullable|string|max:255',
             'existing_images.*.order' => 'integer',
             'existing_images_featured_id' => 'nullable|integer',
+            'existing_images_secondary_id' => 'nullable|integer',
             'delete_images' => 'nullable|array',
             'delete_images.*' => 'exists:product_images,id',
 
@@ -520,6 +564,7 @@ class ProductController extends Controller
             'new_images_names' => 'nullable|array',
             'new_images_alts' => 'nullable|array',
             'new_image_featured_temp' => 'nullable|string', // "new_0", "existing_23"
+            'new_image_secondary_temp' => 'nullable|string', // "new_1", "existing_23"
         ]);
 
         // Capture original product type
@@ -600,9 +645,11 @@ class ProductController extends Controller
             }
         }
 
-        // Determine which image is featured
+        // Determine which image is featured and which is the hover (second) image
         $featuredId = $request->input('existing_images_featured_id'); // If existing is chosen
         $newFeaturedSelect = $request->input('new_image_featured_temp'); // Format: "existing_12" or "new_0"
+        $secondaryId = $request->input('existing_images_secondary_id');
+        $newSecondarySelect = $request->input('new_image_secondary_temp'); // Format: "existing_12" or "new_0"
 
         // Update existing images meta
         if ($request->has('existing_images')) {
@@ -610,7 +657,8 @@ class ProductController extends Controller
                 $img = ProductImage::find($imgData['id']);
                 if ($img) {
                     $isFeatured = ($img->id == $featuredId);
-                    
+                    $isSecondary = ($img->id == $secondaryId);
+
                     // Or if it matches new_image_featured_temp
                     if ($newFeaturedSelect && $newFeaturedSelect === "existing_" . $img->id) {
                         $isFeatured = true;
@@ -618,11 +666,19 @@ class ProductController extends Controller
                         $isFeatured = false; // A new image will be featured
                     }
 
+                    // Or if it matches new_image_secondary_temp
+                    if ($newSecondarySelect && $newSecondarySelect === "existing_" . $img->id) {
+                        $isSecondary = true;
+                    } elseif ($newSecondarySelect && Str::startsWith($newSecondarySelect, 'new_')) {
+                        $isSecondary = false; // A new image will be the hover image
+                    }
+
                     $img->update([
                         'name' => $imgData['name'],
                         'alt_text' => $imgData['alt_text'] ?: $product->name,
                         'order' => $imgData['order'] ?: 0,
                         'is_featured' => $isFeatured,
+                        'is_secondary' => $isSecondary,
                     ]);
                 }
             }
@@ -635,11 +691,13 @@ class ProductController extends Controller
                 $path = $file->store('product_images', 'public');
                 $name = $request->input("new_images_names.{$index}") ?: ('image_' . Str::random(5));
                 $alt = $request->input("new_images_alts.{$index}") ?: $product->name;
-                
+
                 $isFeatured = false;
                 if ($newFeaturedSelect === "new_" . $index) {
                     $isFeatured = true;
                 }
+
+                $isSecondary = $newSecondarySelect === "new_" . $index;
 
                 ProductImage::create([
                     'product_id' => $product->id,
@@ -647,18 +705,13 @@ class ProductController extends Controller
                     'name' => $name,
                     'alt_text' => $alt,
                     'is_featured' => $isFeatured,
+                    'is_secondary' => $isSecondary,
                     'order' => 100 + $index, // Put new ones at the end
                 ]);
             }
         }
 
-        // Ensure exactly one image is featured if images exist
-        $images = $product->images()->get();
-        if ($images->count() > 0 && $images->where('is_featured', true)->isEmpty()) {
-            $firstImg = $images->first();
-            $firstImg->is_featured = true;
-            $firstImg->saveQuietly();
-        }
+        $this->reconcileGalleryMarks($product);
 
         $this->warnIfUploadsWereClipped($request);
 

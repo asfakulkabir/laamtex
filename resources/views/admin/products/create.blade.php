@@ -519,10 +519,17 @@
                                                class="w-full border border-slate-700/50 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-purple-500 text-slate-200 placeholder-slate-600">
                                     </div>
                                 </div>
-                                <div class="flex items-center">
-                                    <input type="radio" :id="`featured_img_${idx}`" name="image_featured_index" :value="idx" :checked="idx === 0"
-                                           class="h-3.5 w-3.5 text-purple-400 focus:ring-purple-500">
-                                    <label :for="`featured_img_${idx}`" class="ml-1.5 text-sm font-bold text-slate-400 uppercase">Set Main Featured</label>
+                                <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+                                    <div class="flex items-center">
+                                        <input type="radio" :id="`featured_img_${idx}`" name="image_featured_index" :value="idx" :checked="idx === 0"
+                                               class="h-3.5 w-3.5 text-purple-400 focus:ring-purple-500">
+                                        <label :for="`featured_img_${idx}`" class="ml-1.5 text-sm font-bold text-slate-400 uppercase">Set Main Featured</label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="radio" :id="`secondary_img_${idx}`" name="image_secondary_index" :value="idx" :checked="idx === 1"
+                                               class="h-3.5 w-3.5 text-pink-400 focus:ring-pink-500">
+                                        <label :for="`secondary_img_${idx}`" class="ml-1.5 text-sm font-bold text-slate-400 uppercase">Set 2nd Image (Hover)</label>
+                                    </div>
                                 </div>
                             </div>
                         </template>

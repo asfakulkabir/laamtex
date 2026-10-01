@@ -11,15 +11,13 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductAttribute;
 use App\Models\ProductVariation;
-use App\Models\Setting;
 use App\Models\Slider;
 use App\Models\Testimonial;
-use App\Mail\NewOrderNotification;
+use App\Jobs\SendOrderNotification;
 use App\Services\MetaPixelService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 class StoreController extends Controller
@@ -425,20 +423,27 @@ class StoreController extends Controller
             session()->forget('checkout_coupon_code');
         }
 
-        // Send InitiateCheckout + AddPaymentInfo to Conversion API
+        // Send InitiateCheckout + AddPaymentInfo to Conversion API. These are
+        // outbound HTTP calls the shopper would wait on, so they run after the
+        // page is on its way; the browser-side fbq() calls in the view cover
+        // the same events in the meantime.
         $contentIds = array_values(array_map(fn($item) => $item['product_id'], $cart));
-        app(MetaPixelService::class)->sendEvent('AddPaymentInfo', [
-            'content_type' => 'product',
-            'value' => (float) $subtotal,
-            'currency' => 'BDT',
-        ]);
-        app(MetaPixelService::class)->sendEvent('InitiateCheckout', [
-            'content_ids' => array_values($contentIds),
-            'content_type' => 'product',
-            'value' => (float) $subtotal,
-            'currency' => 'BDT',
-            'num_items' => count($cart),
-        ]);
+        dispatch(function () use ($subtotal, $contentIds, $cart) {
+            $pixel = app(MetaPixelService::class);
+
+            $pixel->sendEvent('AddPaymentInfo', [
+                'content_type' => 'product',
+                'value' => (float) $subtotal,
+                'currency' => 'BDT',
+            ]);
+            $pixel->sendEvent('InitiateCheckout', [
+                'content_ids' => $contentIds,
+                'content_type' => 'product',
+                'value' => (float) $subtotal,
+                'currency' => 'BDT',
+                'num_items' => count($cart),
+            ]);
+        })->afterResponse();
 
         return view('store.checkout', compact('cart', 'deliveryZones', 'subtotal', 'customer', 'coupon', 'discount'));
     }
@@ -558,11 +563,29 @@ class StoreController extends Controller
         DB::beginTransaction();
 
         try {
+            // Loaded once instead of per cart line: the validation pass and the
+            // write pass below both need them, and a big cart would otherwise
+            // pay four queries per row before a single order is created.
+            $products = Product::whereIn('id', array_column($cart, 'product_id'))->get()->keyBy('id');
+            $variations = ProductVariation::whereIn('id', array_filter(array_column($cart, 'variation_id')))
+                ->with('product')
+                ->get()
+                ->keyBy('id');
+
             foreach ($cart as $item) {
-                $product = Product::findOrFail($item['product_id']);
+                $product = $products->get($item['product_id']);
+
+                if (! $product) {
+                    throw new \Exception('One of the products in your cart no longer exists.');
+                }
 
                 if ($item['variation_id']) {
-                    $variation = ProductVariation::findOrFail($item['variation_id']);
+                    $variation = $variations->get($item['variation_id']);
+
+                    if (! $variation) {
+                        throw new \Exception("{$product->name} ({$item['variation_details']}) is no longer available.");
+                    }
+
                     if ($variation->isStockTracked() && (int) $variation->effectiveStockQuantity() < $item['quantity']) {
                         throw new \Exception("{$product->name} ({$item['variation_details']}) is out of stock.");
                     }
@@ -593,7 +616,7 @@ class StoreController extends Controller
             ]);
 
             foreach ($cart as $item) {
-                $product = Product::findOrFail($item['product_id']);
+                $product = $products->get($item['product_id']);
 
                 OrderItem::create([
                     'order_id'             => $order->id,
@@ -606,7 +629,7 @@ class StoreController extends Controller
                 ]);
 
                 if ($item['variation_id']) {
-                    $variation = ProductVariation::findOrFail($item['variation_id']);
+                    $variation = $variations->get($item['variation_id']);
                     $variation->reduceStock($item['quantity']);
                     $product->updateStockFromVariations();
                 } else {
@@ -632,6 +655,11 @@ class StoreController extends Controller
                 'content_type' => 'product',
             ]);
 
+            // The admin alert is mailed only once the browser already holds the
+            // redirect, so the shopper lands on the thank-you page immediately
+            // instead of waiting on an SMTP round trip per recipient.
+            SendOrderNotification::dispatch($order->id)->afterResponse();
+
             return redirect()->route('order.success', $order->id)
                 ->with('success', 'Order placed successfully.');
 
@@ -646,38 +674,14 @@ class StoreController extends Controller
         // Load the items relationship explicitly (not the attribute)
         $order->load('items', 'deliveryCharge');
 
-        // Send Purchase to Conversion API (one-time, never on refresh)
+        // Nothing slow belongs on this page: the shopper is staring at it. The
+        // admin email was fired by placeOrder() and the Purchase hit goes out
+        // below, both after the response has been flushed.
         $purchaseData = session()->get('pixel_purchase', null);
         if ($purchaseData) {
-            app(MetaPixelService::class)->sendEvent('Purchase', $purchaseData);
-        }
-
-        if (!$order->is_notification_sent) {
-            try {
-                $emails = Setting::getValue('order_notification_emails', '');
-                \Log::info('Order notification emails from setting: ' . $emails);
-                
-                if ($emails) {
-                    $recipients = array_map('trim', explode(',', $emails));
-                    $recipients = array_filter($recipients);
-                    \Log::info('Processing order #' . $order->id . ' notification for recipients: ' . implode(', ', $recipients));
-                    
-                    foreach ($recipients as $recipient) {
-                        try {
-                            \Log::info('Sending email to: ' . $recipient);
-                            Mail::to($recipient)->send(new NewOrderNotification($order));
-                            \Log::info('Email sent successfully to: ' . $recipient);
-                        } catch (\Exception $emailError) {
-                            \Log::error('Failed to send email to ' . $recipient . ': ' . $emailError->getMessage());
-                        }
-                    }
-                    $order->update(['is_notification_sent' => true]);
-                } else {
-                    \Log::warning('Order notification emails not configured in settings for order #' . $order->id);
-                }
-            } catch (\Exception $e) {
-                \Log::error('Failed to process order notification for order ' . $order->id . ': ' . $e->getMessage());
-            }
+            dispatch(function () use ($purchaseData) {
+                app(MetaPixelService::class)->sendEvent('Purchase', $purchaseData);
+            })->afterResponse();
         }
 
         return view('store.order-success', compact('order'));

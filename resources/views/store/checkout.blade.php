@@ -19,18 +19,19 @@ fbq('track', 'InitiateCheckout', {
 @endsection
 
 @section('content')
+<div class="-mx-3 sm:-mx-4 lg:-mx-6 -my-3 sm:-my-4 bg-gradient-to-b from-cream-100 via-cream-50 to-cream-100 min-h-full">
 <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4" x-data="checkoutPage({{ $deliveryZones }})">
 
     <h1 class="text-xl font-extrabold text-gray-900 mb-2 sm:mb-3">🔒 Checkout</h1>
 
     @if(session('error'))
-        <div class="mb-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm font-semibold">
+        <div class="mb-3 bg-cream-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm font-semibold">
             ⚠️ {{ session('error') }}
         </div>
     @endif
 
     @auth
-        <div class="mb-3 bg-purple-50 border border-purple-200 text-purple-800 px-3 py-2 rounded-lg text-sm font-semibold flex flex-wrap items-center gap-2">
+        <div class="mb-3 bg-cream-100 border border-cream-300 text-purple-800 px-3 py-2 rounded-lg text-sm font-semibold flex flex-wrap items-center gap-2">
             <span>👤 We have filled this form in with your saved details.</span>
             <a href="{{ route('customer.profile.edit') }}" class="text-purple-600 underline font-bold">Edit profile</a>
         </div>
@@ -46,8 +47,8 @@ fbq('track', 'InitiateCheckout', {
             <div class="lg:col-span-2 space-y-2 sm:space-y-3">
 
                 <!-- Customer Information -->
-                <div class="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 space-y-2.5 sm:space-y-3 shadow-sm">
-                    <h2 class="font-bold text-gray-900 text-base border-b border-gray-200 pb-2">📋 Your Details</h2>
+                <div class="bg-cream-50 border border-cream-200 rounded-xl p-3 sm:p-4 space-y-2.5 sm:space-y-3 shadow-sm">
+                    <h2 class="font-bold text-gray-900 text-base border-b border-cream-200 pb-2">📋 Your Details</h2>
 
                     <div class="space-y-2.5 sm:space-y-3">
 
@@ -105,7 +106,7 @@ fbq('track', 'InitiateCheckout', {
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 @foreach($deliveryZones as $zone)
                                     <label class="relative flex items-start p-3 cursor-pointer rounded-lg border-2 transition-all"
-                                           :class="selectedZone === '{{ $zone->zone }}' ? 'border-purple-500 bg-purple-50' : 'border-gray-300 bg-white hover:border-purple-400 hover:bg-gray-50'">
+                                           :class="selectedZone === '{{ $zone->zone }}' ? 'border-purple-500 bg-purple-50' : 'border-cream-300 bg-cream-100 hover:border-purple-400 hover:bg-cream-200'">
                                         <div class="flex items-center h-5">
                                             <input type="radio" name="delivery_zone" value="{{ $zone->zone }}"
                                                    @change="selectZone('{{ $zone->zone }}')"
@@ -130,7 +131,7 @@ fbq('track', 'InitiateCheckout', {
                             @enderror
 
                             <div x-show="selectedZoneDays" x-cloak
-                                 class="mt-1.5 text-sm font-semibold text-primary bg-purple-50 border border-purple-200 px-3 py-1.5 rounded-md">
+                                 class="mt-1.5 text-sm font-semibold text-primary bg-cream-100 border border-cream-300 px-3 py-1.5 rounded-md">
                                 🚚 Estimated Delivery: <span x-text="selectedZoneDays" class="font-bold"></span>
                             </div>
                         </div>
@@ -139,7 +140,7 @@ fbq('track', 'InitiateCheckout', {
                 </div>
 
                 <!-- Payment Method -->
-                <div class="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 shadow-sm">
+                <div class="bg-cream-50 border border-cream-200 rounded-xl p-3 sm:p-4 shadow-sm">
                     @php
                         $bkashNumber = App\Models\Setting::getValue('bkash_number', '');
                     @endphp
@@ -148,7 +149,7 @@ fbq('track', 'InitiateCheckout', {
                     <div class="space-y-2">
                         <!-- Cash on Delivery -->
                         <label class="relative flex items-center gap-3 p-3 cursor-pointer rounded-lg border-2 transition-all"
-                               :class="selectedPayment === 'cod' ? 'border-purple-500 bg-purple-50' : 'border-gray-300 bg-white hover:border-purple-400 hover:bg-gray-50'">
+                               :class="selectedPayment === 'cod' ? 'border-purple-500 bg-purple-50' : 'border-cream-300 bg-cream-100 hover:border-purple-400 hover:bg-cream-200'">
                             <div class="flex items-center h-5">
                                 <input type="radio" name="payment_method" value="cod"
                                        x-model="selectedPayment"
@@ -164,7 +165,7 @@ fbq('track', 'InitiateCheckout', {
 
                         <!-- bKash Send Money -->
                         <label class="relative flex items-center gap-3 p-3 cursor-pointer rounded-lg border-2 transition-all"
-                               :class="selectedPayment === 'bkash' ? 'border-pink-500 bg-pink-50' : 'border-gray-300 bg-white hover:border-pink-400 hover:bg-gray-50'">
+                               :class="selectedPayment === 'bkash' ? 'border-pink-500 bg-pink-50' : 'border-cream-300 bg-cream-100 hover:border-pink-400 hover:bg-cream-200'">
                             <div class="flex items-center h-5">
                                 <input type="radio" name="payment_method" value="bkash"
                                        x-model="selectedPayment"
@@ -221,7 +222,7 @@ fbq('track', 'InitiateCheckout', {
 
             <!-- Right: Order Summary -->
             <aside class="space-y-2 sm:space-y-3">
-                <div class="bg-white border border-gray-200 p-3 sm:p-4 rounded-xl shadow-sm space-y-2.5 sm:space-y-3 lg:sticky lg:top-20">
+                <div class="bg-cream-50 border border-cream-200 p-3 sm:p-4 rounded-xl shadow-sm space-y-2.5 sm:space-y-3 lg:sticky lg:top-20">
                     <h3 class="font-bold text-gray-900 text-base">🛒 Order Summary</h3>
 
                     <!-- Cart Items -->
@@ -231,7 +232,7 @@ fbq('track', 'InitiateCheckout', {
                             @php $subtotal += $item['price'] * $item['quantity']; @endphp
                             <div class="flex justify-between items-start text-sm">
                                 <div class="flex-1 flex items-start gap-2.5 pr-2">
-                                    <div class="w-11 h-11 bg-gray-50 border border-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                                    <div class="w-11 h-11 bg-cream-100 border border-cream-200 rounded-lg overflow-hidden flex-shrink-0">
                                         @if($item['image'])
                                             <img src="{{ Storage::url($item['image']) }}" alt="{{ $item['name'] }}" class="w-full h-full object-cover" loading="lazy">
                                         @else
@@ -255,7 +256,7 @@ fbq('track', 'InitiateCheckout', {
                         @endforeach
                     </div>
 
-                    <div class="border-t border-gray-200 pt-3 space-y-1.5 text-sm">
+                    <div class="border-t border-cream-200 pt-3 space-y-1.5 text-sm">
                         <div class="flex justify-between text-gray-500">
                             <span>Subtotal</span>
                             <span class="font-semibold text-gray-900">৳{{ number_format($subtotal, 0) }}</span>
@@ -280,7 +281,7 @@ fbq('track', 'InitiateCheckout', {
                             </div>
 
                             <div x-show="couponApplied" x-cloak
-                                 class="flex items-center justify-between gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                                 class="flex items-center justify-between gap-2 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2">
                                 <div class="text-xs font-bold text-green-700">
                                     ✅ <span x-text="couponLabel"></span>
                                     <span class="font-mono" x-text="couponCode"></span>
@@ -303,7 +304,7 @@ fbq('track', 'InitiateCheckout', {
                         </div>
                     </div>
 
-                    <div class="border-t border-gray-200 pt-3 flex justify-between font-bold text-gray-900">
+                    <div class="border-t border-cream-200 pt-3 flex justify-between font-bold text-gray-900">
                         <span>Total</span>
                         <span class="text-purple-600" x-text="formattedGrandTotal">৳{{ number_format($subtotal - $discount, 0) }}</span>
                     </div>
@@ -323,6 +324,7 @@ fbq('track', 'InitiateCheckout', {
         </div>
     </form>
 
+</div>
 </div>
 @endsection
 

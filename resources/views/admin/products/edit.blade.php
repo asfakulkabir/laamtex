@@ -621,11 +621,19 @@
                                         <input type="text" name="existing_images[{{ $index }}][alt_text]" value="{{ $img->alt_text }}"
                                                class="w-full border border-slate-700/50 rounded px-1.5 py-0.5 text-sm text-slate-200 placeholder-slate-600">
                                     </div>
-                                    <div class="flex items-center">
-                                        <input type="radio" id="featured_img_old_{{ $img->id }}" name="new_image_featured_temp" value="existing_{{ $img->id }}"
-                                               {{ $img->is_featured ? 'checked' : '' }}
-                                               class="h-3 w-3 text-purple-400 focus:ring-purple-500">
-                                        <label for="featured_img_old_{{ $img->id }}" class="ml-1.5 text-sm font-bold text-slate-400 uppercase">Featured Main Image</label>
+                                    <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+                                        <div class="flex items-center">
+                                            <input type="radio" id="featured_img_old_{{ $img->id }}" name="new_image_featured_temp" value="existing_{{ $img->id }}"
+                                                   {{ $img->is_featured ? 'checked' : '' }}
+                                                   class="h-3 w-3 text-purple-400 focus:ring-purple-500">
+                                            <label for="featured_img_old_{{ $img->id }}" class="ml-1.5 text-sm font-bold text-slate-400 uppercase">Featured Main Image</label>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="radio" id="secondary_img_old_{{ $img->id }}" name="new_image_secondary_temp" value="existing_{{ $img->id }}"
+                                                   {{ $img->is_secondary ? 'checked' : '' }}
+                                                   class="h-3 w-3 text-pink-400 focus:ring-pink-500">
+                                            <label for="secondary_img_old_{{ $img->id }}" class="ml-1.5 text-sm font-bold text-slate-400 uppercase">2nd Image (Hover)</label>
+                                        </div>
                                     </div>
                                 </div>
                             @endforeach
@@ -661,10 +669,17 @@
                                                    class="w-full border border-slate-700/50 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-purple-500 text-slate-200 placeholder-slate-600">
                                         </div>
                                     </div>
-                                    <div class="flex items-center">
-                                        <input type="radio" :id="`featured_img_new_${idx}`" name="new_image_featured_temp" :value="`new_${idx}`"
-                                               class="h-3 w-3 text-purple-400 focus:ring-purple-500">
-                                        <label :for="`featured_img_new_${idx}`" class="ml-1.5 text-sm font-bold text-slate-400 uppercase">Set Main Featured</label>
+                                    <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+                                        <div class="flex items-center">
+                                            <input type="radio" :id="`featured_img_new_${idx}`" name="new_image_featured_temp" :value="`new_${idx}`"
+                                                   class="h-3 w-3 text-purple-400 focus:ring-purple-500">
+                                            <label :for="`featured_img_new_${idx}`" class="ml-1.5 text-sm font-bold text-slate-400 uppercase">Set Main Featured</label>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <input type="radio" :id="`secondary_img_new_${idx}`" name="new_image_secondary_temp" :value="`new_${idx}`"
+                                                   class="h-3 w-3 text-pink-400 focus:ring-pink-500">
+                                            <label :for="`secondary_img_new_${idx}`" class="ml-1.5 text-sm font-bold text-slate-400 uppercase">Set 2nd Image (Hover)</label>
+                                        </div>
                                     </div>
                                 </div>
                             </template>

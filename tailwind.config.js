@@ -15,6 +15,14 @@ export default {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
             },
             colors: {
+                cream: {
+                    50: '#FFFDF9',
+                    100: '#FDF6EA',
+                    200: '#F8EBD6',
+                    300: '#F1DCBC',
+                    400: '#E5C79A',
+                    500: '#D3AC74',
+                },
                 brand: {
                     50: '#f5f3ff',
                     100: '#ede9fe',

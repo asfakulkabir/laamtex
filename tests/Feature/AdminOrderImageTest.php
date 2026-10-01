@@ -59,7 +59,7 @@ class AdminOrderImageTest extends TestCase
 
         // The thumbnail is rendered at the enlarged size and links to the full image.
         $this->assertMatchesRegularExpression(
-            '/<a href="[^"]*leather_handbag[^"]*"[^>]*>\s*<img[^>]*width="96"[^>]*height="96"/s',
+            '/<a href="[^"]*leather_handbag[^"]*"[^>]*>\s*<img[^>]*width="144"[^>]*height="144"/s',
             $html
         );
         $this->assertStringContainsString('target="_blank"', $html);

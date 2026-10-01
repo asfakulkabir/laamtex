@@ -14,6 +14,12 @@
             transform: translate(-50%, -50%);
             background: #000;
             border: 0;
+            /* YouTube draws its player inside a cross-origin frame, so page CSS
+               can never reach the controls. Letting the pointer pass through is
+               what actually keeps them hidden: the frame can no longer be
+               hovered or clicked, so it has nothing to reveal. Clicks land on the
+               slide link underneath instead. */
+            pointer-events: none;
         }
         @media (max-width: 639.98px) {
             .yt-cover-iframe { width: 111.112%; height: 100%; }
@@ -74,8 +80,9 @@
                                 @endif
                                 <template x-if="activeSlide === {{ $i }}">
                                     @if($slider->isYoutubeVideo())
-                                        <iframe :src="'https://www.youtube.com/embed/{{ $slider->youtube_id }}?autoplay=1&mute=1&loop=1&playlist={{ $slider->youtube_id }}&controls=0&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3&disablekb=1&fs=0'"
-                                                class="yt-cover-iframe" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" title="{{ $slider->title ?? 'Hero video' }}"></iframe>
+                                        <iframe :src="'https://www.youtube.com/embed/{{ $slider->youtube_id }}?autoplay=1&mute=1&loop=1&playlist={{ $slider->youtube_id }}&controls=0&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3&disablekb=1&fs=0&enablejsapi=1'"
+                                                class="yt-cover-iframe" frameborder="0" tabindex="-1"
+                                                allow="autoplay; encrypted-media; picture-in-picture" title="{{ $slider->title ?? 'Hero video' }}"></iframe>
                                     @else
                                         <video src="{{ asset('storage/' . $slider->video) }}"
                                                @if($slider->image) poster="{{ asset('storage/' . $slider->image) }}" @endif
@@ -341,6 +348,68 @@
 @endsection
 
 @section('scripts')
+@if($sliders->contains(fn ($slider) => $slider->isYoutubeVideo()))
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+    /**
+     * The hero slide is background decoration, so it must never show a play
+     * button, a pause icon or a control bar. `controls=0` already hides the
+     * bar; the centre play button is the remaining piece, and YouTube only
+     * draws that while the player is paused. Holding the player muted and
+     * playing removes the moment it would ever appear. Every browser permits
+     * muted playback, so this survives the autoplay policies that block the
+     * plain `autoplay=1` parameter.
+     */
+    (function () {
+        var bind = function () {
+            var frames = document.querySelectorAll('iframe.yt-cover-iframe:not([data-yt-bound])');
+
+            for (var i = 0; i < frames.length; i++) {
+                frames[i].setAttribute('data-yt-bound', '1');
+
+                /* eslint-disable no-new */
+                new YT.Player(frames[i], {
+                    events: {
+                        onReady: function (event) {
+                            event.target.mute();
+                            event.target.playVideo();
+                        },
+                        onStateChange: function (event) {
+                            if (event.data === YT.PlayerState.PAUSED) {
+                                event.target.playVideo();
+                            }
+                        }
+                    }
+                });
+            }
+        };
+
+        // Bind straight away when the API is already loaded, otherwise wait for
+        // its callback. The API overwrites this handler on load, so it has to
+        // be assigned before and re-checked after the tag has run.
+        window.onYouTubeIframeAPIReady = bind;
+
+        if (window.YT && window.YT.Player) {
+            bind();
+        }
+
+        // Alpine only inserts a slide's frame once that slide becomes active,
+        // so the frames this has to bind mostly do not exist yet.
+        var queued = false;
+        var schedule = function () {
+            if (queued) return;
+            queued = true;
+
+            requestAnimationFrame(function () {
+                queued = false;
+                bind();
+            });
+        };
+
+        new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+    })();
+</script>
+@endif
 @if($sliders->count() > 0)
 <script>
     function heroSlider(count, videoSlides) {

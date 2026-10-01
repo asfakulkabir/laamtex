@@ -25,7 +25,7 @@
                     <h3 class="font-bold text-white">Order Items</h3>
                 </div>
 
-                @php $thumbSize = 96; @endphp
+                @php $thumbSize = 144; @endphp
                 <table class="w-full text-left border-collapse text-sm">
                     <thead>
                         <tr class="bg-slate-800/30 border-b border-slate-800/50 text-sm font-bold uppercase text-slate-300">
@@ -85,7 +85,8 @@
                                            title="View full size image">
                                             <img src="{{ Storage::url($image) }}" alt="{{ $name }}"
                                                  width="{{ $thumbSize }}" height="{{ $thumbSize }}"
-                                                 style="border-radius:6px;object-fit:cover;display:block;border:1px solid rgb(51 65 85);"
+                                                 loading="lazy"
+                                                 style="border-radius:8px;object-fit:cover;display:block;border:1px solid rgb(51 65 85);"
                                                  class="hover:opacity-80 transition-opacity">
                                         </a>
                                     @else

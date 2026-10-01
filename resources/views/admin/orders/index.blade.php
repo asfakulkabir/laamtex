@@ -352,7 +352,7 @@
                                         <table class="w-full text-left border-collapse text-sm">
                                             <thead>
                                                 <tr class="bg-slate-800/30 border-b border-slate-800/50 text-xs font-bold uppercase text-slate-400">
-                                                    <th style="width:44px"></th>
+                                                    <th style="width:84px"></th>
                                                     <th class="px-4 py-2">Product</th>
                                                     <th class="px-4 py-2 text-center">Price</th>
                                                     <th class="px-4 py-2 text-center">Qty</th>
@@ -373,11 +373,13 @@
                                                         }
                                                     @endphp
                                                     <tr>
-                                                        <td class="pl-4 py-2" style="width:50px">
+                                                        <td class="pl-4 py-2" style="width:84px">
                                                             @if($iimage)
-                                                                <img src="{{ Storage::url($iimage) }}" alt="{{ $iname }}" width="50" height="50" style="border-radius:4px;object-fit:cover;display:block;">
+                                                                <a href="{{ Storage::url($iimage) }}" target="_blank" rel="noopener" title="View full size image">
+                                                                    <img src="{{ Storage::url($iimage) }}" alt="{{ $iname }}" width="84" height="84" loading="lazy" style="border-radius:6px;object-fit:cover;display:block;border:1px solid rgb(51 65 85);" class="hover:opacity-80 transition-opacity">
+                                                                </a>
                                                             @else
-                                                                <span style="display:inline-block;width:50px;height:50px;background:#1e293b;border-radius:4px;"></span>
+                                                                <span style="display:inline-block;width:84px;height:84px;background:#1e293b;border-radius:6px;border:1px solid rgb(51 65 85);"></span>
                                                             @endif
                                                         </td>
                                                         <td class="px-4 py-2">

@@ -87,6 +87,46 @@ class Product extends Model
     }
 
     /**
+     * The main listing image: the one marked as featured, or the first one in
+     * gallery order when none is marked.
+     */
+    public function mainImage(): ?ProductImage
+    {
+        $images = $this->images;
+
+        if ($images->isEmpty()) {
+            return null;
+        }
+
+        return $images->firstWhere('is_featured', true) ?? $images->first();
+    }
+
+    /**
+     * The image listing cards swap to on hover. Prefers the image explicitly
+     * marked as the second image, otherwise falls back to the second image in
+     * gallery order, so products that were never configured still get the
+     * behaviour as soon as a second image exists.
+     */
+    public function hoverImage(): ?ProductImage
+    {
+        $images = $this->images;
+
+        if ($images->count() < 2) {
+            return null;
+        }
+
+        $mainId = $this->mainImage()?->id;
+
+        $second = $images->firstWhere('is_secondary', true);
+
+        if ($second && $second->id !== $mainId) {
+            return $second;
+        }
+
+        return $images->first(fn (ProductImage $image) => $image->id !== $mainId);
+    }
+
+    /**
      * The attributes that are used to build variations, in display order.
      */
     public function variationAttributes()
