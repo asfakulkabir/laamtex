@@ -7,6 +7,21 @@
 
     <!-- Hero Slider -->
     <style>
+        /*
+         * The hero media is background decoration, never a player.
+         * No native controls, and the media ignores taps so the browser's
+         * own play overlay can never show. Playback is driven from
+         * syncVideos() and the custom play/pause button.
+         */
+        .hero-media {
+            pointer-events: none;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-user-drag: none;
+            touch-action: pan-y;
+        }
         .yt-cover-iframe {
             position: absolute;
             top: 50%;
@@ -14,12 +29,6 @@
             transform: translate(-50%, -50%);
             background: #000;
             border: 0;
-            /* YouTube draws its player inside a cross-origin frame, so page CSS
-               can never reach the controls. Letting the pointer pass through is
-               what actually keeps them hidden: the frame can no longer be
-               hovered or clicked, so it has nothing to reveal. Clicks land on the
-               slide link underneath instead. */
-            pointer-events: none;
         }
         @media (max-width: 639.98px) {
             .yt-cover-iframe { width: 111.112%; height: 100%; }
@@ -36,7 +45,11 @@
     </style>
     @if($sliders->count() > 0)
         <section class="w-full">
-            <div class="relative overflow-hidden bg-gray-900" x-data="heroSlider({{ $sliders->count() }}, @json($sliders->map(fn($s) => $s->isVideo())->values()->all()))" x-init="init()">
+            {{-- No x-init here: Alpine already calls init() by itself. --}}
+            <div class="relative overflow-hidden bg-gray-900" x-data="heroSlider({{ $sliders->count() }}, @json($sliders->map(fn($s) => $s->isVideo())->values()->all()))"
+                 @mouseenter="beginInteract()" @mouseleave="endInteract()"
+                 @touchstart.passive="beginInteract()" @touchend.passive="endInteract()"
+                 @focusin="beginInteract()" @focusout="endInteract()">
                 <div class="relative w-full [aspect-ratio:16/10] sm:[aspect-ratio:3/2] md:[aspect-ratio:var(--hero-ratio)] 2xl:max-h-[min(68vh,600px)]" :style="'--hero-ratio:' + ratio + ';'">
                     @foreach($sliders as $i => $slider)
                         <div x-show="activeSlide === {{ $i }}" x-transition:enter="transition-opacity duration-700" @if($i > 0) x-cloak @endif
@@ -75,24 +88,39 @@
                                     </div>
                                 </div>
                             @elseif($slider->isVideo())
-                                @if($slider->link)
-                                    <a href="{{ $slider->link }}" class="block w-full h-full">
+                                @if($slider->isYoutubeVideo())
+                                    <iframe data-slide="{{ $i }}"
+                                            src="https://www.youtube.com/embed/{{ $slider->youtube_id }}?autoplay={{ $i === 0 ? 1 : 0 }}&mute=1&loop=1&playlist={{ $slider->youtube_id }}&controls=0&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3&disablekb=1&fs=0&enablejsapi=1&origin={{ urlencode(request()->getSchemeAndHttpHost()) }}"
+                                            class="yt-cover-iframe hero-media" frameborder="0" tabindex="-1"
+                                            allow="autoplay; encrypted-media; picture-in-picture" title="{{ $slider->title ?? 'Hero video' }}"></iframe>
+                                @else
+                                    <video data-video="{{ $i }}"
+                                           src="{{ asset('storage/' . $slider->video) }}"
+                                           @if($slider->image) poster="{{ asset('storage/' . $slider->image) }}" @endif
+                                           muted playsinline loop preload="auto"
+                                           disablepictureinpicture x-webkit-airplay="deny"
+                                           controlslist="nodownload nofullscreen noplaybackrate noremoteplayback"
+                                           class="hero-media w-full h-full object-cover bg-black"
+                                           @loadedmetadata="videoLoaded({{ $i }}, $event)"
+                                           @play="setVideoState({{ $i }}, true)"
+                                           @playing="setVideoState({{ $i }}, true)"
+                                           @pause="setVideoState({{ $i }}, false)"></video>
                                 @endif
-                                <template x-if="activeSlide === {{ $i }}">
-                                    @if($slider->isYoutubeVideo())
-                                        <iframe :src="'https://www.youtube.com/embed/{{ $slider->youtube_id }}?autoplay=1&mute=1&loop=1&playlist={{ $slider->youtube_id }}&controls=0&modestbranding=1&rel=0&playsinline=1&iv_load_policy=3&disablekb=1&fs=0&enablejsapi=1'"
-                                                class="yt-cover-iframe" frameborder="0" tabindex="-1"
-                                                allow="autoplay; encrypted-media; picture-in-picture" title="{{ $slider->title ?? 'Hero video' }}"></iframe>
-                                    @else
-                                        <video src="{{ asset('storage/' . $slider->video) }}"
-                                               @if($slider->image) poster="{{ asset('storage/' . $slider->image) }}" @endif
-                                               autoplay muted loop playsinline
-                                               class="w-full h-full object-cover bg-black" @loadedmetadata="videoLoaded({{ $i }}, $event)"></video>
-                                    @endif
-                                </template>
+
+                                {{-- One link for the whole slide (z-0). The button below is z-20, so it stays clickable. --}}
                                 @if($slider->link)
-                                    </a>
+                                    <a href="{{ $slider->link }}" class="absolute inset-0 z-0" aria-label="{{ $slider->title ?? 'Shop now' }}"></a>
                                 @endif
+
+                                {{-- Always visible play/pause button. --}}
+                                <button type="button"
+                                        @click.stop="toggleVideo({{ $i }})"
+                                        class="pointer-events-auto absolute bottom-4 right-4 z-20 h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-black/50 hover:bg-black/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-white text-white backdrop-blur-sm flex items-center justify-center transition active:scale-95 touch-manipulation select-none"
+                                        :aria-label="videoIsPlaying({{ $i }}) ? 'Pause hero video' : 'Play hero video'"
+                                        :aria-pressed="videoIsPlaying({{ $i }}) ? 'true' : 'false'">
+                                    <svg x-show="!videoIsPlaying({{ $i }})" class="ml-0.5 h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.54.84l10.3-6.86a1 1 0 0 0 0-1.68L9.54 4.3A1 1 0 0 0 8 5.14Z"/></svg>
+                                    <svg x-show="videoIsPlaying({{ $i }})" x-cloak class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
+                                </button>
                             @else
                                 @if($slider->link)
                                     <a href="{{ $slider->link }}">
@@ -108,13 +136,13 @@
                 </div>
 
                 @if($sliders->count() > 1)
-                    <button @click="prev()" class="absolute left-3 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-2 transition z-10">
+                    <button @click="prev()" class="absolute left-3 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-2 transition z-20">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                     </button>
-                    <button @click="next()" class="absolute right-3 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-2 transition z-10">
+                    <button @click="next()" class="absolute right-3 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-2 transition z-20">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     </button>
-                    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
+                    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2 z-20">
                         @foreach($sliders as $i => $slider)
                             <button @click="go({{ $i }})"
                                     class="w-2.5 h-2.5 rounded-full transition-all duration-300"
@@ -351,65 +379,64 @@
 @if($sliders->contains(fn ($slider) => $slider->isYoutubeVideo()))
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-    /**
-     * The hero slide is background decoration, so it must never show a play
-     * button, a pause icon or a control bar. `controls=0` already hides the
-     * bar; the centre play button is the remaining piece, and YouTube only
-     * draws that while the player is paused. Holding the player muted and
-     * playing removes the moment it would ever appear. Every browser permits
-     * muted playback, so this survives the autoplay policies that block the
-     * plain `autoplay=1` parameter.
+    /*
+     * Connects the YouTube IFrame API to the hero slider.
+     * The slider decides when to play or pause; this only reports back.
      */
     (function () {
-        var bind = function () {
-            var frames = document.querySelectorAll('iframe.yt-cover-iframe:not([data-yt-bound])');
+        window.heroYT = window.heroYT || { players: {} };
 
-            for (var i = 0; i < frames.length; i++) {
-                frames[i].setAttribute('data-yt-bound', '1');
-
-                /* eslint-disable no-new */
-                new YT.Player(frames[i], {
-                    events: {
-                        onReady: function (event) {
-                            event.target.mute();
-                            event.target.playVideo();
-                        },
-                        onStateChange: function (event) {
-                            if (event.data === YT.PlayerState.PAUSED) {
-                                event.target.playVideo();
-                            }
-                        }
-                    }
-                });
-            }
+        var announce = function (index, playing, ready) {
+            window.dispatchEvent(new CustomEvent('hero-yt-state', {
+                detail: { index: index, playing: !!playing, ready: !!ready }
+            }));
         };
 
-        // Bind straight away when the API is already loaded, otherwise wait for
-        // its callback. The API overwrites this handler on load, so it has to
-        // be assigned before and re-checked after the tag has run.
-        window.onYouTubeIframeAPIReady = bind;
+        var apiReady = function () {
+            return typeof window.YT === 'object' && window.YT !== null && typeof window.YT.Player === 'function';
+        };
 
-        if (window.YT && window.YT.Player) {
-            bind();
-        }
+        var bind = function () {
+            if (!apiReady()) return;
 
-        // Alpine only inserts a slide's frame once that slide becomes active,
-        // so the frames this has to bind mostly do not exist yet.
-        var queued = false;
-        var schedule = function () {
-            if (queued) return;
-            queued = true;
+            document.querySelectorAll('iframe.yt-cover-iframe:not([data-yt-bound])').forEach(function (frame) {
+                var index = parseInt(frame.getAttribute('data-slide'), 10);
+                if (isNaN(index)) return;
 
-            requestAnimationFrame(function () {
-                queued = false;
-                bind();
+                try {
+                    new YT.Player(frame, {
+                        events: {
+                            onReady: function (event) {
+                                window.heroYT.players[index] = event.target;
+                                event.target.mute();
+                                // The slider decides play or pause for this slide.
+                                announce(index, false, true);
+                            },
+                            onStateChange: function (event) {
+                                // 1 = playing, 3 = buffering
+                                announce(index, event.data === 1 || event.data === 3, false);
+                            }
+                        }
+                    });
+                    frame.setAttribute('data-yt-bound', '1');
+                } catch (e) { /* retried by the poll below */ }
             });
         };
 
-        new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+        window.onYouTubeIframeAPIReady = bind;
+
+        var attempts = 0;
+        var poll = setInterval(function () {
+            attempts++;
+            bind();
+            if (!document.querySelector('iframe.yt-cover-iframe:not([data-yt-bound])') || attempts > 150) {
+                clearInterval(poll);
+            }
+        }, 100);
     })();
 </script>
 @endif
+
 @if($sliders->count() > 0)
 <script>
     function heroSlider(count, videoSlides) {
@@ -420,36 +447,197 @@
             videoSlides: videoSlides || [],
             audioPlaying: -1,
             audioProgress: {},
+            videoState: {},
+            userPaused: {},
             ratio: '2.4',
+            interacting: false,
+            started: false,
+            unlockPlayback: null,
+            onVisibility: null,
+            onYtState: null,
+
             init() {
-                if (count > 1) {
-                    this.timer = setInterval(() => {
-                        this.step(1);
-                    }, 5000);
-                }
+                // Alpine may call init() by itself. Run only once.
+                if (this.started) return;
+                this.started = true;
+
                 this.videoSlides.forEach((isVideo, i) => {
                     if (isVideo) this.ratios[i] = '2.2';
                 });
                 this.applyRatio();
+                this.resetTimer();
+
+                // If autoplay was blocked, the first tap anywhere starts the video.
+                // It never restarts a video the visitor paused on purpose.
+                this.unlockPlayback = () => {
+                    if (this.userPaused[this.activeSlide]) return;
+                    if (this.videoIsPlaying(this.activeSlide)) return;
+                    this.syncVideos();
+                };
+
+                this.onVisibility = () => {
+                    if (document.hidden) {
+                        this.pauseAllVideos();
+                        this.pauseAllAudio();
+                        this.stopTimer();
+                    } else {
+                        this.syncVideos();
+                        this.resetTimer();
+                    }
+                };
+                document.addEventListener('visibilitychange', this.onVisibility);
+
+                // State coming from the YouTube player.
+                this.onYtState = (event) => {
+                    const d = event && event.detail;
+                    if (!d) return;
+                    this.setVideoState(d.index, d.playing);
+                    if (d.ready) this.syncVideos();
+                };
+                window.addEventListener('hero-yt-state', this.onYtState);
+
+                this.$nextTick(() => {
+                    this.syncVideos();
+                    if (!this.videoSlides.some(Boolean)) return;
+                    ['pointerdown', 'touchend', 'keydown'].forEach((evt) => {
+                        window.addEventListener(evt, this.unlockPlayback, { passive: true });
+                    });
+                });
             },
+
+            destroy() {
+                this.stopTimer();
+                ['pointerdown', 'touchend', 'keydown'].forEach((evt) => {
+                    if (this.unlockPlayback) window.removeEventListener(evt, this.unlockPlayback);
+                });
+                if (this.onVisibility) document.removeEventListener('visibilitychange', this.onVisibility);
+                if (this.onYtState) window.removeEventListener('hero-yt-state', this.onYtState);
+            },
+
+            /* ---------- slide navigation ---------- */
             step(dir) {
                 this.activeSlide = (this.activeSlide + dir + count) % count;
-                this.pauseAllAudio();
-                this.resetTimer();
-                this.applyRatio();
+                this.afterSlideChange();
             },
-            prev() {
-                this.step(-1);
-            },
-            next() {
-                this.step(1);
-            },
+            prev() { this.step(-1); },
+            next() { this.step(1); },
             go(i) {
                 this.activeSlide = i;
+                this.afterSlideChange();
+            },
+            afterSlideChange() {
                 this.pauseAllAudio();
                 this.resetTimer();
                 this.applyRatio();
+                this.syncVideos();
             },
+
+            /* ---------- video helpers ---------- */
+            videoEl(i) {
+                return document.querySelector('video[data-video="' + i + '"]');
+            },
+            videoEls() {
+                return Array.prototype.slice.call(document.querySelectorAll('video[data-video]'));
+            },
+            ytRegistry() {
+                return window.heroYT || null;
+            },
+            ytPlayer(i) {
+                const reg = this.ytRegistry();
+                const p = reg && reg.players[i];
+                return p && typeof p.playVideo === 'function' ? p : null;
+            },
+            // Objects are replaced (not edited) so the buttons update in every Alpine version.
+            setVideoState(i, playing) {
+                this.videoState = Object.assign({}, this.videoState, { [i]: !!playing });
+            },
+            setUserPaused(i, paused) {
+                this.userPaused = Object.assign({}, this.userPaused, { [i]: !!paused });
+            },
+            videoIsPlaying(i) {
+                return !!this.videoState[i];
+            },
+
+            tryPlayVideo(i) {
+                const video = this.videoEl(i);
+                if (!video) return;
+
+                video.muted = true;
+                video.defaultMuted = true;
+                video.playsInline = true;
+
+                const started = video.play();
+                if (started && typeof started.catch === 'function') {
+                    started.catch(() => {
+                        video.addEventListener('canplay', () => {
+                            if (i === this.activeSlide && !this.userPaused[i]) this.tryPlayVideo(i);
+                        }, { once: true });
+                    });
+                }
+            },
+
+            // Makes every video match: only the active slide plays, and not if the visitor paused it.
+            syncVideos() {
+                for (let i = 0; i < count; i++) {
+                    if (!this.videoSlides[i]) continue;
+
+                    const hold = i !== this.activeSlide || !!this.userPaused[i];
+
+                    const video = this.videoEl(i);
+                    if (video) {
+                        if (hold) { if (!video.paused) video.pause(); }
+                        else this.tryPlayVideo(i);
+                        continue;
+                    }
+
+                    const player = this.ytPlayer(i);
+                    if (!player) continue;
+
+                    if (hold) {
+                        player.pauseVideo();
+                    } else {
+                        player.mute();
+                        player.playVideo();
+                    }
+                }
+            },
+
+            pauseAllVideos() {
+                this.videoEls().forEach((v) => v.pause());
+                const reg = this.ytRegistry();
+                if (!reg) return;
+                Object.keys(reg.players).forEach((k) => {
+                    const p = reg.players[k];
+                    if (p && typeof p.pauseVideo === 'function') p.pauseVideo();
+                });
+            },
+
+            // The play/pause button.
+            toggleVideo(i) {
+                const video = this.videoEl(i);
+                const player = video ? null : this.ytPlayer(i);
+
+                let wantPlay;
+                if (video) wantPlay = video.paused;
+                else wantPlay = !this.videoState[i];
+
+                this.setUserPaused(i, !wantPlay);
+                this.setVideoState(i, wantPlay); // icon changes at once
+
+                if (video) {
+                    if (wantPlay) this.tryPlayVideo(i);
+                    else video.pause();
+                } else if (player) {
+                    if (wantPlay) { player.mute(); player.playVideo(); }
+                    else player.pauseVideo();
+                }
+                // If the YouTube player is not ready yet, syncVideos() applies this choice when it is.
+
+                if (wantPlay) this.resetTimer();
+                else this.stopTimer();
+            },
+
+            /* ---------- audio ---------- */
             audioEl(i) {
                 return this.$refs['audio-' + i] || null;
             },
@@ -510,6 +698,8 @@
                 const s = total % 60;
                 return m + ':' + (s < 10 ? '0' : '') + s;
             },
+
+            /* ---------- sizing ---------- */
             imgLoaded(i, event) {
                 const img = event && event.currentTarget;
                 if (!img || !img.naturalWidth) return;
@@ -529,6 +719,16 @@
                 const r = this.ratios[this.activeSlide];
                 this.ratio = r ? String(r) : '2.4';
             },
+
+            /* ---------- auto-slide timer ---------- */
+            beginInteract() {
+                this.interacting = true;
+                this.stopTimer();
+            },
+            endInteract() {
+                this.interacting = false;
+                this.resetTimer();
+            },
             stopTimer() {
                 if (this.timer) {
                     clearInterval(this.timer);
@@ -537,18 +737,20 @@
             },
             resetTimer() {
                 this.stopTimer();
-                if (count > 1) {
-                    this.timer = setInterval(() => {
-                        this.step(1);
-                    }, 5000);
-                }
+                if (this.interacting || count <= 1 || document.hidden) return;
+                // Visitor paused this video: stay on the slide.
+                if (this.videoSlides[this.activeSlide] && this.userPaused[this.activeSlide]) return;
+                // Audio is playing: stay on the slide.
+                if (this.audioPlaying !== -1) return;
+
+                this.timer = setInterval(() => this.step(1), 5000);
             }
         }
     }
 </script>
 @endif
 
-@if($featuredProducts->count() > 0)
+@if($testimonials->count() > 0)
 <script>
     function testimonialSlider() {
         return {
@@ -645,7 +847,11 @@
             }
         }
     }
+</script>
+@endif
 
+@if($featuredProducts->count() > 0)
+<script>
     function featuredSlider() {
         return {
             timer: null,

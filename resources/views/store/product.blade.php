@@ -15,10 +15,10 @@ fbq('track', 'ViewContent', {
 @endsection
 
 @section('content')
-<div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 md:py-10 pb-24 md:pb-10" x-data="productDetail({{ json_encode($variationsJson) }}, {{ json_encode($attributesJson) }})">
+<div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 md:py-6 pb-24 md:pb-6" x-data="productDetail({{ json_encode($variationsJson) }}, {{ json_encode($attributesJson) }})">
     
     <!-- Breadcrumbs (desktop only) -->
-    <nav class="hidden md:flex text-xs font-bold text-gray-400 mb-6 space-x-2">
+    <nav class="hidden md:flex text-xs font-bold text-gray-400 mb-3 space-x-2">
         <a href="{{ route('home') }}" class="hover:text-purple-600 transition">Home</a>
         <span>/</span>
         <a href="{{ route('shop') }}" class="hover:text-purple-600 transition">Shop</a>
@@ -32,14 +32,14 @@ fbq('track', 'ViewContent', {
     </nav>
 
     <!-- Product Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-10 items-start">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6 items-start">
         
         <!-- Left: Image Gallery -->
         @php
             $imagesList = $product->images;
             $featuredImg = $imagesList->where('is_featured', true)->first() ?? $imagesList->first();
         @endphp
-        <div class="space-y-2 md:space-y-4">
+        <div class="space-y-1.5 md:space-y-2">
             <div class="bg-gray-100 aspect-square w-full rounded-xl md:rounded-2xl overflow-hidden border border-gray-200 relative cursor-zoom-in select-none group"
                  x-ref="zoomContainer"
                  @mousemove="onZoomMove($event)"
@@ -68,8 +68,8 @@ fbq('track', 'ViewContent', {
                     @foreach($imagesList as $img)
                         <button type="button" 
                                 @click="activeImage = '{{ Storage::url($img->image) }}'; resetAutoSlide()"
-                                class="h-16 w-16 md:h-20 md:w-20 bg-white border rounded-lg md:rounded-xl overflow-hidden flex-shrink-0 hover:border-purple-500 focus:outline-none focus:border-purple-500 transition-all"
-                                :class="activeImage === '{{ Storage::url($img->image) }}' ? 'border-purple-600 ring-2 ring-purple-100' : 'border-gray-200'">
+                                class="h-16 w-16 md:h-20 md:w-20 bg-white border rounded-lg md:rounded-xl overflow-hidden flex-shrink-0 hover:border-gray-900 focus:outline-none focus:border-gray-900 transition-all"
+                                :class="activeImage === '{{ Storage::url($img->image) }}' ? 'border-gray-900 ring-2 ring-gray-200' : 'border-gray-200'">
                             <img src="{{ Storage::url($img->image) }}" class="h-full w-full object-cover">
                         </button>
                     @endforeach
@@ -80,135 +80,22 @@ fbq('track', 'ViewContent', {
         <!-- Right: Info & Form -->
         <div>
             
-            <!-- Title + Badge -->
+            <!-- Title -->
             <div>
-                @if($product->is_featured)
-                    <span class="text-[10px] font-extrabold bg-purple-50 text-primary border border-purple-100 px-2.5 py-0.5 rounded-full">Featured</span>
-                @endif
-                <h1 class="text-xl md:text-3xl font-extrabold text-gray-900 {{ $product->is_featured ? 'mt-1' : '' }}">{{ $product->name }}</h1>
+                <h1 class="text-3xl sm:text-4xl lg:text-4xl font-bold lg:font-extrabold text-gray-900">{{ $product->name }}</h1>
             </div>
 
-            <!-- Price -->
-            <div class="flex items-baseline gap-3 pt-1 md:pt-2">
+            <!-- Price + Stock -->
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 pt-0.5">
                 @if($product->sale_price !== null)
-                    <span class="font-bold text-primary text-xl md:text-2xl" x-text="formattedPrice">৳{{ number_format($product->sale_price, 2) }}</span>
-                    <span class="text-sm text-gray-400 line-through">৳{{ number_format($product->regular_price, 2) }}</span>
+                    <span class="font-bold text-primary text-xl md:text-2xl" x-text="formattedPrice">৳{{ number_format($product->sale_price, 0) }}</span>
+                    <span class="text-sm text-gray-400 line-through">৳{{ number_format($product->regular_price, 0) }}</span>
+                    <span class="inline-flex shrink-0 rounded-md border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-bold text-green-700">Save ৳{{ number_format($product->regular_price - $product->sale_price, 0) }}</span>
                 @else
-                    <span class="font-bold text-primary text-xl md:text-2xl" x-text="formattedPrice">৳{{ number_format($product->regular_price, 2) }}</span>
-                @endif
-            </div>
-
-            <!-- Short Description -->
-            @if($product->short_description)
-                <div class="text-base text-gray-600 leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-purple-600 [&_a]:underline p-2 bg-gray-100 border border-slate-500 rounded-md">{!! $product->short_description !!}</div>
-            @endif
-
-            <!-- Form -->
-            <form action="{{ route('cart.add') }}" method="POST" id="product-cart-form" class="space-y-2 md:space-y-3 border-t border-gray-200">
-                @csrf
-                <input type="hidden" name="product_id" value="{{ $product->id }}">
-
-                @if($product->product_type === 'variable')
-                    <input type="hidden" name="variation_id" x-model="selectedVariationId">
-
-                    <div class="space-y-3 md:space-y-4 bg-purple-50/30 p-3 md:p-4 rounded-xl border border-purple-100/50">
-                        @forelse($attributesJson as $attribute)
-                            @php $isSwatch = in_array($attribute['type'], ['color', 'image'], true); @endphp
-
-                            <div>
-                                <label class="block text-xs text-gray-500 font-bold mb-2">{{ $attribute['name'] }}</label>
-                                <div class="flex flex-wrap gap-2">
-                                    @foreach($attribute['values'] as $value)
-                                        @if($isSwatch)
-                                            <button type="button"
-                                                    @click="select({{ $attribute['id'] }}, {{ $value['id'] }})"
-                                                    class="w-9 h-9 md:w-10 md:h-10 rounded-full border-2 transition-all flex items-center justify-center font-bold text-xs hover:scale-105"
-                                                    :class="isSelected({{ $attribute['id'] }}, {{ $value['id'] }}) ? 'border-purple-600 ring-2 ring-purple-200 shadow' : 'border-gray-300 hover:border-purple-400'"
-                                                    style="background-color: {{ $value['color'] }}; @if(! empty($value['image'])) background-image: url('{{ $value['image'] }}'); background-size: cover; background-position: center; @endif color: {{ in_array(strtolower($value['name']), ['white', 'yellow', 'lime']) ? '#333' : 'white' }};"
-                                                    title="{{ $value['name'] }}">
-                                                <span x-show="isSelected({{ $attribute['id'] }}, {{ $value['id'] }})" class="text-sm">✓</span>
-                                            </button>
-                                        @else
-                                            <button type="button"
-                                                    @click="select({{ $attribute['id'] }}, {{ $value['id'] }})"
-                                                    class="px-4 py-2 rounded-lg border-2 font-bold text-sm transition-all active:scale-95 min-w-[3rem] text-center"
-                                                    :class="isSelected({{ $attribute['id'] }}, {{ $value['id'] }}) ? 'bg-purple-600 border-purple-600 text-white shadow' : 'bg-white border-gray-300 text-gray-700 hover:border-purple-400 hover:bg-gray-50'">
-                                                {{ $value['name'] }}
-                                            </button>
-                                        @endif
-                                    @endforeach
-                                </div>
-                            </div>
-                        @empty
-                            <p class="text-sm text-gray-500">No options available for this product yet.</p>
-                        @endforelse
-                    </div>
+                    <span class="font-bold text-primary text-xl md:text-2xl" x-text="formattedPrice">৳{{ number_format($product->regular_price, 0) }}</span>
                 @endif
 
-                <!-- Quantity + Price -->
-                <div class="flex items-center justify-between gap-3">
-                    <label for="quantity" class="sr-only">Quantity</label>
-                    <div class="inline-flex items-center bg-gray-50 border border-gray-300 rounded-lg overflow-hidden flex-shrink-0">
-                        <button type="button" @click="if(qty > 1) qty--" class="px-2.5 py-2.5 text-gray-600 hover:bg-gray-200 focus:outline-none text-base font-bold transition-colors">−</button>
-                        <input type="number" id="quantity" name="quantity" x-model="qty" readonly class="w-14 text-center bg-transparent border-0 text-sm focus:ring-0 p-0 font-bold text-gray-900">
-                        <button type="button" @click="qty++" class="px-2.5 py-2.5 text-gray-600 hover:bg-gray-200 focus:outline-none text-base font-bold transition-colors">+</button>
-                    </div>
-                    <div class="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
-                        <span class="font-bold text-primary text-xl md:text-2xl" x-text="formattedPrice">৳{{ number_format($product->getDisplayPrice(), 2) }}</span>
-                        @if($product->sale_price !== null)
-                            <span class="text-sm text-gray-400 line-through">৳{{ number_format($product->regular_price, 2) }}</span>
-                            <span class="inline-flex shrink-0 rounded-[6px] border border-[#1890ff] px-2 py-px font-body text-xs font-bold leading-5 text-[#1890ff]">Save ৳{{ number_format($product->regular_price - $product->sale_price, 0) }}</span>
-                        @endif
-                    </div>
-                </div>
-
-                <!-- Desktop Purchase Buttons (md+) -->
-                <div class="hidden md:grid grid-cols-[repeat(2,minmax(0,293px))] gap-6">
-                    <button type="button" @click="addCart()" :disabled="!canOrder"
-                            class="flex h-[52px] w-full items-center justify-center gap-2 rounded-[999px] border-0 bg-[#ffc107] px-[22px] py-[11px] text-base font-semibold leading-[26px] text-[#212b36] shadow-[0_8px_16px_rgba(255,193,7,0.24)] transition-[filter,transform] duration-150 hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
-                        <span>Add to Cart</span>
-                    </button>
-                    <button type="button" @click="buyNow()" :disabled="!canOrder"
-                            class="animate-order-pulse flex h-[52px] w-full items-center justify-center gap-2 rounded-[999px] border-0 bg-[#159758] px-[22px] py-[11px] text-base font-semibold leading-[26px] text-white shadow-[0_8px_16px_rgba(0,171,85,0.24)] transition-[filter,transform] duration-150 hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg>
-                        <span>Order Now</span>
-                    </button>
-                </div>
-
-                <!-- Desktop Contact Buttons (md+) -->
-                @php
-                    $whatsappNumber = App\Models\Setting::getValue('whatsapp_number', '');
-                    $whatsappDigits = preg_replace('/[^0-9]/', '', $whatsappNumber);
-                @endphp
-                @if($whatsappNumber)
-                    <div class="hidden md:grid grid-cols-[repeat(2,minmax(0,293px))] gap-6">
-                        <a href="tel:+{{ $whatsappDigits }}"
-                           class="flex h-[52px] w-full items-center justify-center gap-2 rounded-[24px] border border-[rgba(145,158,171,0.48)] bg-white px-4 text-[#212b36] transition-[border-color,transform] duration-150 hover:-translate-y-0.5 hover:border-[#159758]">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 text-[#159758]"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                            <span class="flex min-w-0 flex-col text-left">
-                                <span class="truncate text-base font-semibold leading-[26px] text-[#212b36]">{{ $whatsappNumber }}</span>
-                                <span class="truncate text-xs font-normal leading-[18px] text-[#637381]">Call for Order</span>
-                            </span>
-                        </a>
-                        <a href="https://wa.me/{{ $whatsappDigits }}"
-                           target="_blank" rel="noopener noreferrer"
-                           class="flex h-[52px] w-full items-center justify-center gap-2 rounded-[24px] border border-[rgba(145,158,171,0.48)] bg-white px-4 text-[#212b36] transition-[border-color,transform] duration-150 hover:-translate-y-0.5 hover:border-[#25D366]">
-                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-6 w-6">
-                                <path d="M12.02 3.25a8.73 8.73 0 0 0-7.45 13.28l.19.3-.98 3.59 3.68-.96.29.17a8.73 8.73 0 1 0 4.27-16.38Z" fill="#25D366"/>
-                                <path d="M17.06 14.31c-.28-.14-1.64-.81-1.89-.9-.25-.09-.44-.14-.62.14-.18.27-.71.9-.87 1.08-.16.18-.32.2-.6.07-.28-.14-1.16-.43-2.21-1.36-.82-.73-1.37-1.63-1.53-1.91-.16-.27-.02-.42.12-.56.13-.13.28-.32.42-.48.14-.16.18-.27.27-.46.09-.18.05-.34-.02-.48-.07-.14-.62-1.49-.85-2.04-.22-.53-.45-.46-.62-.47h-.53c-.18 0-.48.07-.73.34-.25.27-.96.94-.96 2.29 0 1.35.98 2.65 1.12 2.83.14.18 1.93 2.94 4.67 4.12.65.28 1.16.45 1.56.58.66.21 1.25.18 1.72.11.53-.08 1.64-.67 1.87-1.31.23-.64.23-1.2.16-1.31-.07-.12-.25-.19-.53-.33Z" fill="white"/>
-                            </svg>
-                            <span class="flex min-w-0 flex-col text-left">
-                                <span class="truncate text-base font-semibold leading-[26px] text-[#212b36]">Order Via WhatsApp</span>
-                                <span class="truncate text-xs font-normal leading-[18px] text-[#637381]">Chat with us</span>
-                            </span>
-                        </a>
-                    </div>
-                @endif
-            </form>
-
-            <!-- Stock -->
-            <div class="pt-3 md:pt-4">
+                <!-- Stock -->
                 @if($product->product_type === 'simple')
                     @if($product->stock_quantity > 0)
                         <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 bg-green-50 text-green-700 rounded-full border border-green-200">✅ In Stock</span>
@@ -223,9 +110,127 @@ fbq('track', 'ViewContent', {
                 @endif
             </div>
 
+            <!-- Short Description -->
+            @if($product->short_description)
+                <div class="text-base text-gray-600 leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-purple-600 [&_a]:underline p-2 bg-gray-100 border border-slate-500 rounded-md">{!! $product->short_description !!}</div>
+            @endif
+
+            <!-- Form -->
+            <form action="{{ route('cart.add') }}" method="POST" id="product-cart-form" class="space-y-1.5 md:space-y-2 border-t border-gray-200 pt-2">
+                @csrf
+                <input type="hidden" name="product_id" value="{{ $product->id }}">
+
+                @if($product->product_type === 'variable')
+                    <input type="hidden" name="variation_id" x-model="selectedVariationId">
+
+                    <div class="space-y-2.5 md:space-y-3 bg-purple-50/30 p-2.5 md:p-3 rounded-xl border border-purple-100/50">
+                        @forelse($attributesJson as $attribute)
+                            @php $isSwatch = in_array($attribute['type'], ['color', 'image'], true); @endphp
+
+                            <div>
+                                <label class="block text-xs text-gray-500 font-bold mb-1.5">{{ $attribute['name'] }}</label>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach($attribute['values'] as $value)
+                                        @if($isSwatch)
+                                            <button type="button"
+                                                    @click="select({{ $attribute['id'] }}, {{ $value['id'] }})"
+                                                    class="w-9 h-9 md:w-10 md:h-10 rounded-full border-2 transition-all flex items-center justify-center font-bold text-xs hover:scale-105"
+                                                    :class="isSelected({{ $attribute['id'] }}, {{ $value['id'] }}) ? 'border-gray-900 ring-2 ring-gray-300 shadow' : 'border-gray-300 hover:border-gray-600'"
+                                                    style="background-color: {{ $value['color'] }}; @if(! empty($value['image'])) background-image: url('{{ $value['image'] }}'); background-size: cover; background-position: center; @endif color: {{ in_array(strtolower($value['name']), ['white', 'yellow', 'lime']) ? '#333' : 'white' }};"
+                                                    title="{{ $value['name'] }}">
+                                                <span x-show="isSelected({{ $attribute['id'] }}, {{ $value['id'] }})" class="text-sm">✓</span>
+                                            </button>
+                                        @else
+                                            <button type="button"
+                                                    @click="select({{ $attribute['id'] }}, {{ $value['id'] }})"
+                                                    class="px-4 py-1.5 rounded-lg border-2 font-bold text-sm transition-all active:scale-95 min-w-[3rem] text-center"
+                                                    :class="isSelected({{ $attribute['id'] }}, {{ $value['id'] }}) ? 'bg-gray-900 border-gray-900 text-white shadow' : 'bg-white border-gray-300 text-gray-700 hover:border-gray-900 hover:bg-gray-50'">
+                                                {{ $value['name'] }}
+                                            </button>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            </div>
+                        @empty
+                            <p class="text-sm text-gray-500">No options available for this product yet.</p>
+                        @endforelse
+                    </div>
+                @endif
+
+                <!-- Purchase Box -->
+                <div class="md:rounded-2xl md:border md:border-gray-200 md:bg-white md:p-4 md:shadow-[0_4px_20px_rgba(15,23,42,0.06)] md:space-y-3">
+
+                    <!-- Quantity + Total -->
+                    <div class="flex items-end justify-between gap-3">
+                        <div>
+                            <label for="quantity" class="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5">Quantity</label>
+                            <div class="inline-flex flex-shrink-0 items-center overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+                                <button type="button" @click="if(qty > 1) qty--" aria-label="Decrease quantity"
+                                        class="flex h-11 w-11 items-center justify-center text-lg font-bold bg-white/70 text-gray-500 hover:bg-white hover:text-gray-900 transition-colors focus:outline-none">−</button>
+                                <input type="number" id="quantity" name="quantity" x-model="qty" readonly
+                                       class="h-11 w-12 border-x border-gray-200 bg-transparent p-0 text-center text-sm font-bold text-gray-900 focus:ring-0">
+                                <button type="button" @click="qty++" aria-label="Increase quantity"
+                                        class="flex h-11 w-11 items-center justify-center text-lg font-bold bg-white/70 text-gray-500 hover:bg-white hover:text-gray-900 transition-colors focus:outline-none">+</button>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="block text-[11px] font-bold uppercase tracking-wider text-gray-400">Total</span>
+                            <span class="text-xl font-extrabold text-primary md:text-2xl" x-text="totalPrice">৳{{ number_format($product->getDisplayPrice(), 0) }}</span>
+                        </div>
+                    </div>
+
+                <!-- Desktop Purchase Buttons (md+) -->
+                <div class="hidden md:grid grid-cols-[1fr_1.35fr] gap-3">
+                    <button type="button" @click="addCart()" :disabled="!canOrder"
+                            class="flex h-[54px] w-full items-center justify-center gap-2 rounded-xl border-0 bg-black px-5 text-base font-bold text-white shadow-[0_8px_18px_rgba(0,0,0,0.25)] transition hover:-translate-y-0.5 hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                        <span>Add to Cart</span>
+                    </button>
+                    <button type="button" @click="buyNow()" :disabled="!canOrder"
+                            class="animate-order-pulse flex h-[54px] w-full items-center justify-center gap-2 rounded-xl bg-rose-700 px-5 text-base font-extrabold tracking-wide text-white shadow-[0_10px_24px_rgba(225,29,72,0.35)] transition hover:-translate-y-0.5 hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg>
+                        <span>Order Now</span>
+                    </button>
+                </div>
+
+                <!-- Desktop Contact Buttons (md+) -->
+                @php
+                    $whatsappNumber = App\Models\Setting::getValue('whatsapp_number', '');
+                    $whatsappDigits = preg_replace('/[^0-9]/', '', $whatsappNumber);
+                @endphp
+                @if($whatsappNumber)
+                    <div class="flex flex-col gap-3">
+                        <a href="https://wa.me/{{ $whatsappDigits }}" target="_blank" rel="noopener noreferrer"
+                           class="group flex items-center gap-4 bg-lime-50 border-2 border-lime-500/30 p-4 rounded-3xl hover:bg-lime-700 hover:text-white transition-all">
+                            <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-md shrink-0">
+                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="w-8 h-8">
+                                    <path d="M12.02 3.25a8.73 8.73 0 0 0-7.45 13.28l.19.3-.98 3.59 3.68-.96.29.17a8.73 8.73 0 1 0 4.27-16.38Z" fill="#25D366"/>
+                                    <path d="M17.06 14.31c-.28-.14-1.64-.81-1.89-.9-.25-.09-.44-.14-.62.14-.18.27-.71.9-.87 1.08-.16.18-.32.2-.6.07-.28-.14-1.16-.43-2.21-1.36-.82-.73-1.37-1.63-1.53-1.91-.16-.27-.02-.42.12-.56.13-.13.28-.32.42-.48.14-.16.18-.27.27-.46.09-.18.05-.34-.02-.48-.07-.14-.62-1.49-.85-2.04-.22-.53-.45-.46-.62-.47h-.53c-.18 0-.48.07-.73.34-.25.27-.96.94-.96 2.29 0 1.35.98 2.65 1.12 2.83.14.18 1.93 2.94 4.67 4.12.65.28 1.16.45 1.56.58.66.21 1.25.18 1.72.11.53-.08 1.64-.67 1.87-1.31.23-.64.23-1.2.16-1.31-.07-.12-.25-.19-.53-.33Z" fill="white"/>
+                                </svg>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm lg:text-base font-black uppercase leading-tight">WhatsApp এ মেসেজ করুন</p>
+                                <p class="text-lg lg:text-xl font-bold opacity-90 group-hover:text-white truncate">{{ $whatsappNumber }}</p>
+                            </div>
+                        </a>
+                        <a href="tel:+{{ $whatsappDigits }}"
+                           class="group flex items-center gap-4 bg-sky-50 border-2 border-sky-500/30 p-4 rounded-3xl hover:bg-sky-700 hover:text-white transition-all">
+                            <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-md shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 fill-sky-500 text-sky-500" aria-hidden="true"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></svg>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm lg:text-base font-black uppercase leading-tight">কল করুন</p>
+                                <p class="text-lg lg:text-xl font-bold opacity-90 group-hover:text-white truncate">{{ $whatsappNumber }}</p>
+                            </div>
+                        </a>
+                    </div>
+                @endif
+                </div>
+            </form>
+
             <!-- Trust Features -->
-            <div class="grid grid-cols-2 md:grid-cols-[repeat(2,minmax(0,293px))] gap-2 md:gap-6 mt-3 md:mt-4">
-                <div class="flex items-start md:items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg md:rounded-[24px] p-3">
+            <div class="grid grid-cols-2 gap-2 md:gap-3 mt-2 md:mt-3">
+                <div class="flex items-start md:items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl md:rounded-2xl p-3">
                     <div class="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
                         <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                     </div>
@@ -234,7 +239,7 @@ fbq('track', 'ViewContent', {
                         <p class="text-[11px] md:text-xs text-gray-500 mt-0.5">Safe delivery within 2-3 days</p>
                     </div>
                 </div>
-                <div class="flex items-start md:items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg md:rounded-[24px] p-3">
+                <div class="flex items-start md:items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl md:rounded-2xl p-3">
                     <div class="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                         <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                     </div>
@@ -250,19 +255,19 @@ fbq('track', 'ViewContent', {
 
     <!-- Full Description -->
     @if($product->description)
-        <div class="mt-6 md:mt-12 border-t border-gray-200 pt-5 md:pt-8">
-            <h3 class="text-lg md:text-2xl font-extrabold text-gray-900 mb-3 md:mb-5">📄 Details</h3>
+        <div class="mt-4 md:mt-8 border-t border-gray-200 pt-4 md:pt-6">
+            <h3 class="text-lg md:text-2xl font-extrabold text-gray-900 mb-2 md:mb-3">📄 Details</h3>
             <div class="text-base text-gray-600 leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-purple-600 [&_a]:underline max-w-none">{!! $product->description !!}</div>
         </div>
     @endif
 
     <!-- Related Products -->
     @if($relatedProducts->count() > 0)
-        <section class="mt-8 md:mt-16 border-t border-gray-200 pt-6 md:pt-12 space-y-4 md:space-y-6">
+        <section class="mt-5 md:mt-10 border-t border-gray-200 pt-4 md:pt-8 space-y-3 md:space-y-4">
             <h2 class="text-lg md:text-2xl font-extrabold text-gray-900 text-center">See more</h2>
             {{-- Exactly 4 related products are fetched, so the grid stays at 4
                  columns on desktop. A 5th column would leave a gap. --}}
-            <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-6">
+            <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
                 @foreach($relatedProducts as $rel)
                     @include('store.partials.product-card', ['product' => $rel])
                 @endforeach
@@ -271,28 +276,28 @@ fbq('track', 'ViewContent', {
     @endif
 
     <!-- Mobile Sticky Purchase Bar -->
-    <div class="fixed inset-x-0 bottom-0 z-[1100] md:hidden border-t border-[#dfe3e8] bg-white px-3 pt-2 pb-[calc(10px+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.12)]">
-        <div class="mx-auto grid max-w-[375px] grid-cols-[64px_1fr_1fr] gap-2">
+    <div class="fixed inset-x-0 bottom-0 z-[1100] md:hidden border-t border-gray-200 bg-white px-3 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.12)]">
+        <div class="mx-auto flex max-w-lg items-center gap-2">
             @if($whatsappNumber)
-                <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $whatsappNumber) }}"
-                   target="_blank" rel="noopener noreferrer" aria-label="Order Via WhatsApp"
-                   class="flex min-h-12 flex-col items-center justify-center rounded-[999px] bg-white px-1 text-center text-[#25D366]">
-                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-6 w-6">
-                        <path d="M12.02 3.25a8.73 8.73 0 0 0-7.45 13.28l.19.3-.98 3.59 3.68-.96.29.17a8.73 8.73 0 1 0 4.27-16.38Z" fill="#25D366"/>
-                        <path d="M17.06 14.31c-.28-.14-1.64-.81-1.89-.9-.25-.09-.44-.14-.62.14-.18.27-.71.9-.87 1.08-.16.18-.32.2-.6.07-.28-.14-1.16-.43-2.21-1.36-.82-.73-1.37-1.63-1.53-1.91-.16-.27-.02-.42.12-.56.13-.13.28-.32.42-.48.14-.16.18-.27.27-.46.09-.18.05-.34-.02-.48-.07-.14-.62-1.49-.85-2.04-.22-.53-.45-.46-.62-.47h-.53c-.18 0-.48.07-.73.34-.25.27-.96.94-.96 2.29 0 1.35.98 2.65 1.12 2.83.14.18 1.93 2.94 4.67 4.12.65.28 1.16.45 1.56.58.66.21 1.25.18 1.72.11.53-.08 1.64-.67 1.87-1.31.23-.64.23-1.2.16-1.31-.07-.12-.25-.19-.53-.33Z" fill="white"/>
-                    </svg>
-                    <span class="mt-0.5 text-[10px] font-bold leading-3 text-[#212b36]">Chat</span>
+                <a href="https://wa.me/{{ $whatsappDigits }}" target="_blank" rel="noopener noreferrer" aria-label="Order Via WhatsApp"
+                   class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-0 bg-[#25D366] text-white transition active:scale-95 hover:bg-[#1ebe5b]">
+<div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-md shrink-0">
+                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="w-8 h-8">
+                                    <path d="M12.02 3.25a8.73 8.73 0 0 0-7.45 13.28l.19.3-.98 3.59 3.68-.96.29.17a8.73 8.73 0 1 0 4.27-16.38Z" fill="#25D366"></path>
+                                    <path d="M17.06 14.31c-.28-.14-1.64-.81-1.89-.9-.25-.09-.44-.14-.62.14-.18.27-.71.9-.87 1.08-.16.18-.32.2-.6.07-.28-.14-1.16-.43-2.21-1.36-.82-.73-1.37-1.63-1.53-1.91-.16-.27-.02-.42.12-.56.13-.13.28-.32.42-.48.14-.16.18-.27.27-.46.09-.18.05-.34-.02-.48-.07-.14-.62-1.49-.85-2.04-.22-.53-.45-.46-.62-.47h-.53c-.18 0-.48.07-.73.34-.25.27-.96.94-.96 2.29 0 1.35.98 2.65 1.12 2.83.14.18 1.93 2.94 4.67 4.12.65.28 1.16.45 1.56.58.66.21 1.25.18 1.72.11.53-.08 1.64-.67 1.87-1.31.23-.64.23-1.2.16-1.31-.07-.12-.25-.19-.53-.33Z" fill="white"></path>
+                                </svg>
+                            </div>
                 </a>
             @endif
             <button type="button" @click="addCart()" :disabled="!canOrder"
-                    class="flex min-h-12 items-center justify-center gap-1.5 rounded-[999px] border-0 bg-[#ffc107] px-2 text-xs font-semibold leading-4 text-[#212b36] shadow-[0_4px_10px_rgba(255,193,7,0.3)] transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 shrink-0"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
-                <span>Add Cart</span>
+                    class="flex h-12 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border-0 bg-black px-2 text-xs font-bold text-white shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 shrink-0"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                <span class="truncate">Add Cart</span>
             </button>
             <button type="button" @click="buyNow()" :disabled="!canOrder"
-                    class="animate-order-pulse flex min-h-12 items-center justify-center gap-1.5 rounded-[999px] border-0 bg-[#159758] px-2 text-xs font-semibold leading-4 text-white shadow-[0_4px_10px_rgba(0,171,85,0.3)] transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 shrink-0"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg>
-                <span>Order Now</span>
+                    class="animate-order-pulse flex h-12 min-w-0 flex-[1.5] items-center justify-center gap-1.5 rounded-xl bg-rose-700 px-2 text-xs font-extrabold text-white shadow-[0_6px_16px_rgba(225,29,72,0.4)] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 shrink-0"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg>
+                <span class="truncate">Order Now</span>
             </button>
         </div>
     </div>
@@ -384,29 +389,35 @@ fbq('track', 'ViewContent', {
 
     @keyframes order-pulse {
         0% {
-            box-shadow: 0 0 0 0 rgba(21, 151, 88, 0.65);
+            box-shadow: 0 8px 22px rgba(225, 29, 72, 0.32), 0 0 0 0 rgba(225, 29, 72, 0.45);
             transform: scale(1);
         }
-        30% {
-            box-shadow: 0 0 0 8px rgba(21, 151, 88, 0);
+        70% {
+            box-shadow: 0 8px 22px rgba(225, 29, 72, 0.32), 0 0 0 12px rgba(225, 29, 72, 0);
             transform: scale(1.02);
         }
-        60% {
-            box-shadow: 0 0 0 8px rgba(21, 151, 88, 0);
-            transform: scale(1);
-        }
         100% {
-            box-shadow: 0 0 0 0 rgba(21, 151, 88, 0);
+            box-shadow: 0 8px 22px rgba(225, 29, 72, 0.32), 0 0 0 0 rgba(225, 29, 72, 0);
             transform: scale(1);
         }
     }
 
     .animate-order-pulse {
-        animation: order-pulse 0.9s ease-out infinite;
+        animation: order-pulse 2s ease-out infinite;
+    }
+
+    .animate-order-pulse:hover {
+        animation: none;
     }
 
     .animate-order-pulse:disabled {
         animation: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .animate-order-pulse {
+            animation: none;
+        }
     }
 </style>
 <script>
@@ -427,7 +438,7 @@ fbq('track', 'ViewContent', {
             productType: '{{ $product->product_type }}',
             simpleInStock: {{ $product->product_type === 'simple' ? ($product->manage_stock ? ($product->stock_quantity > 0 ? 'true' : 'false') : 'true') : 'true' }},
             
-            formattedPrice: '৳{{ number_format($product->getDisplayPrice(), 2) }}',
+            formattedPrice: '৳{{ number_format($product->getDisplayPrice(), 0) }}',
             stockStatusText: 'Select an option',
             buttonText: 'Select an option',
 
@@ -544,7 +555,7 @@ fbq('track', 'ViewContent', {
                 this.variationStock = 0;
                 this.variationOutOfStock = false;
                 this.variationPrice = basePrice;
-                this.formattedPrice = '৳' + Number(basePrice).toFixed(2);
+                this.formattedPrice = '৳' + Number(basePrice).toFixed(0);
                 this.stockStatusText = 'Select an option';
                 this.buttonText = 'Select an option';
 
@@ -595,7 +606,7 @@ fbq('track', 'ViewContent', {
 
                 if (match.price !== null && match.price !== undefined) {
                     this.variationPrice = parseFloat(match.price);
-                    this.formattedPrice = '৳' + this.variationPrice.toFixed(2);
+                    this.formattedPrice = '৳' + this.variationPrice.toFixed(0);
                 }
 
                 // A variation with its own image swaps the main image and holds
@@ -628,6 +639,13 @@ fbq('track', 'ViewContent', {
                     return !this.variationOutOfStock;
                 }
                 return this.variationStock > 0;
+            },
+
+            get totalPrice() {
+                var unit = parseFloat(String(this.formattedPrice).replace(/[^0-9.]/g, ''));
+                if (isNaN(unit)) return this.formattedPrice;
+                var total = unit * (parseInt(this.qty, 10) || 1);
+                return '৳' + total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
             },
 
             addCart() {

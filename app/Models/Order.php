@@ -28,6 +28,7 @@ class Order extends Model
         'customer_name',
         'customer_phone',
         'customer_address',
+        'customer_note',
         'delivery_charge_id',
         'coupon_id',
         'coupon_code',

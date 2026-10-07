@@ -100,6 +100,9 @@
                         <span>৳{{ number_format($order->total_amount, 0) }}</span>
                     </div>
                     <p class="text-xs text-gray-500 font-semibold mt-1">📍 {{ $order->customer_address }}</p>
+                    @if($order->customer_note)
+                        <p class="text-xs text-gray-600 font-semibold bg-amber-50 border border-amber-100 px-3 py-2 rounded-lg whitespace-pre-line">📝 Note: {{ $order->customer_note }}</p>
+                    @endif
                 </div>
             </details>
         @empty

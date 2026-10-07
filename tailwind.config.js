@@ -12,7 +12,7 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['Baloo Da 2', ...defaultTheme.fontFamily.sans],
             },
             colors: {
                 cream: {

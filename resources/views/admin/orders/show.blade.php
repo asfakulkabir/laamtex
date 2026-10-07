@@ -123,7 +123,7 @@
                     </div>
                     @if($order->discount_amount > 0)
                     <div class="flex justify-between w-72">
-                        <span class="text-slate-300">Discount ({{ $order->coupon_code }}):</span>
+                        <span class="text-slate-300">Discount:</span>
                         <span class="font-semibold text-emerald-400">-৳{{ number_format($order->discount_amount, 0) }}</span>
                     </div>
                     @endif
@@ -165,6 +165,12 @@
                         <p class="text-sm font-bold text-slate-300 uppercase">Delivery Address</p>
                         <p class="font-semibold text-slate-200 mt-1 whitespace-pre-line bg-slate-800/50 p-4 rounded-lg border border-slate-800/30">{{ $order->customer_address }}</p>
                     </div>
+                    @if($order->customer_note)
+                        <div class="md:col-span-2">
+                            <p class="text-sm font-bold text-slate-300 uppercase">Customer Note</p>
+                            <p class="font-semibold text-slate-200 mt-1 whitespace-pre-line bg-amber-500/10 border border-amber-500/20 p-4 rounded-lg">{{ $order->customer_note }}</p>
+                        </div>
+                    @endif
                 </div>
             </div>
 

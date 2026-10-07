@@ -33,7 +33,7 @@
     </div>
 
     <div class="p-3 sm:p-4 flex-1 flex flex-col">
-        <h3 class="text-sm font-medium text-slate-900 line-clamp-2 mb-1.5 group-hover:text-brand-600 transition">
+        <h3 class="text-lg md:text-xl font-semibold text-slate-900 line-clamp-2 group-hover:text-brand-600 transition">
             {{ $product->name }}
         </h3>
         <div class="flex items-baseline gap-2 mt-auto">

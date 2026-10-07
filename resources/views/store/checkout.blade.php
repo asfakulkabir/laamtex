@@ -19,312 +19,305 @@ fbq('track', 'InitiateCheckout', {
 @endsection
 
 @section('content')
-<div class="-mx-3 sm:-mx-4 lg:-mx-6 -my-3 sm:-my-4 bg-gradient-to-b from-cream-100 via-cream-50 to-cream-100 min-h-full">
-<div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4" x-data="checkoutPage({{ $deliveryZones }})">
+@php $bkashNumber = App\Models\Setting::getValue('bkash_number', ''); @endphp
+<div class="-mx-3 sm:-mx-4 lg:-mx-6 bg-gray-50 md:pb-10" x-data="checkoutPage({{ $deliveryZones }})">
 
-    <h1 class="text-xl font-extrabold text-gray-900 mb-2 sm:mb-3">🔒 Checkout</h1>
-
-    @if(session('error'))
-        <div class="mb-3 bg-cream-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm font-semibold">
-            ⚠️ {{ session('error') }}
+    <!-- Hero -->
+    <div class="bg-gray-950 text-white pt-8 pb-12 md:pb-24 px-4 sm:px-6 relative overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(225,29,72,0.18),transparent_60%)]"></div>
+        <div class="max-w-6xl mx-auto relative z-10">
+            <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight leading-none">Complete your <span class="text-rose-500">order</span></h1>
         </div>
-    @endif
+    </div>
 
-    @auth
-        <div class="mb-3 bg-cream-100 border border-cream-300 text-purple-800 px-3 py-2 rounded-lg text-sm font-semibold flex flex-wrap items-center gap-2">
-            <span>👤 We have filled this form in with your saved details.</span>
-            <a href="{{ route('customer.profile.edit') }}" class="text-purple-600 underline font-bold">Edit profile</a>
-        </div>
-    @endauth
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 -mt-8 md:-mt-16 relative z-20">
 
-    <form action="{{ route('checkout.place') }}" method="POST" id="checkout-form"
-          x-on:submit="submitting = true">
-        @csrf
+        @if(session('error'))
+            <div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm font-semibold">
+                {{ session('error') }}
+            </div>
+        @endif
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
+        @auth
+            <div class="mb-4 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-xl text-sm font-semibold flex flex-wrap items-center gap-2 shadow-sm">
+                <span>Your saved details have been filled in automatically.</span>
+                <a href="{{ route('customer.profile.edit') }}" class="text-rose-700 underline font-bold">Edit profile</a>
+            </div>
+        @endauth
 
-            <!-- Left: Customer Form -->
-            <div class="lg:col-span-2 space-y-2 sm:space-y-3">
+        <form action="{{ route('checkout.place') }}" method="POST" id="checkout-form"
+              x-on:submit="submitting = true"
+              class="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-12">
 
-                <!-- Customer Information -->
-                <div class="bg-cream-50 border border-cream-200 rounded-xl p-3 sm:p-4 space-y-2.5 sm:space-y-3 shadow-sm">
-                    <h2 class="font-bold text-gray-900 text-base border-b border-cream-200 pb-2">📋 Your Details</h2>
+            <!-- Left: form -->
+            <div class="lg:col-span-7 space-y-3 lg:space-y-8">
 
-                    <div class="space-y-2.5 sm:space-y-3">
+                <!-- Delivery information -->
+                <section class="bg-white p-3 sm:p-6 md:p-10 rounded-2xl border border-gray-200 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.1)] space-y-4">
+                    <h2 class="text-lg md:text-2xl font-extrabold text-gray-900 flex items-center gap-4 tracking-tight">
+                        <span class="bg-rose-50 text-rose-700 p-3 rounded-2xl shadow-sm shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </span>
+                        Delivery Information
+                    </h2>
 
+                    <div class="space-y-2 md:space-y-4">
                         <!-- Full Name -->
                         <div>
-                            <label for="customer_name" class="block text-sm font-bold text-gray-600 mb-1">
-                                Your Name <span class="text-pink-500">*</span>
-                            </label>
-                            <input type="text" id="customer_name" name="customer_name"
-                                   value="{{ old('customer_name', $customer->name ?? '') }}" required
-                                   class="w-full bg-white border-2 border-gray-400 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                                   placeholder="Enter your full name">
+                            <label for="customer_name" class="block text-sm font-bold text-gray-600 mb-1.5 ml-1">Your Name *</label>
+                            <div class="relative">
+                                <input type="text" id="customer_name" name="customer_name"
+                                       value="{{ old('customer_name', $customer->name ?? '') }}" required
+                                       class="w-full bg-gray-50 border-2 border-gray-400 rounded-xl md:rounded-2xl pl-12 pr-4 py-2 md:py-3.5 text-base font-semibold text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-rose-500 focus:bg-white focus:ring-2 focus:ring-rose-100"
+                                       placeholder="Enter your full name">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            </div>
                             @error('customer_name')
-                                <span class="text-sm text-red-500 mt-0.5 block">{{ $message }}</span>
+                                <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
                             @enderror
                         </div>
 
                         <!-- Phone -->
                         <div>
-                            <label for="customer_phone" class="block text-sm font-bold text-gray-600 mb-1">
-                                Mobile Number <span class="text-pink-500">*</span>
-                            </label>
+                            <label for="customer_phone" class="block text-sm font-bold text-gray-600 mb-1.5 ml-1">Mobile Number *</label>
                             <div class="relative">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 text-base font-semibold select-none">🇧🇩</span>
                                 <input type="tel" id="customer_phone" name="customer_phone"
                                        value="{{ old('customer_phone', $customer->phone ?? '') }}" required
                                        pattern="^(\+?88)?01[3-9]\d{8}$"
-                                       class="w-full bg-white border-2 border-gray-400 rounded-lg pl-9 pr-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                       class="w-full bg-gray-50 border-2 border-gray-400 rounded-xl md:rounded-2xl pl-12 pr-4 py-2 md:py-3.5 text-base font-semibold text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-rose-500 focus:bg-white focus:ring-2 focus:ring-rose-100"
                                        placeholder="01XXXXXXXXX">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                             </div>
                             @error('customer_phone')
-                                <span class="text-sm text-red-500 mt-0.5 block">{{ $message }}</span>
+                                <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
                             @enderror
-                            <p class="text-xs text-gray-400 mt-0.5">Format: 01XXXXXXXXX (Bangladeshi number)</p>
+                            <p class="text-xs text-gray-400 mt-1 ml-1">Format: 01XXXXXXXXX (Bangladeshi number)</p>
                         </div>
 
-                        <!-- Address (reduced height) -->
+                        <!-- Address -->
                         <div>
-                            <label for="customer_address" class="block text-sm font-bold text-gray-600 mb-1">
-                                Address <span class="text-pink-500">*</span>
-                            </label>
-                            <textarea id="customer_address" name="customer_address" rows="2" required
-                                      class="w-full bg-white border-2 border-gray-400 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                                      placeholder="House / Road / Area / City / District">{{ old('customer_address', $customer->address ?? '') }}</textarea>
+                            <label for="customer_address" class="block text-sm font-bold text-gray-600 mb-1.5 ml-1">Full Address *</label>
+                            <div class="relative">
+                                <textarea id="customer_address" name="customer_address" rows="2" required
+                                          class="w-full bg-gray-50 border-2 border-gray-400 rounded-xl md:rounded-2xl pl-12 pr-4 py-2 md:py-3.5 text-base font-semibold text-gray-900 outline-none transition-all placeholder:text-gray-400 resize-none focus:border-rose-500 focus:bg-white focus:ring-2 focus:ring-rose-100"
+                                          placeholder="House, Road, Area, City">{{ old('customer_address', $customer->address ?? '') }}</textarea>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-5 text-gray-400"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                            </div>
                             @error('customer_address')
-                                <span class="text-sm text-red-500 mt-0.5 block">{{ $message }}</span>
+                                <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
                             @enderror
                         </div>
+                                            <!-- Delivery area -->
+                    <div class="border-t-2 border-dashed border-gray-200 pt-1 space-y-3">
+                        <h4 class="text-xs font-extrabold text-gray-700 flex items-center uppercase tracking-wider">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-rose-600"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+                            Delivery Zone
+                        </h4>
 
-                        <!-- Delivery Zone (radio buttons) -->
-                        <div>
-                            <label class="block text-sm font-bold text-gray-600 mb-2">
-                                Delivery Zone <span class="text-pink-500">*</span>
-                            </label>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                @foreach($deliveryZones as $zone)
-                                    <label class="relative flex items-start p-3 cursor-pointer rounded-lg border-2 transition-all"
-                                           :class="selectedZone === '{{ $zone->zone }}' ? 'border-purple-500 bg-purple-50' : 'border-cream-300 bg-cream-100 hover:border-purple-400 hover:bg-cream-200'">
-                                        <div class="flex items-center h-5">
-                                            <input type="radio" name="delivery_zone" value="{{ $zone->zone }}"
-                                                   @change="selectZone('{{ $zone->zone }}')"
-                                                   x-model="selectedZone"
-                                                   class="h-4 w-4 border-gray-400 text-purple-600 focus:ring-purple-500"
-                                                   {{ old('delivery_zone') === $zone->zone ? 'checked' : '' }}>
-                                        </div>
-                                        <div class="ml-2 flex-1">
-                                            <div class="flex justify-between items-center">
-                                                <span class="font-bold text-gray-900 text-sm">{{ $zone->zone }}</span>
-                                                <span class="font-bold text-primary text-sm">৳{{ number_format($zone->charge, 0) }}</span>
-                                            </div>
-                                            @if($zone->estimated_days)
-                                                <p class="text-xs text-gray-400">⏱ Delivery in {{ $zone->estimated_days }}</p>
-                                            @endif
-                                        </div>
-                                    </label>
-                                @endforeach
-                            </div>
-                            @error('delivery_zone')
-                                <span class="text-sm text-red-500 mt-0.5 block">{{ $message }}</span>
-                            @enderror
-
-                            <div x-show="selectedZoneDays" x-cloak
-                                 class="mt-1.5 text-sm font-semibold text-primary bg-cream-100 border border-cream-300 px-3 py-1.5 rounded-md">
-                                🚚 Estimated Delivery: <span x-text="selectedZoneDays" class="font-bold"></span>
-                            </div>
+                        <div class="space-y-1">
+                            @foreach($deliveryZones as $zone)
+                                <label class="flex items-center gap-3 px-2 py-1 rounded-xl border-2 cursor-pointer transition-all"
+                                       :class="selectedZone === '{{ $zone->zone }}' ? 'border-rose-500 bg-rose-50/50 shadow-[0_12px_24px_-16px_rgba(225,29,72,0.6)]' : 'border-gray-200 bg-gray-50 hover:border-gray-300'">
+                                    <input type="radio" name="delivery_zone" value="{{ $zone->zone }}"
+                                           @change="selectZone('{{ $zone->zone }}')"
+                                           x-model="selectedZone"
+                                           class="h-4 w-4 border-gray-300 text-rose-600 focus:ring-rose-500"
+                                           {{ old('delivery_zone') === $zone->zone ? 'checked' : '' }}>
+                                    <div class="flex-1 min-w-0">
+                                        <span class="block text-sm font-bold text-gray-900">{{ $zone->zone }}</span>
+                                        @if($zone->estimated_days)
+                                            <span class="block text-xs text-gray-400">Delivery in {{ $zone->estimated_days }}</span>
+                                        @endif
+                                    </div>
+                                    <span class="text-base font-extrabold text-gray-900" :class="selectedZone === '{{ $zone->zone }}' && 'text-rose-700'">৳{{ number_format($zone->charge, 0) }}</span>
+                                </label>
+                            @endforeach
                         </div>
 
+                        @error('delivery_zone')
+                            <span class="text-sm text-red-500 block">{{ $message }}</span>
+                        @enderror
+
+                        <div x-show="selectedZoneDays" x-cloak x-transition
+                             class="text-sm font-bold text-rose-700 bg-rose-50 border border-rose-100 px-3 py-2 rounded-lg">
+                            Estimated delivery: <span x-text="selectedZoneDays"></span>
+                        </div>
+
+                    </div>
+                    </div>
+                </section>
+
+                <!-- Custom note (collapsible, optional) -->
+                <div x-data="{ noteOpen: {{ old('customer_note') ? 'true' : 'false' }} }">
+                    <button type="button" @click="noteOpen = !noteOpen" :aria-expanded="noteOpen"
+                            class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-rose-700 transition ml-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                             class="transition-transform duration-200" :class="noteOpen && 'rotate-45'"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                        <span x-text="noteOpen ? 'Hide note' : 'Add a note (optional)'"></span>
+                    </button>
+
+                    <div x-show="noteOpen" x-cloak x-transition class="mt-2">
+                        <textarea name="customer_note" id="customer_note" rows="2" maxlength="500"
+                                  placeholder="e.g. Please deliver after 6 PM..."
+                                  class="w-full bg-gray-50 border-2 border-gray-400 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-rose-500 focus:bg-white focus:ring-2 focus:ring-rose-100 resize-none">{{ old('customer_note') }}</textarea>
+                        @error('customer_note')
+                            <span class="text-sm text-red-500 mt-1 block ml-1">{{ $message }}</span>
+                        @enderror
                     </div>
                 </div>
-
-                <!-- Payment Method -->
-                <div class="bg-cream-50 border border-cream-200 rounded-xl p-3 sm:p-4 shadow-sm">
-                    @php
-                        $bkashNumber = App\Models\Setting::getValue('bkash_number', '');
-                    @endphp
-                    <h2 class="font-bold text-gray-900 text-base mb-2">💳 Payment Method</h2>
-
-                    <div class="space-y-2">
-                        <!-- Cash on Delivery -->
-                        <label class="relative flex items-center gap-3 p-3 cursor-pointer rounded-lg border-2 transition-all"
-                               :class="selectedPayment === 'cod' ? 'border-purple-500 bg-purple-50' : 'border-cream-300 bg-cream-100 hover:border-purple-400 hover:bg-cream-200'">
-                            <div class="flex items-center h-5">
-                                <input type="radio" name="payment_method" value="cod"
-                                       x-model="selectedPayment"
-                                       class="h-4 w-4 border-gray-400 text-purple-600 focus:ring-purple-500"
-                                       {{ old('payment_method', 'cod') === 'cod' ? 'checked' : '' }}>
-                            </div>
-                            <div class="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center text-lg">💵</div>
-                            <div>
-                                <p class="font-bold text-gray-900 text-sm">Cash on Delivery</p>
-                                <p class="text-gray-500 text-xs">Pay when the order arrives at your door</p>
-                            </div>
-                        </label>
-
-                        <!-- bKash Send Money -->
-                        <label class="relative flex items-center gap-3 p-3 cursor-pointer rounded-lg border-2 transition-all"
-                               :class="selectedPayment === 'bkash' ? 'border-pink-500 bg-pink-50' : 'border-cream-300 bg-cream-100 hover:border-pink-400 hover:bg-cream-200'">
-                            <div class="flex items-center h-5">
-                                <input type="radio" name="payment_method" value="bkash"
-                                       x-model="selectedPayment"
-                                       class="h-4 w-4 border-gray-400 text-pink-600 focus:ring-pink-500"
-                                       {{ old('payment_method') === 'bkash' ? 'checked' : '' }}>
-                            </div>
-                            <div class="w-9 h-9 rounded-full bg-pink-100 flex items-center justify-center text-lg">💳</div>
-                            <div>
-                                <p class="font-bold text-gray-900 text-sm">bKash Send Money</p>
-                                <p class="text-gray-500 text-xs">Send the full payment from bKash using Send Money</p>
-                            </div>
-                        </label>
-                    </div>
-
-                    <!-- bKash details (only when selected) -->
-                    <div x-show="selectedPayment === 'bkash'" x-cloak x-transition
-                         class="mt-3 rounded-lg border-2 border-pink-200 bg-pink-50 p-4 space-y-3"
-                         @keydown.escape.window="selectedPayment = 'cod'">
-                        <div class="flex items-center justify-between gap-3">
-                            <div>
-                                <p class="text-xs font-bold text-pink-700 uppercase tracking-wide">💯 Send Money to this number</p>
-                                <p class="text-lg font-extrabold text-gray-900 mt-0.5 tracking-wide">{{ $bkashNumber }}</p>
-                            </div>
-                            <button type="button" @click="copyBkashNumber()"
-                                    class="text-xs font-bold text-pink-600 border border-pink-300 bg-white px-3 py-1.5 rounded-lg hover:bg-pink-100 focus:outline-none transition">
-                                📋 Copy
-                            </button>
-                        </div>
-
-                        <div>
-                            <label for="bkash_sender_last4" class="block text-sm font-bold text-gray-700 mb-1">
-                                Which number did you Send Money from? (last <span class="text-pink-500">4 digits</span>)
-                            </label>
-                            <input type="text" id="bkash_sender_last4" name="bkash_sender_last4"
-                                   inputmode="numeric" maxlength="4" autocomplete="off"
-                                   value="{{ old('bkash_sender_last4') }}" x-model="bkashLast4"
-                                   :required="selectedPayment === 'bkash'"
-                                   :disabled="selectedPayment !== 'bkash'"
-                                   :pattern="selectedPayment === 'bkash' ? '[0-9]{4}' : null"
-                                   class="w-full bg-white border-2 border-gray-400 rounded-lg px-3 py-2.5 text-base text-center font-bold tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all"
-                                   placeholder="XXXX">
-                            <div x-show="bkashLast4.length > 0" x-cloak
-                                 class="text-xs text-pink-600 mt-1 font-semibold">
-                                ✅ Last 4 digits of the number you sent from: <span class="font-extrabold" x-text="bkashLast4"></span>
-                            </div>
-                            @error('bkash_sender_last4')
-                                <span class="text-sm text-red-500 mt-0.5 block">{{ $message }}</span>
-                            @enderror
-                        </div>
-                    </div>
-                </div>
-
             </div>
 
-            <!-- Right: Order Summary -->
-            <aside class="space-y-2 sm:space-y-3">
-                <div class="bg-cream-50 border border-cream-200 p-3 sm:p-4 rounded-xl shadow-sm space-y-2.5 sm:space-y-3 lg:sticky lg:top-20">
-                    <h3 class="font-bold text-gray-900 text-base">🛒 Order Summary</h3>
+            <!-- Right: summary -->
+            <div class="lg:col-span-5 h-fit lg:sticky lg:top-24">
+                <div class="bg-white p-3 sm:p-6 md:p-8 rounded-2xl border border-gray-200 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.15)] space-y-2">
 
-                    <!-- Cart Items -->
-                    <div class="space-y-2">
-                        @php $subtotal = 0; @endphp
+                    <h3 class="text-lg md:text-xl font-extrabold text-gray-900 border-b-2 border-gray-100 pb-3 flex items-center justify-between tracking-tight">
+                        Order Summary
+                        <span class="text-xs bg-gray-100 text-gray-500 px-3 py-1 rounded-full font-bold">{{ count($cart) }} {{ count($cart) > 1 ? 'items' : 'item' }}</span>
+                    </h3>
+
+                    <!-- Items -->
+                    <div class="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
                         @foreach($cart as $key => $item)
-                            @php $subtotal += $item['price'] * $item['quantity']; @endphp
-                            <div class="flex justify-between items-start text-sm">
-                                <div class="flex-1 flex items-start gap-2.5 pr-2">
-                                    <div class="w-11 h-11 bg-cream-100 border border-cream-200 rounded-lg overflow-hidden flex-shrink-0">
-                                        @if($item['image'])
-                                            <img src="{{ Storage::url($item['image']) }}" alt="{{ $item['name'] }}" class="w-full h-full object-cover" loading="lazy">
-                                        @else
-                                            <div class="w-full h-full flex items-center justify-center text-purple-300">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                                </svg>
-                                            </div>
-                                        @endif
-                                    </div>
-                                    <div>
-                                        <span class="font-semibold text-gray-900">{{ $item['name'] }}</span>
-                                        @if($item['variation_details'])
-                                            <span class="text-xs text-purple-500 font-semibold block">{{ $item['variation_details'] }}</span>
-                                        @endif
-                                        <span class="text-gray-400 text-xs">× {{ $item['quantity'] }}</span>
-                                    </div>
+                            <div class="flex gap-4 p-2 rounded-xl bg-gray-50/70 hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all">
+                                <div class="w-16 h-16 rounded-xl overflow-hidden bg-white shrink-0 shadow-sm">
+                                    @if($item['image'])
+                                        <img src="{{ Storage::url($item['image']) }}" alt="{{ $item['name'] }}" class="w-full h-full object-cover" loading="lazy">
+                                    @else
+                                        <div class="w-full h-full flex items-center justify-center text-gray-300">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        </div>
+                                    @endif
                                 </div>
-                                <span class="font-semibold text-gray-900 whitespace-nowrap">৳{{ number_format($item['price'] * $item['quantity'], 0) }}</span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex justify-between items-start gap-2">
+                                        <span class="font-bold text-gray-900 text-sm truncate">{{ $item['name'] }}</span>
+                                        <span class="text-sm font-extrabold text-gray-900 shrink-0">৳{{ number_format($item['price'] * $item['quantity'], 0) }}</span>
+                                    </div>
+                                    @if($item['variation_details'])
+                                        <span class="text-xs text-rose-600 font-semibold block mt-0.5">{{ $item['variation_details'] }}</span>
+                                    @endif
+                                    <span class="text-xs text-gray-400 font-bold">Qty: {{ $item['quantity'] }}</span>
+                                </div>
                             </div>
                         @endforeach
                     </div>
 
-                    <div class="border-t border-cream-200 pt-3 space-y-1.5 text-sm">
-                        <div class="flex justify-between text-gray-500">
-                            <span>Subtotal</span>
-                            <span class="font-semibold text-gray-900">৳{{ number_format($subtotal, 0) }}</span>
+                    <!-- Payment method -->
+                    <div class="border-t-2 border-dashed border-gray-200 pt-4 space-y-3">
+                        <h4 class="text-xs font-extrabold text-gray-700 flex items-center uppercase tracking-wider">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-rose-600"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                            Payment Method
+                        </h4>
+
+                        <div class="space-y-2">
+                            <!-- Cash on Delivery -->
+                            <label class="flex items-center gap-3 px-2 py-1 rounded-xl border-2 cursor-pointer transition-all"
+                                   :class="selectedPayment === 'cod' ? 'border-rose-500 bg-rose-50/50' : 'border-gray-200 bg-gray-50 hover:border-gray-300'">
+                                <input type="radio" name="payment_method" value="cod" x-model="selectedPayment"
+                                       class="h-4 w-4 border-gray-300 text-rose-600 focus:ring-rose-500"
+                                       {{ old('payment_method', 'cod') === 'cod' ? 'checked' : '' }}>
+                                <div class="flex-1">
+                                    <span class="block font-bold text-gray-900 text-sm">Cash on Delivery</span>
+                                    <span class="block text-xs font-semibold text-gray-500 mt-0.5">Pay when the order arrives at your door</span>
+                                </div>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" :class="selectedPayment === 'cod' ? 'text-rose-600' : 'text-gray-300'"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                            </label>
+
+                            <!-- bKash -->
+                            <label class="flex items-center gap-3 px-2 py-1 rounded-xl border-2 cursor-pointer transition-all"
+                                   :class="selectedPayment === 'bkash' ? 'border-pink-500 bg-pink-50/60' : 'border-gray-200 bg-gray-50 hover:border-gray-300'">
+                                <input type="radio" name="payment_method" value="bkash" x-model="selectedPayment"
+                                       class="h-4 w-4 border-gray-300 text-pink-600 focus:ring-pink-500"
+                                       {{ old('payment_method') === 'bkash' ? 'checked' : '' }}>
+                                <div class="flex-1">
+                                    <span class="block font-bold text-gray-900 text-sm">bKash Send Money</span>
+                                    <span class="block text-xs font-semibold text-gray-500 mt-0.5">Send the full payment using Send Money</span>
+                                </div>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" :class="selectedPayment === 'bkash' ? 'text-pink-600' : 'text-gray-300'"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                            </label>
                         </div>
 
-                        <!-- Coupon -->
-                        <div>
-                            <div x-show="!couponApplied" x-cloak>
-                                <div class="flex gap-2">
-                                    <input type="text" x-model="couponCode" @keydown.enter.prevent="applyCoupon()"
-                                           placeholder="Discount coupon code"
-                                           class="flex-1 bg-white border-2 border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500 transition-all uppercase">
-                                    <button type="button" @click="applyCoupon()" :disabled="couponLoading"
-                                            class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition disabled:opacity-50">
-                                        <span x-show="!couponLoading">Apply</span>
-                                        <span x-show="couponLoading" x-cloak>Checking...</span>
-                                    </button>
+                        <!-- bKash details -->
+                        <div x-show="selectedPayment === 'bkash'" x-cloak x-transition
+                             class="rounded-xl border-2 border-pink-200 bg-pink-50 p-4 space-y-3"
+                             @keydown.escape.window="selectedPayment = 'cod'">
+                            <div class="flex items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-xs font-bold text-pink-700 uppercase tracking-wide">Send Money to this number</p>
+                                    <p class="text-lg font-extrabold text-gray-900 mt-0.5 tracking-wide">{{ $bkashNumber }}</p>
                                 </div>
-                                <p x-show="couponMessage" x-cloak
-                                   class="mt-1 text-xs font-semibold"
-                                   :class="couponError ? 'text-red-500' : 'text-green-600'" x-text="couponMessage"></p>
-                            </div>
-
-                            <div x-show="couponApplied" x-cloak
-                                 class="flex items-center justify-between gap-2 bg-cream-100 border border-cream-300 rounded-lg px-3 py-2">
-                                <div class="text-xs font-bold text-green-700">
-                                    ✅ <span x-text="couponLabel"></span>
-                                    <span class="font-mono" x-text="couponCode"></span>
-                                    <span class="ml-1 text-green-600" x-text="couponDiscountLabel"></span>
-                                </div>
-                                <button type="button" @click="removeCoupon()" class="text-xs font-bold text-red-500 hover:underline">
-                                    ✕ Cancel
+                                <button type="button" @click="copyBkashNumber()"
+                                        class="text-xs font-bold text-pink-600 border border-pink-300 bg-white px-3 py-1.5 rounded-lg hover:bg-pink-100 transition">
+                                    Copy
                                 </button>
                             </div>
+
+                            <div>
+                                <label for="bkash_sender_last4" class="block text-sm font-bold text-gray-700 mb-1">
+                                    Which number did you Send Money from? (last 4 digits)
+                                </label>
+                                <input type="text" id="bkash_sender_last4" name="bkash_sender_last4"
+                                       inputmode="numeric" maxlength="4" autocomplete="off"
+                                       value="{{ old('bkash_sender_last4') }}" x-model="bkashLast4"
+                                       :required="selectedPayment === 'bkash'"
+                                       :disabled="selectedPayment !== 'bkash'"
+                                       :pattern="selectedPayment === 'bkash' ? '[0-9]{4}' : null"
+                                       class="w-full bg-white border-2 border-gray-300 rounded-xl px-3 py-2.5 text-base text-center font-bold tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-pink-200 focus:border-pink-500 transition-all"
+                                       placeholder="XXXX">
+                                <div x-show="bkashLast4.length > 0" x-cloak class="text-xs text-pink-600 mt-1 font-semibold">
+                                    Last 4 digits: <span class="font-extrabold" x-text="bkashLast4"></span>
+                                </div>
+                                @error('bkash_sender_last4')
+                                    <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Totals -->
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between items-center text-gray-500 font-bold">
+                            <span>Subtotal</span>
+                            <span class="text-gray-900">৳{{ number_format($subtotal, 0) }}</span>
                         </div>
 
-                        <div class="flex justify-between text-gray-500" x-show="discount > 0" x-cloak>
-                            <span>Discount</span>
-                            <span class="font-semibold text-green-600" x-text="'-৳' + Math.round(discount)"></span>
-                        </div>
-
-                        <div class="flex justify-between text-gray-500">
+                        <div class="flex justify-between items-center text-gray-500 font-bold">
                             <span>Delivery Charge</span>
-                            <span class="font-semibold text-gray-900" x-text="formattedShippingCharge">Select a zone</span>
+                            <span class="text-gray-900" x-text="formattedShippingCharge">Select a zone</span>
+                        </div>
+
+                        <div class="flex items-end justify-between border-t border-gray-100">
+                            <span class="text-lg font-extrabold text-gray-900">Total</span>
+                            <span class="text-3xl font-extrabold text-rose-700" x-text="formattedGrandTotal">৳{{ number_format($subtotal, 0) }}</span>
                         </div>
                     </div>
 
-                    <div class="border-t border-cream-200 pt-3 flex justify-between font-bold text-gray-900">
-                        <span>Total</span>
-                        <span class="text-purple-600" x-text="formattedGrandTotal">৳{{ number_format($subtotal - $discount, 0) }}</span>
+                    <!-- Confirm Order -->
+                    <div class="border-t-2 border-dashed border-gray-200 pt-4">
+                        <button type="submit" form="checkout-form" :disabled="submitting"
+                                class="w-full bg-rose-700 text-white py-4 md:py-5 px-4 rounded-2xl font-extrabold text-lg md:text-xl hover:bg-rose-800 shadow-[0_20px_40px_-15px_rgba(225,29,72,0.5)] transition-all hover:-translate-y-0.5 active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                            <span x-show="!submitting" class="flex items-center gap-3">Confirm Order <span class="text-xl md:text-2xl" x-text="formattedGrandTotal">৳{{ number_format($subtotal, 0) }}</span></span>
+                            <span x-show="submitting" x-cloak>Processing your order...</span>
+                        </button>
+
+                        <div class="flex items-center justify-center gap-2 text-gray-400 mt-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <p class="text-[11px] font-bold uppercase tracking-wide">Secure checkout · {{ site_name() }}</p>
+                        </div>
+
+                        <a href="{{ route('cart') }}" class="block w-full text-center mt-3 text-xs font-bold text-gray-400 hover:text-gray-700 transition">
+                            ← Edit Cart
+                        </a>
                     </div>
 
-                    <button type="submit" :disabled="submitting"
-                            class="block w-full text-center py-4 bg-primary hover:bg-primary text-white rounded-lg font-bold transition shadow-md active:scale-95 text-lg disabled:opacity-60 disabled:cursor-not-allowed">
-                        <span x-show="!submitting">✅ Confirm Order</span>
-                        <span x-show="submitting" x-cloak>⏳ Processing your order...</span>
-                    </button>
 
-                    <a href="{{ route('cart') }}"
-                       class="block w-full text-center py-1.5 text-xs font-bold text-gray-400 hover:text-gray-700 transition">
-                        ← Edit Cart
-                    </a>
+
                 </div>
-            </aside>
-        </div>
-    </form>
+            </div>
+        </form>
+    </div>
 
-</div>
 </div>
 @endsection
 
@@ -332,8 +325,6 @@ fbq('track', 'InitiateCheckout', {
 <script>
     function checkoutPage(zones) {
         const subtotal = {{ $subtotal ?? 0 }};
-        const initialDiscount = {{ (float) ($discount ?? 0) }};
-        const initialCoupon = @json($coupon ? ['code' => $coupon->code, 'label' => $coupon->value_label, 'discount' => $discount] : null) || { code: null, label: null, discount: 0 };
 
         const zoneMap = {};
         zones.forEach(z => {
@@ -350,15 +341,6 @@ fbq('track', 'InitiateCheckout', {
             bkashNumber: @json($bkashNumber ?? ''),
             submitting: false,
 
-            couponCode: initialCoupon.code || '',
-            couponLabel: initialCoupon.label || '',
-            couponApplied: !!initialCoupon.code,
-            discount: initialDiscount,
-            couponLoading: false,
-            couponMessage: '',
-            couponError: false,
-            couponDiscountLabel: initialCoupon.code ? ('-৳' + Math.round(initialDiscount)) : '',
-
             copyBkashNumber() {
                 if (!this.bkashNumber) return;
                 if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -373,70 +355,6 @@ fbq('track', 'InitiateCheckout', {
                 }
             },
 
-            async applyCoupon() {
-                const code = this.couponCode.trim();
-                if (!code) return;
-
-                this.couponLoading = true;
-                this.couponMessage = '';
-                this.couponError = false;
-
-                try {
-                    const response = await fetch('{{ route('checkout.coupon.apply') }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}'
-                        },
-                        body: JSON.stringify({ code: code })
-                    });
-                    const data = await response.json();
-
-                    if (data.success) {
-                        this.couponCode = data.code;
-                        this.couponLabel = data.label;
-                        this.discount = parseFloat(data.discount) || 0;
-                        this.couponApplied = true;
-                        this.couponDiscountLabel = data.discount_label;
-                        this.couponMessage = 'Coupon applied!';
-                        this.couponError = false;
-                    } else {
-                        this.couponError = true;
-                        this.couponMessage = data.message || 'That coupon code is not valid.';
-                    }
-                } catch (e) {
-                    this.couponError = true;
-                    this.couponMessage = 'Something went wrong. Please try again.';
-                } finally {
-                    this.couponLoading = false;
-                }
-            },
-
-            async removeCoupon() {
-                this.couponLoading = true;
-                try {
-                    await fetch('{{ route('checkout.coupon.remove') }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}'
-                        }
-                    });
-                } catch (e) {
-                    // ignore - the local state is reset either way
-                }
-
-                this.couponApplied = false;
-                this.couponCode = '';
-                this.couponLabel = '';
-                this.couponDiscountLabel = '';
-                this.discount = 0;
-                this.couponMessage = '';
-                this.couponLoading = false;
-            },
-
             init() {
                 if (this.selectedZone && zoneMap[this.selectedZone]) {
                     this.selectZone(this.selectedZone);
@@ -449,7 +367,7 @@ fbq('track', 'InitiateCheckout', {
             },
 
             get formattedGrandTotal() {
-                return '৳' + Math.max(0, Math.round(this.subtotal - this.discount + this.shippingCharge));
+                return '৳' + Math.max(0, Math.round(this.subtotal + this.shippingCharge));
             },
 
             selectZone(zoneName) {

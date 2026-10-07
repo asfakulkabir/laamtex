@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\AttributeValue;
-use App\Models\Coupon;
 use App\Models\DeliveryCharge;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -43,6 +42,11 @@ class StoreController extends Controller
         $categories = Category::whereNull('parent_id')->with('children')->orderBy('name')->get();
 
         return view('store.categories', compact('categories'));
+    }
+
+    public function privacyPolicy()
+    {
+        return view('store.privacy-policy');
     }
 
     public function shop(Request $request)
@@ -416,12 +420,7 @@ class StoreController extends Controller
         $deliveryZones = DeliveryCharge::orderBy('zone')->get();
         $customer = auth()->user();
 
-        // Re-check the coupon kept in the session against the live cart and
-        // drop it from the session when it is no longer valid.
-        [$coupon, $discount] = $this->resolveAppliedCoupon((float) $subtotal);
-        if (!$coupon) {
-            session()->forget('checkout_coupon_code');
-        }
+        session()->forget('checkout_coupon_code');
 
         // Send InitiateCheckout + AddPaymentInfo to Conversion API. These are
         // outbound HTTP calls the shopper would wait on, so they run after the
@@ -445,72 +444,7 @@ class StoreController extends Controller
             ]);
         })->afterResponse();
 
-        return view('store.checkout', compact('cart', 'deliveryZones', 'subtotal', 'customer', 'coupon', 'discount'));
-    }
-
-    /**
-     * Apply a coupon code to the current cart (AJAX from the checkout page).
-     */
-    public function applyCoupon(Request $request)
-    {
-        $request->validate([
-            'code' => ['required', 'string', 'max:50'],
-        ]);
-
-        $cart = session()->get('cart', []);
-        if (empty($cart)) {
-            return response()->json(['success' => false, 'message' => 'Your cart is empty.'], 422);
-        }
-
-        $subtotal = (float) array_sum(array_map(fn($item) => $item['price'] * $item['quantity'], $cart));
-
-        $coupon = Coupon::whereRaw('UPPER(code) = ?', [strtoupper(trim($request->input('code')))])->first();
-        if (!$coupon) {
-            return response()->json(['success' => false, 'message' => 'Invalid coupon code.'], 422);
-        }
-
-        if ($reason = $coupon->rejectionReason($subtotal, auth()->id())) {
-            return response()->json(['success' => false, 'message' => $reason], 422);
-        }
-
-        $discount = $coupon->discountFor($subtotal);
-
-        session(['checkout_coupon_code' => $coupon->code]);
-
-        return response()->json([
-            'success' => true,
-            'code'    => $coupon->code,
-            'label'   => $coupon->value_label,
-            'discount' => $discount,
-            'discount_label' => '-৳' . number_format($discount, 0),
-        ]);
-    }
-
-    public function removeCoupon()
-    {
-        session()->forget('checkout_coupon_code');
-
-        return response()->json(['success' => true]);
-    }
-
-    /**
-     * Load the coupon stored in the session and work out its discount.
-     *
-     * @return array{0: ?Coupon, 1: float}
-     */
-    private function resolveAppliedCoupon(float $subtotal): array
-    {
-        $code = session('checkout_coupon_code');
-        if (!$code) {
-            return [null, 0.0];
-        }
-
-        $coupon = Coupon::whereRaw('UPPER(code) = ?', [strtoupper($code)])->first();
-        if (!$coupon || $coupon->rejectionReason($subtotal, auth()->id())) {
-            return [null, 0.0];
-        }
-
-        return [$coupon, $coupon->discountFor($subtotal)];
+        return view('store.checkout', compact('cart', 'deliveryZones', 'subtotal', 'customer'));
     }
 
     public function placeOrder(Request $request)
@@ -519,6 +453,7 @@ class StoreController extends Controller
             'customer_name'    => 'required|string|max:255',
             'customer_phone'   => ['required', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
             'customer_address' => 'required|string',
+            'customer_note'    => 'nullable|string|max:500',
             'delivery_zone'    => 'required|exists:delivery_charges,zone',
             'payment_method'   => 'required|in:cod,bkash',
             'bkash_sender_last4' => Rule::when(
@@ -541,11 +476,7 @@ class StoreController extends Controller
         }
         $subtotal = (float) $subtotal;
 
-        // The coupon is re-validated here so a tampered or expired session
-        // value can never change the price that gets stored.
-        [$coupon, $discount] = $this->resolveAppliedCoupon($subtotal);
-
-        $totalAmount = (int) round(max(0, $subtotal - $discount + $delivery->charge));
+        $totalAmount = (int) round(max(0, $subtotal + $delivery->charge));
 
         $itemsArray = [];
         foreach ($cart as $item) {
@@ -604,10 +535,11 @@ class StoreController extends Controller
                 'customer_name'       => $request->customer_name,
                 'customer_phone'      => $request->customer_phone,
                 'customer_address'    => $request->customer_address,
+                'customer_note'       => $request->filled('customer_note') ? trim($request->customer_note) : null,
                 'delivery_charge_id'  => $delivery->id,
-                'coupon_id'           => $coupon?->id,
-                'coupon_code'         => $coupon?->code,
-                'discount_amount'     => $discount,
+                'coupon_id'           => null,
+                'coupon_code'         => null,
+                'discount_amount'     => 0,
                 'total_amount'        => $totalAmount,
                 'total'               => $totalAmount,
                 'status'              => 'processing',
@@ -638,10 +570,6 @@ class StoreController extends Controller
             }
 
             DB::commit();
-
-            if ($coupon) {
-                $coupon->increment('used_count');
-            }
 
             session()->forget('cart');
             session()->forget('checkout_coupon_code');

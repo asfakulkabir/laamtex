@@ -91,7 +91,7 @@ fbq('track', 'Purchase', @json($pixelPurchase));
                 </div>
                 @if($order->discount_amount > 0)
                 <div class="flex justify-between text-gray-450">
-                    <span>Discount ({{ $order->coupon_code }})</span>
+                    <span>Discount</span>
                     <span class="text-green-600">-৳{{ number_format($order->discount_amount, 0) }}</span>
                 </div>
                 @endif
@@ -117,6 +117,12 @@ fbq('track', 'Purchase', @json($pixelPurchase));
                 <h2 class="text-xs font-bold uppercase tracking-wider text-gray-400">Delivery Address</h2>
                 <p class="text-gray-600 whitespace-pre-line leading-relaxed">{{ $order->customer_address }}</p>
             </div>
+            @if($order->customer_note)
+                <div class="md:col-span-2 space-y-3">
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-gray-400">Your Note</h2>
+                    <p class="text-gray-700 whitespace-pre-line leading-relaxed bg-amber-50 border border-amber-100 px-4 py-3 rounded-xl font-medium">{{ $order->customer_note }}</p>
+                </div>
+            @endif
         </div>
 
         <!-- Status Footer -->

@@ -9,7 +9,7 @@
     <div class="rounded-2xl border border-slate-800/50 bg-slate-900/60 p-4 text-sm text-slate-300">
         <p class="font-bold text-white mb-1">How access works</p>
         <ul class="list-disc pl-5 space-y-1 text-slate-400">
-            <li><span class="font-semibold text-pink-300">Super Admin</span> — full access to everything: products, categories, customers, shipping, sliders, coupons, settings and staff. Can delete orders.</li>
+            <li><span class="font-semibold text-pink-300">Super Admin</span> — full access to everything: products, categories, customers, shipping, sliders, settings and staff. Can delete orders.</li>
             <li><span class="font-semibold text-sky-300">Moderator</span> — orders only: can view orders and change their status, but cannot delete orders or open any other section.</li>
         </ul>
     </div>

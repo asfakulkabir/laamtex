@@ -15,7 +15,7 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400..800&display=swap" rel="stylesheet">
     
     <!-- Styles / Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -44,7 +44,7 @@
     
     <style>
         body {
-            font-family: 'Outfit', sans-serif;
+            font-family: 'Baloo Da 2', sans-serif;
         }
         [x-cloak] {
             display: none !important;
@@ -200,7 +200,7 @@
     <!-- Side Cart Drawer -->
     <div x-data="sideCart()" 
          @open-cart.window="open()" 
-         class="relative z-50" 
+         class="relative z-[1000]" 
          x-show="isOpen" 
          x-cloak
          role="dialog" 
@@ -558,5 +558,19 @@
     @endif
 
     @yield('scripts')
+
+    <!-- Floating WhatsApp Button (Desktop Only) -->
+    @php $waDigits = preg_replace('/[^0-9]/', '', $whatsapp); @endphp
+    @if($whatsapp)
+        <a href="https://wa.me/{{ $waDigits }}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"
+           class="hidden md:block fixed bottom-10 right-10 z-[100] transition hover:-translate-y-1 active:scale-95">
+            <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-md shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="w-12 h-12">
+                    <path d="M12.02 3.25a8.73 8.73 0 0 0-7.45 13.28l.19.3-.98 3.59 3.68-.96.29.17a8.73 8.73 0 1 0 4.27-16.38Z" fill="#25D366"></path>
+                    <path d="M17.06 14.31c-.28-.14-1.64-.81-1.89-.9-.25-.09-.44-.14-.62.14-.18.27-.71.9-.87 1.08-.16.18-.32.2-.6.07-.28-.14-1.16-.43-2.21-1.36-.82-.73-1.37-1.63-1.53-1.91-.16-.27-.02-.42.12-.56.13-.13.28-.32.42-.48.14-.16.18-.27.27-.46.09-.18.05-.34-.02-.48-.07-.14-.62-1.49-.85-2.04-.22-.53-.45-.46-.62-.47h-.53c-.18 0-.48.07-.73.34-.25.27-.96.94-.96 2.29 0 1.35.98 2.65 1.12 2.83.14.18 1.93 2.94 4.67 4.12.65.28 1.16.45 1.56.58.66.21 1.25.18 1.72.11.53-.08 1.64-.67 1.87-1.31.23-.64.23-1.2.16-1.31-.07-.12-.25-.19-.53-.33Z" fill="white"></path>
+                </svg>
+            </div>
+        </a>
+    @endif
 </body>
 </html>

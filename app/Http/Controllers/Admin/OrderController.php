@@ -75,7 +75,7 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        $order->load('items.product', 'items.variation', 'deliveryCharge', 'coupon');
+        $order->load('items.product', 'items.variation', 'deliveryCharge');
         return view('admin.orders.show', compact('order'));
     }
 
@@ -265,17 +265,12 @@ class OrderController extends Controller
                 $q->where('customer_name', 'like', "%{$search}%")
                     ->orWhere('customer_phone', 'like', "%{$search}%")
                     ->orWhere('customer_address', 'like', "%{$search}%")
-                    ->orWhere('coupon_code', 'like', "%{$search}%")
                     ->orWhere('id', $search);
             });
         }
 
         if ($request->filled('payment')) {
             $query->where('payment_method', $request->input('payment'));
-        }
-
-        if ($request->boolean('coupon_only')) {
-            $query->whereNotNull('coupon_code');
         }
 
         return [$query, $period];

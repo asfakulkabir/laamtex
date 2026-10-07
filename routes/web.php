@@ -14,7 +14,6 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SliderController;
 use App\Http\Controllers\Admin\StaffController;
-use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\TestimonialController;
 use App\Http\Controllers\Admin\NotificationController;
 
@@ -29,6 +28,7 @@ Route::get('/', [StoreController::class, 'index'])->name('home');
 Route::get('/categories', [StoreController::class, 'categories'])->name('categories');
 Route::get('/shop', [StoreController::class, 'shop'])->name('shop');
 Route::get('/product/{slug}', [StoreController::class, 'product'])->name('product.detail');
+Route::get('/privacy-policy', [StoreController::class, 'privacyPolicy'])->name('privacy.policy');
 
 // Cart Routes
 Route::get('/cart', [StoreController::class, 'cart'])->name('cart');
@@ -39,8 +39,6 @@ Route::post('/cart/remove', [StoreController::class, 'removeFromCart'])->name('c
 // Checkout & Order Placement
 Route::get('/checkout', [StoreController::class, 'checkout'])->name('checkout');
 Route::post('/checkout/order', [StoreController::class, 'placeOrder'])->name('checkout.place');
-Route::post('/checkout/coupon', [StoreController::class, 'applyCoupon'])->name('checkout.coupon.apply');
-Route::post('/checkout/coupon/remove', [StoreController::class, 'removeCoupon'])->name('checkout.coupon.remove');
 Route::get('/order-success/{order}', [StoreController::class, 'orderSuccess'])->name('order.success');
 
 // Customer Authentication & Account
@@ -141,14 +139,6 @@ Route::prefix('admin')->group(function () {
             Route::get('/delivery-charges/{deliveryCharge}/edit', [DeliveryChargeController::class, 'edit'])->name('admin.delivery-charges.edit');
             Route::put('/delivery-charges/{deliveryCharge}', [DeliveryChargeController::class, 'update'])->name('admin.delivery-charges.update');
             Route::delete('/delivery-charges/{deliveryCharge}', [DeliveryChargeController::class, 'destroy'])->name('admin.delivery-charges.destroy');
-
-            // Discount Coupons
-            Route::get('/coupons', [CouponController::class, 'index'])->name('admin.coupons.index');
-            Route::get('/coupons/create', [CouponController::class, 'create'])->name('admin.coupons.create');
-            Route::post('/coupons', [CouponController::class, 'store'])->name('admin.coupons.store');
-            Route::get('/coupons/{coupon}/edit', [CouponController::class, 'edit'])->name('admin.coupons.edit');
-            Route::put('/coupons/{coupon}', [CouponController::class, 'update'])->name('admin.coupons.update');
-            Route::delete('/coupons/{coupon}', [CouponController::class, 'destroy'])->name('admin.coupons.destroy');
 
             // Customer Testimonials (image only)
             Route::get('/testimonials', [TestimonialController::class, 'index'])->name('admin.testimonials.index');

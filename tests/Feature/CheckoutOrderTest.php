@@ -131,4 +131,35 @@ class CheckoutOrderTest extends TestCase
         $this->assertSame(9, (int) $this->product->stock_quantity);
         $this->assertNull(session('cart'));
     }
+
+    public function test_customer_note_is_saved_when_provided()
+    {
+        $this->seedCart();
+
+        $this->post(route('checkout.place'), $this->payload([
+            'customer_note' => 'Please deliver after 6 PM.',
+        ]))->assertRedirect();
+
+        $this->assertSame('Please deliver after 6 PM.', Order::first()->customer_note);
+    }
+
+    public function test_customer_note_is_optional()
+    {
+        $this->seedCart();
+
+        $this->post(route('checkout.place'), $this->payload())->assertRedirect();
+
+        $this->assertNull(Order::first()->customer_note);
+    }
+
+    public function test_customer_note_rejects_more_than_500_characters()
+    {
+        $this->seedCart();
+
+        $this->post(route('checkout.place'), $this->payload([
+            'customer_note' => str_repeat('a', 501),
+        ]))->assertSessionHasErrors('customer_note');
+
+        $this->assertNull(Order::first());
+    }
 }
