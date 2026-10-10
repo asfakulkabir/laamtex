@@ -162,4 +162,13 @@ class CheckoutOrderTest extends TestCase
 
         $this->assertNull(Order::first());
     }
+
+    public function test_checkout_page_renders_a_csrf_token_field()
+    {
+        $this->seedCart();
+
+        $this->get(route('checkout'))
+            ->assertOk()
+            ->assertSee('name="_token"', false);
+    }
 }

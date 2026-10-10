@@ -25,6 +25,43 @@ if (!function_exists('site_logo')) {
     }
 }
 
+if (!function_exists('contact_phone')) {
+    function contact_phone(): string
+    {
+        return (string) Setting::getValue('contact_phone', '');
+    }
+}
+
+if (!function_exists('contact_phone_digits')) {
+    function contact_phone_digits(): string
+    {
+        return (string) preg_replace('/[^0-9]/', '', contact_phone());
+    }
+}
+
+if (!function_exists('whatsapp_number')) {
+    function whatsapp_number(): string
+    {
+        return (string) Setting::getValue('whatsapp_number', '');
+    }
+}
+
+if (!function_exists('whatsapp_number_digits')) {
+    function whatsapp_number_digits(): string
+    {
+        return (string) preg_replace('/[^0-9]/', '', whatsapp_number());
+    }
+}
+
+if (!function_exists('whatsapp_link')) {
+    function whatsapp_link(): string
+    {
+        $digits = whatsapp_number_digits();
+
+        return $digits !== '' ? 'https://wa.me/' . $digits : '#';
+    }
+}
+
 if (!function_exists('primary_color')) {
     function primary_color(): string
     {

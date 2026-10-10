@@ -65,6 +65,48 @@ class SettingsSiteInfoTest extends TestCase
         $response->assertSee('#e11d48');
     }
 
+    public function test_contact_phone_and_whatsapp_number_are_stored_separately()
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_SUPER_ADMIN]);
+
+        $response = $this->actingAs($admin)->put(route('admin.settings.update'), [
+            'site_name' => 'My Store',
+            'contact_phone' => '+8801711111111',
+            'whatsapp_number' => '+8801722222222',
+        ]);
+
+        $response->assertRedirect(route('admin.settings.edit'));
+        $this->assertSame('+8801711111111', Setting::getValue('contact_phone'));
+        $this->assertSame('+8801722222222', Setting::getValue('whatsapp_number'));
+
+        $this->assertSame('+8801711111111', contact_phone());
+        $this->assertSame('8801711111111', contact_phone_digits());
+        $this->assertSame('+8801722222222', whatsapp_number());
+        $this->assertSame('8801722222222', whatsapp_number_digits());
+        $this->assertSame('https://wa.me/8801722222222', whatsapp_link());
+    }
+
+    public function test_settings_page_renders_both_phone_fields()
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_SUPER_ADMIN]);
+
+        $response = $this->actingAs($admin)->get(route('admin.settings.edit'));
+        $response->assertOk();
+        $response->assertSee('name="contact_phone"', false);
+        $response->assertSee('name="whatsapp_number"', false);
+    }
+
+    public function test_footer_uses_contact_phone_for_calling_and_whatsapp_for_chat()
+    {
+        Setting::setValue('contact_phone', '+8801711111111');
+        Setting::setValue('whatsapp_number', '+8801722222222');
+
+        $response = $this->get(route('home'));
+        $response->assertOk();
+        $response->assertSee('tel:8801711111111', false);
+        $response->assertSee('https://wa.me/8801722222222', false);
+    }
+
     public function test_storefront_uses_primary_color_from_settings()
     {
         Setting::setValue('primary_color', '#e11d48');

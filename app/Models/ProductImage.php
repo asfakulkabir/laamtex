@@ -34,14 +34,14 @@ class ProductImage extends Model
     protected static function booted()
     {
         static::deleted(function ($productImage) {
-            if ($productImage->image) {
+            if ($productImage->image && ! Media::isLibraryPath($productImage->image)) {
                 Storage::disk('public')->delete($productImage->image);
             }
         });
 
         static::updating(function ($productImage) {
             $original = $productImage->getOriginal('image');
-            if ($original && $original !== $productImage->image) {
+            if ($original && $original !== $productImage->image && ! Media::isLibraryPath($original)) {
                 Storage::disk('public')->delete($original);
             }
         });

@@ -12,9 +12,12 @@ use App\Http\Controllers\Admin\DeliveryChargeController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\SliderController;
 use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\Admin\TestimonialController;
+use App\Http\Controllers\Admin\HomeSectionController;
+use App\Http\Controllers\Admin\SizeChartController;
 use App\Http\Controllers\Admin\NotificationController;
 
 /*
@@ -87,6 +90,7 @@ Route::prefix('admin')->group(function () {
         Route::get('/orders/{order}', [OrderController::class, 'show'])->name('admin.orders.show');
         Route::post('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('admin.orders.status');
         Route::post('/orders/{order}/send-to-steadfast', [OrderController::class, 'sendToSteadfast'])->name('admin.orders.send-to-steadfast');
+        Route::get('/orders/{order}/fraud-check', [OrderController::class, 'fraudCheck'])->name('admin.orders.fraud-check');
 
         // Deleting an order is a super admin only action
         Route::delete('/orders/{order}', [OrderController::class, 'destroy'])
@@ -150,6 +154,25 @@ Route::prefix('admin')->group(function () {
             Route::post('/testimonials/{testimonial}/toggle', [TestimonialController::class, 'toggle'])->name('admin.testimonials.toggle');
             Route::delete('/testimonials/{testimonial}', [TestimonialController::class, 'destroy'])->name('admin.testimonials.destroy');
 
+            // Home content sections (category products on the home page)
+            Route::get('/home-sections', [HomeSectionController::class, 'index'])->name('admin.home-sections.index');
+            Route::get('/home-sections/create', [HomeSectionController::class, 'create'])->name('admin.home-sections.create');
+            Route::post('/home-sections', [HomeSectionController::class, 'store'])->name('admin.home-sections.store');
+            Route::post('/home-sections/reorder', [HomeSectionController::class, 'reorder'])->name('admin.home-sections.reorder');
+            Route::get('/home-sections/{homeSection}/edit', [HomeSectionController::class, 'edit'])->name('admin.home-sections.edit');
+            Route::put('/home-sections/{homeSection}', [HomeSectionController::class, 'update'])->name('admin.home-sections.update');
+            Route::post('/home-sections/{homeSection}/toggle', [HomeSectionController::class, 'toggle'])->name('admin.home-sections.toggle');
+            Route::delete('/home-sections/{homeSection}', [HomeSectionController::class, 'destroy'])->name('admin.home-sections.destroy');
+
+            // Size Charts (a product uses at most one, or none)
+            Route::get('/size-charts', [SizeChartController::class, 'index'])->name('admin.size-charts.index');
+            Route::get('/size-charts/create', [SizeChartController::class, 'create'])->name('admin.size-charts.create');
+            Route::post('/size-charts', [SizeChartController::class, 'store'])->name('admin.size-charts.store');
+            Route::get('/size-charts/{sizeChart}/edit', [SizeChartController::class, 'edit'])->name('admin.size-charts.edit');
+            Route::put('/size-charts/{sizeChart}', [SizeChartController::class, 'update'])->name('admin.size-charts.update');
+            Route::post('/size-charts/{sizeChart}/toggle', [SizeChartController::class, 'toggle'])->name('admin.size-charts.toggle');
+            Route::delete('/size-charts/{sizeChart}', [SizeChartController::class, 'destroy'])->name('admin.size-charts.destroy');
+
             // Staff (super admin / moderator accounts)
             Route::get('/staff', [StaffController::class, 'index'])->name('admin.staff.index');
             Route::get('/staff/create', [StaffController::class, 'create'])->name('admin.staff.create');
@@ -170,6 +193,12 @@ Route::prefix('admin')->group(function () {
             Route::get('/sliders/{slider}/edit', [SliderController::class, 'edit'])->name('admin.sliders.edit');
             Route::put('/sliders/{slider}', [SliderController::class, 'update'])->name('admin.sliders.update');
             Route::delete('/sliders/{slider}', [SliderController::class, 'destroy'])->name('admin.sliders.destroy');
+
+            // Media Library
+            Route::get('/media', [MediaController::class, 'index'])->name('admin.media.index');
+            Route::get('/media/list', [MediaController::class, 'list'])->name('admin.media.list');
+            Route::post('/media', [MediaController::class, 'store'])->name('admin.media.store');
+            Route::delete('/media/{media}', [MediaController::class, 'destroy'])->name('admin.media.destroy');
 
             // Settings
             Route::get('/settings', [SettingController::class, 'edit'])->name('admin.settings.edit');

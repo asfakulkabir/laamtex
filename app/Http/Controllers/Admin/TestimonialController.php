@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Media;
 use App\Models\Testimonial;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -24,15 +25,22 @@ class TestimonialController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'image' => ['required', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
+            'image_media_id' => ['nullable', 'integer'],
         ]);
 
-        $upload = $request->file('image');
+        $resolved = $this->resolveImage($request);
+
+        if ($resolved === null) {
+            return back()->withInput()->withErrors([
+                'image' => 'Choose an image from the media library or upload one.',
+            ]);
+        }
 
         Testimonial::create(array_merge(
-            Testimonial::readImageMeta($upload),
+            $resolved['meta'],
             [
-                'image'      => $upload->store('testimonials', 'public'),
+                'image'      => $resolved['path'],
                 'sort_order' => (int) Testimonial::max('sort_order') + 1,
                 'is_active'  => true,
             ]
@@ -51,16 +59,17 @@ class TestimonialController extends Controller
     {
         $request->validate([
             'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
+            'image_media_id' => ['nullable', 'integer'],
         ]);
 
-        if ($request->hasFile('image')) {
-            $upload = $request->file('image');
+        $resolved = $this->resolveImage($request);
 
+        if ($resolved !== null) {
             $this->deleteImage($testimonial);
 
             $testimonial->update(array_merge(
-                Testimonial::readImageMeta($upload),
-                ['image' => $upload->store('testimonials', 'public')]
+                $resolved['meta'],
+                ['image' => $resolved['path']]
             ));
         }
 
@@ -101,8 +110,36 @@ class TestimonialController extends Controller
 
     private function deleteImage(Testimonial $testimonial): void
     {
-        if ($testimonial->image) {
+        if ($testimonial->image && ! Media::isLibraryPath($testimonial->image)) {
             Storage::disk('public')->delete($testimonial->image);
         }
+    }
+
+    /**
+     * Resolve a fresh upload or a library pick into a path and its metadata.
+     *
+     * @return array{meta: array{width:int|null,height:int|null,file_size:int|null}, path: string}|null
+     */
+    private function resolveImage(Request $request): ?array
+    {
+        if ($request->hasFile('image')) {
+            $upload = $request->file('image');
+
+            return [
+                'meta' => Testimonial::readImageMeta($upload),
+                'path' => $upload->store('testimonials', 'public'),
+            ];
+        }
+
+        $media = Media::find($request->input('image_media_id'));
+
+        if (! $media || ! $media->isImage() || ! Storage::disk($media->disk ?: 'public')->exists($media->path)) {
+            return null;
+        }
+
+        return [
+            'meta' => ['width' => $media->width, 'height' => $media->height, 'file_size' => $media->size],
+            'path' => $media->path,
+        ];
     }
 }

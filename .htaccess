@@ -4,6 +4,24 @@
 # files are served from the public/ and storage/app/public folders through it.
 # ----------------------------------------------------------------------------
 
+# ----------------------------------------------------------------------------
+# Upload limits for the slider video uploader (mod_php only).
+#
+# SliderController accepts a 50 MB video. The stock php.ini caps uploads at 2M
+# and the whole POST at 8M, so a large video dies before validation runs and the
+# admin sees an empty form instead of an error. 64M leaves headroom above the
+# app's own limit, which stays the one that reports the problem.
+#
+# .user.ini covers CGI/FPM hosts; this block covers mod_php.
+# ----------------------------------------------------------------------------
+<IfModule mod_php.c>
+    php_value upload_max_filesize 64M
+    php_value post_max_size 64M
+    php_value max_file_uploads 20
+    php_value max_execution_time 300
+    php_value max_input_time 300
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
@@ -14,7 +32,7 @@
     # ------------------------------------------------------------------------
     # Security: never let Apache serve dotfiles or the .env file directly.
     # ------------------------------------------------------------------------
-    <FilesMatch "^(\.env|\.env\.example|\.env\.backup|\.env\.production|\.gitignore|\.gitattributes|\.editorconfig|\.DS_Store)$">
+    <FilesMatch "^(\.env|\.env\.example|\.env\.backup|\.env\.production|\.gitignore|\.gitattributes|\.editorconfig|\.user\.ini|\.DS_Store)$">
         Require all denied
     </FilesMatch>
 

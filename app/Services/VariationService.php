@@ -6,6 +6,7 @@ use App\Models\Attribute;
 use App\Models\AttributeValue;
 use App\Models\Product;
 use App\Models\ProductAttribute;
+use App\Models\Media;
 use App\Models\ProductVariation;
 use App\Models\VariationAttributeValue;
 use Illuminate\Support\Collection;
@@ -397,9 +398,12 @@ class VariationService
 
         foreach ($selected as $item) {
             $attribute = $attributes->firstWhere('id', $item['product_attribute_id']);
-            $value = $item['attribute_value_id'] === null
-                ? null
-                : $attribute?->values->firstWhere('id', $item['attribute_value_id']);
+            $value = null;
+            if ($item['attribute_value_id'] !== null) {
+                $value = $attribute?->values->firstWhere('id', $item['attribute_value_id'])
+                    ?? $attribute?->attribute?->values->firstWhere('id', $item['attribute_value_id'])
+                    ?? AttributeValue::find($item['attribute_value_id']);
+            }
 
             $parts[] = $value?->name ?? 'Any';
         }
@@ -427,14 +431,11 @@ class VariationService
                 $variation = $product->variations()->where('id', $row['id'])->first();
             }
 
-            if ($variation === null) {
-                // A new row that resolves to a combination that already exists
-                // updates that variation instead of colliding with the unique
-                // index on (product_id, combo_key).
-                $variation = $product->variations()->where('combo_key', $comboKey)->first();
-            }
+            $existingWithCombo = $product->variations()->where('combo_key', $comboKey)->first();
 
-            if ($variation === null) {
+            if ($existingWithCombo !== null && ($variation === null || $variation->id !== $existingWithCombo->id)) {
+                $variation = $existingWithCombo;
+            } elseif ($variation === null) {
                 $variation = $product->variations()->create([
                     'combo_key' => $comboKey,
                     'menu_order' => $index,
@@ -507,15 +508,29 @@ class VariationService
         if ($uploadedImage) {
             $path = $uploadedImage->store('product_variations', 'public');
 
-            if ($variation->image && $variation->image !== $path) {
+            if ($variation->image && $variation->image !== $path && ! Media::isLibraryPath($variation->image)) {
                 Storage::disk('public')->delete($variation->image);
             }
 
             $variation->image = $path;
+        } elseif (! empty($row['image_media_id'])) {
+            // The image was picked from the media library rather than uploaded
+            // with this form, so reuse the file that is already stored.
+            $picked = Media::find($row['image_media_id']);
+
+            if ($picked && $picked->isImage() && Storage::disk($picked->disk ?: 'public')->exists($picked->path)) {
+                if ($variation->image && $variation->image !== $picked->path && ! Media::isLibraryPath($variation->image)) {
+                    Storage::disk('public')->delete($variation->image);
+                }
+
+                $variation->image = $picked->path;
+            }
         }
 
         if (($row['remove_image'] ?? false) && $variation->image) {
-            Storage::disk('public')->delete($variation->image);
+            if (! Media::isLibraryPath($variation->image)) {
+                Storage::disk('public')->delete($variation->image);
+            }
             $variation->image = null;
         }
 
@@ -557,11 +572,13 @@ class VariationService
         $selection = [];
 
         foreach ($attributes as $attribute) {
-            if (! array_key_exists($attribute->id, $raw)) {
+            $key = $this->selectionKey($attribute, $raw);
+
+            if ($key === null) {
                 continue;
             }
 
-            $valueId = (int) $raw[$attribute->id];
+            $valueId = (int) $raw[$key];
 
             // "— Any —" keeps the attribute in the combination but with no
             // value, which the storefront treats as a wildcard.
@@ -574,6 +591,14 @@ class VariationService
             }
 
             if (! $attribute->values->contains('id', $valueId)) {
+                if ($attribute->attribute && $attribute->attribute->values->contains('id', $valueId)) {
+                    $selection[] = [
+                        'product_attribute_id' => $attribute->id,
+                        'attribute_value_id' => $valueId,
+                    ];
+                    $attribute->values()->syncWithoutDetaching([$valueId]);
+                    continue;
+                }
                 continue;
             }
 
@@ -584,6 +609,30 @@ class VariationService
         }
 
         return $selection;
+    }
+
+    /**
+     * Which key a posted variation row used for this attribute.
+     *
+     * Rows normally key by product_attribute_id. The edit form also builds
+     * combinations for an attribute the admin has just ticked but not yet
+     * saved, and that one has no product_attribute_id to post, so it is keyed
+     * "p" plus its position in the submitted attributes array. Positions and
+     * ids overlap numerically, so the prefixed key is what keeps them apart.
+     */
+    private function selectionKey($attribute, array $raw): int|string|null
+    {
+        if (array_key_exists($attribute->id, $raw)) {
+            return $attribute->id;
+        }
+
+        if (array_key_exists((string) $attribute->id, $raw)) {
+            return (string) $attribute->id;
+        }
+
+        $positionKey = 'p' . (int) $attribute->position;
+
+        return array_key_exists($positionKey, $raw) ? $positionKey : null;
     }
 
     /**

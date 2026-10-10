@@ -47,6 +47,19 @@ class VariationUploadLimitsTest extends TestCase
         return $file;
     }
 
+    /** Convert a php.ini shorthand size (e.g. "64M") to bytes. */
+    private function toBytes(string $size): int
+    {
+        $value = (int) $size;
+
+        return match (strtolower(substr($size, -1))) {
+            'g' => $value * 1024 * 1024 * 1024,
+            'm' => $value * 1024 * 1024,
+            'k' => $value * 1024,
+            default => $value,
+        };
+    }
+
     public function test_a_webp_variation_image_and_price_save_on_add()
     {
         Storage::fake('public');
@@ -93,7 +106,7 @@ class VariationUploadLimitsTest extends TestCase
 
         $this->actingAs($this->admin())
             ->from(route('admin.products.create'))
-            ->withServerVariables(['CONTENT_LENGTH' => (string) (64 * 1024 * 1024)])
+            ->withServerVariables(['CONTENT_LENGTH' => (string) ($this->toBytes($perRequest) + 1)])
             ->post(route('admin.products.store'), [
                 'name' => 'Too Big',
                 'product_type' => 'variable',

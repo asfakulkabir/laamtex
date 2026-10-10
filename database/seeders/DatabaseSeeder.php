@@ -18,29 +18,36 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Seed Admin User
-        $admin = User::create([
-            'name' => 'Admin',
-            'email' => 'admin@outfitt.com',
-            'password' => Hash::make('adminpassword'),
-            'role' => User::ROLE_SUPER_ADMIN,
-        ]);
+        // 1. Seed Admin User. updateOrCreate so a re-run repairs the password
+        // on an imported database instead of crashing on the unique email.
+        $admin = User::updateOrCreate(
+            ['email' => 'admin@outfitt.com'],
+            [
+                'name' => 'Admin',
+                'password' => Hash::make('adminpassword'),
+                'role' => User::ROLE_SUPER_ADMIN,
+            ]
+        );
 
         // Seed a moderator who can only work with orders
-        User::create([
-            'name' => 'Moderator',
-            'email' => 'moderator@outfitt.com',
-            'password' => Hash::make('moderatorpassword'),
-            'role' => User::ROLE_MODERATOR,
-        ]);
+        User::updateOrCreate(
+            ['email' => 'moderator@outfitt.com'],
+            [
+                'name' => 'Moderator',
+                'password' => Hash::make('moderatorpassword'),
+                'role' => User::ROLE_MODERATOR,
+            ]
+        );
 
         // Seed a regular test user as well
-        User::create([
-            'name' => 'Customer',
-            'email' => 'customer@outfitt.com',
-            'password' => Hash::make('password'),
-            'role' => User::ROLE_CUSTOMER,
-        ]);
+        User::updateOrCreate(
+            ['email' => 'customer@outfitt.com'],
+            [
+                'name' => 'Customer',
+                'password' => Hash::make('password'),
+                'role' => User::ROLE_CUSTOMER,
+            ]
+        );
 
         // 2. Seed Delivery Charges
         DeliveryCharge::create([

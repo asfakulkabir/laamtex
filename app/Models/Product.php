@@ -29,6 +29,7 @@ class Product extends Model
         'status',
         'is_active',
         'is_featured',
+        'size_chart_id',
         'sort_order',
         'seo_title',
         'meta_description',
@@ -74,6 +75,15 @@ class Product extends Model
     public function variations()
     {
         return $this->hasMany(ProductVariation::class)->orderBy('menu_order')->orderBy('id');
+    }
+
+    /**
+     * At most one size chart per product. Null when the admin did not pick one,
+     * in which case the storefront hides the link entirely.
+     */
+    public function sizeChart()
+    {
+        return $this->belongsTo(SizeChart::class);
     }
 
     public function publishedVariations()
@@ -194,6 +204,21 @@ class Product extends Model
     protected static function booted()
     {
         static::saving(function ($product) {
+            // Renaming a product re-derives the slug, otherwise the URL keeps
+            // advertising the old title forever. Only when the name actually
+            // changed, so re-saving an untouched product cannot rewrite a slug
+            // that is already published.
+            if ($product->isDirty('name')) {
+                $fromName = Str::slug($product->name ?? '');
+
+                // A title made entirely of symbols slugifies to nothing, and an
+                // empty slug would produce a broken product URL. Keep the
+                // current one rather than storing that.
+                if ($fromName !== '') {
+                    $product->slug = $fromName;
+                }
+            }
+
             if (empty($product->slug)) {
                 $product->slug = Str::slug($product->name);
             } else {

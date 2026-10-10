@@ -661,6 +661,7 @@ class VariableProductTest extends TestCase
             'regular_price' => '10.00',
         ]);
         $this->assertSame('This option is not available.', $disabled->unavailabilityReason());
+        $this->assertSame('disabled', $disabled->unavailabilityCode());
 
         $outOfStock = new ProductVariation([
             'status' => ProductVariation::STATUS_PUBLISH,
@@ -670,6 +671,7 @@ class VariableProductTest extends TestCase
             'stock_status' => ProductVariation::STOCK_OUT_OF_STOCK,
         ]);
         $this->assertSame('This option is out of stock.', $outOfStock->unavailabilityReason());
+        $this->assertSame('out_of_stock', $outOfStock->unavailabilityCode());
 
         $fine = new ProductVariation([
             'status' => ProductVariation::STATUS_PUBLISH,
@@ -679,6 +681,7 @@ class VariableProductTest extends TestCase
             'stock_status' => ProductVariation::STOCK_IN_STOCK,
         ]);
         $this->assertNull($fine->unavailabilityReason());
+        $this->assertNull($fine->unavailabilityCode());
         $this->assertTrue($fine->isPurchasable());
     }
 
@@ -717,6 +720,47 @@ class VariableProductTest extends TestCase
         $this->assertTrue($json[0]['in_stock'], 'It really is in stock.');
         $this->assertNull($json[0]['price']);
         $this->assertSame('This option has no price yet.', $json[0]['unavailable_reason']);
+        $this->assertSame('no_price', $json[0]['unavailable_code']);
+    }
+
+    public function test_out_of_stock_variation_reports_a_code_so_the_page_can_translate_it()
+    {
+        [$size] = $this->attributes();
+
+        $product = $this->product();
+        $value = $size->values()->first();
+        $product->productAttributes()->create([
+            'attribute_id' => $size->id,
+            'position' => 1,
+            'is_visible' => true,
+            'is_variation' => true,
+        ]);
+
+        $variation = $product->variations()->create([
+            'combo_key' => "1:{$value->id}",
+            'regular_price' => '25.00',
+            'manage_stock' => true,
+            'stock_quantity' => 0,
+            'stock_status' => ProductVariation::STOCK_OUT_OF_STOCK,
+            'status' => ProductVariation::STATUS_PUBLISH,
+        ]);
+        $variation->attributeValues()->create([
+            'product_attribute_id' => $product->productAttributes()->first()->id,
+            'attribute_value_id' => $value->id,
+        ]);
+
+        $response = $this->get(route('product.detail', $product->slug));
+        $response->assertOk();
+
+        $json = json_decode($response->viewData('variationsJson'), true);
+        $this->assertFalse($json[0]['purchasable']);
+        $this->assertFalse($json[0]['in_stock']);
+        // An out of stock option keeps its price; only its availability changes.
+        $this->assertSame(25.0, (float) $json[0]['price']);
+        $this->assertSame('out_of_stock', $json[0]['unavailable_code']);
+        // The product page ships the Bengali wording for the picker.
+        $response->assertSee('এই অপশনটি স্টক শেষ', false);
+        $response->assertDontSee('Out of Stock"', false);
     }
 
     public function test_adding_a_priceless_variation_to_the_cart_says_why()

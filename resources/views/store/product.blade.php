@@ -15,7 +15,15 @@ fbq('track', 'ViewContent', {
 @endsection
 
 @section('content')
-<div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 md:py-6 pb-24 md:pb-6" x-data="productDetail({{ json_encode($variationsJson) }}, {{ json_encode($attributesJson) }})">
+@php
+    // A variable parent's own price is normally empty, and its cached min/max
+    // range goes null when nothing is purchasable yet. Fall back to the
+    // cheapest published option so the page never opens on "৳0".
+    $fallbackPrice = $product->isVariable()
+        ? ($product->min_price ?? $product->publishedVariations()->get()->map(fn ($v) => $v->active_price)->filter()->min())
+        : $product->getDisplayPrice();
+@endphp
+<div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 md:py-6" x-data="productDetail({{ json_encode($variationsJson) }}, {{ json_encode($attributesJson) }}, {{ json_encode((float) ($fallbackPrice ?? 0)) }})">
     
     <!-- Breadcrumbs (desktop only) -->
     <nav class="hidden md:flex text-xs font-bold text-gray-400 mb-3 space-x-2">
@@ -87,24 +95,35 @@ fbq('track', 'ViewContent', {
 
             <!-- Price + Stock -->
             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 pt-0.5">
-                @if($product->sale_price !== null)
-                    <span class="font-bold text-primary text-xl md:text-2xl" x-text="formattedPrice">৳{{ number_format($product->sale_price, 0) }}</span>
-                    <span class="text-sm text-gray-400 line-through">৳{{ number_format($product->regular_price, 0) }}</span>
-                    <span class="inline-flex shrink-0 rounded-md border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-bold text-green-700">Save ৳{{ number_format($product->regular_price - $product->sale_price, 0) }}</span>
+                @if($product->product_type === 'simple')
+                    @if($product->sale_price !== null)
+                        <span class="font-extrabold text-emerald-600 text-3xl md:text-4xl" x-text="formattedPrice">৳{{ number_format($product->sale_price, 0, '', '') }}</span>
+                        <span class="text-base text-gray-400 line-through">৳{{ number_format($product->regular_price, 0, '', '') }}</span>
+                        <span class="inline-flex shrink-0 rounded-md border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-bold text-green-700">Save ৳{{ number_format($product->regular_price - $product->sale_price, 0, '', '') }}</span>
+                    @elseif($product->regular_price)
+                        <span class="font-extrabold text-emerald-600 text-3xl md:text-4xl" x-text="formattedPrice">৳{{ number_format($product->regular_price, 0, '', '') }}</span>
+                    @else
+                        <span class="font-extrabold text-gray-400 text-3xl md:text-4xl" x-text="formattedPrice">N/A</span>
+                    @endif
                 @else
-                    <span class="font-bold text-primary text-xl md:text-2xl" x-text="formattedPrice">৳{{ number_format($product->regular_price, 0) }}</span>
+                    {{-- A variable product shows the cheapest published option until one is picked. --}}
+                    @if($fallbackPrice)
+                        <span class="font-extrabold text-emerald-600 text-3xl md:text-4xl" x-text="formattedPrice">৳{{ number_format((float) $fallbackPrice, 0, '', '') }}</span>
+                    @else
+                        <span class="font-extrabold text-gray-400 text-3xl md:text-4xl" x-text="formattedPrice">N/A</span>
+                    @endif
                 @endif
 
                 <!-- Stock -->
                 @if($product->product_type === 'simple')
                     @if($product->stock_quantity > 0)
-                        <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 bg-green-50 text-green-700 rounded-full border border-green-200">✅ In Stock</span>
+                        <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 bg-green-50 text-green-700 rounded-full border border-green-200">✅ স্টকে আছে</span>
                     @else
-                        <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 bg-red-50 text-red-700 rounded-full border border-red-200">❌ Out of Stock</span>
+                        <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 bg-red-50 text-red-700 rounded-full border border-red-200">❌ স্টক শেষ</span>
                     @endif
                 @else
                     <span class="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full border"
-                          :class="variationStock === null || variationStock > 0 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'"
+                          :class="stockBadgeClass"
                           x-text="stockStatusText">
                     </span>
                 @endif
@@ -152,54 +171,74 @@ fbq('track', 'ViewContent', {
                                 </div>
                             </div>
                         @empty
-                            <p class="text-sm text-gray-500">No options available for this product yet.</p>
+                            <p class="text-sm text-gray-500">এই পণ্যের জন্য এখনো কোনো অপশন নেই।</p>
                         @endforelse
                     </div>
                 @endif
 
                 <!-- Purchase Box -->
-                <div class="md:rounded-2xl md:border md:border-gray-200 md:bg-white md:p-4 md:shadow-[0_4px_20px_rgba(15,23,42,0.06)] md:space-y-3">
+                <div class="space-y-3 md:rounded-2xl md:border md:border-gray-200 md:bg-white md:p-4 md:shadow-[0_4px_20px_rgba(15,23,42,0.06)]">
 
-                    <!-- Quantity + Total -->
-                    <div class="flex items-end justify-between gap-3">
+                    @php
+                        $whatsappNumber = whatsapp_number();
+                        $whatsappDigits = whatsapp_number_digits();
+                        $contactPhone = contact_phone();
+                        $contactPhoneDigits = contact_phone_digits();
+                    @endphp
+
+                    @if($product->sizeChart)
                         <div>
-                            <label for="quantity" class="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5">Quantity</label>
-                            <div class="inline-flex flex-shrink-0 items-center overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-                                <button type="button" @click="if(qty > 1) qty--" aria-label="Decrease quantity"
-                                        class="flex h-11 w-11 items-center justify-center text-lg font-bold bg-white/70 text-gray-500 hover:bg-white hover:text-gray-900 transition-colors focus:outline-none">−</button>
-                                <input type="number" id="quantity" name="quantity" x-model="qty" readonly
-                                       class="h-11 w-12 border-x border-gray-200 bg-transparent p-0 text-center text-sm font-bold text-gray-900 focus:ring-0">
-                                <button type="button" @click="qty++" aria-label="Increase quantity"
-                                        class="flex h-11 w-11 items-center justify-center text-lg font-bold bg-white/70 text-gray-500 hover:bg-white hover:text-gray-900 transition-colors focus:outline-none">+</button>
+                            <button type="button" @click="sizeChartOpen = ! sizeChartOpen"
+                                    :aria-expanded="sizeChartOpen ? 'true' : 'false'"
+                                    class="flex items-center gap-1 text-xs font-bold text-gray-600 underline decoration-dotted underline-offset-2 transition hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900/20 rounded-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 shrink-0" aria-hidden="true"><path d="M9 6v12M6 9v6M15 6v12M12 9v6M18 9v6M3 9v6"/></svg>
+                                <span class="truncate">Size Chart</span>
+                            </button>
+
+                            <div x-show="sizeChartOpen" x-cloak x-transition class="mt-2">
+                                <img src="{{ $product->sizeChart->image_url }}" alt="{{ $product->sizeChart->title }}" loading="lazy"
+                                     @if($product->sizeChart->width) width="{{ $product->sizeChart->width }}" height="{{ $product->sizeChart->height }}" @endif
+                                     class="max-h-[60vh] w-full rounded-lg border border-gray-200 bg-white object-contain">
                             </div>
                         </div>
-                        <div class="text-right">
-                            <span class="block text-[11px] font-bold uppercase tracking-wider text-gray-400">Total</span>
-                            <span class="text-xl font-extrabold text-primary md:text-2xl" x-text="totalPrice">৳{{ number_format($product->getDisplayPrice(), 0) }}</span>
+                    @endif
+
+                    <!-- Quantity Stepper + Order Now -->
+                    <div class="flex items-center gap-3">
+                        <div class="inline-flex flex-shrink-0 items-center overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+                            <button type="button" @click="if(qty > 1) qty--" aria-label="Decrease quantity"
+                                    class="flex h-[56px] w-12 items-center justify-center bg-white/70 text-xl font-bold text-gray-500 transition-colors hover:bg-white hover:text-gray-900 focus:outline-none active:scale-95">−</button>
+                            <input type="number" id="quantity" name="quantity" x-model="qty" readonly aria-label="Quantity"
+                                   class="h-[56px] w-10 border-x border-gray-200 bg-transparent p-0 text-center text-base font-bold tabular-nums text-gray-900 focus:ring-0">
+                            <button type="button" @click="qty++" aria-label="Increase quantity"
+                                    class="flex h-[56px] w-12 items-center justify-center bg-white/70 text-xl font-bold text-gray-500 transition-colors hover:bg-white hover:text-gray-900 focus:outline-none active:scale-95">+</button>
                         </div>
+                        <button type="button" @click="buyNow()" :disabled="!canOrder"
+                                class="animate-order-pulse flex h-[56px] min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-lg font-extrabold tracking-wide text-white shadow-[0_10px_24px_rgba(225,29,72,0.35)] transition hover:-translate-y-0.5 hover:bg-rose-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 shrink-0"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg>
+                            <span class="truncate sm:hidden">অর্ডার করুন</span>
+                            <span class="hidden truncate sm:inline">এখনই অর্ডার করুন</span>
+                        </button>
                     </div>
 
-                <!-- Desktop Purchase Buttons (md+) -->
-                <div class="hidden md:grid grid-cols-[1fr_1.35fr] gap-3">
-                    <button type="button" @click="addCart()" :disabled="!canOrder"
-                            class="flex h-[54px] w-full items-center justify-center gap-2 rounded-xl border-0 bg-black px-5 text-base font-bold text-white shadow-[0_8px_18px_rgba(0,0,0,0.25)] transition hover:-translate-y-0.5 hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
-                        <span>Add to Cart</span>
-                    </button>
-                    <button type="button" @click="buyNow()" :disabled="!canOrder"
-                            class="animate-order-pulse flex h-[54px] w-full items-center justify-center gap-2 rounded-xl bg-rose-700 px-5 text-base font-extrabold tracking-wide text-white shadow-[0_10px_24px_rgba(225,29,72,0.35)] transition hover:-translate-y-0.5 hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg>
-                        <span>Order Now</span>
-                    </button>
-                </div>
+                    <!-- Add to Cart + Call -->
+                    <div class="flex items-center gap-3">
+                        <button type="button" @click="addCart()" :disabled="!canOrder"
+                                class="flex h-[52px] min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border-0 bg-black px-3 text-base font-extrabold text-white shadow-[0_8px_18px_rgba(0,0,0,0.25)] transition hover:-translate-y-0.5 hover:bg-gray-900 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 shrink-0"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                            <span class="truncate">কার্টে যোগ করুন</span>
+                        </button>
+                        @if($contactPhone)
+                            <a href="tel:+{{ $contactPhoneDigits }}"
+                               class="flex h-[52px] min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-sky-600 px-3 text-base font-extrabold text-white shadow-[0_8px_18px_rgba(2,132,199,0.3)] transition hover:-translate-y-0.5 hover:bg-sky-700 active:scale-[0.98]">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 shrink-0" aria-hidden="true"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a2 2 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></svg>
+                                <span class="truncate">কল করুন</span>
+                            </a>
+                        @endif
+                    </div>
 
-                <!-- Desktop Contact Buttons (md+) -->
-                @php
-                    $whatsappNumber = App\Models\Setting::getValue('whatsapp_number', '');
-                    $whatsappDigits = preg_replace('/[^0-9]/', '', $whatsappNumber);
-                @endphp
-                @if($whatsappNumber)
-                    <div class="flex flex-col gap-3">
+                    <!-- WhatsApp -->
+                    @if($whatsappNumber)
                         <a href="https://wa.me/{{ $whatsappDigits }}" target="_blank" rel="noopener noreferrer"
                            class="group flex items-center gap-4 bg-lime-50 border-2 border-lime-500/30 p-4 rounded-3xl hover:bg-lime-700 hover:text-white transition-all">
                             <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-md shrink-0">
@@ -212,19 +251,8 @@ fbq('track', 'ViewContent', {
                                 <p class="text-sm lg:text-base font-black uppercase leading-tight">WhatsApp এ মেসেজ করুন</p>
                                 <p class="text-lg lg:text-xl font-bold opacity-90 group-hover:text-white truncate">{{ $whatsappNumber }}</p>
                             </div>
-                        </a>
-                        <a href="tel:+{{ $whatsappDigits }}"
-                           class="group flex items-center gap-4 bg-sky-50 border-2 border-sky-500/30 p-4 rounded-3xl hover:bg-sky-700 hover:text-white transition-all">
-                            <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-md shrink-0">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 fill-sky-500 text-sky-500" aria-hidden="true"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></svg>
-                            </div>
-                            <div class="min-w-0">
-                                <p class="text-sm lg:text-base font-black uppercase leading-tight">কল করুন</p>
-                                <p class="text-lg lg:text-xl font-bold opacity-90 group-hover:text-white truncate">{{ $whatsappNumber }}</p>
-                            </div>
-                        </a>
-                    </div>
-                @endif
+</a>
+                    @endif
                 </div>
             </form>
 
@@ -274,33 +302,6 @@ fbq('track', 'ViewContent', {
             </div>
         </section>
     @endif
-
-    <!-- Mobile Sticky Purchase Bar -->
-    <div class="fixed inset-x-0 bottom-0 z-[1100] md:hidden border-t border-gray-200 bg-white px-3 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.12)]">
-        <div class="mx-auto flex max-w-lg items-center gap-2">
-            @if($whatsappNumber)
-                <a href="https://wa.me/{{ $whatsappDigits }}" target="_blank" rel="noopener noreferrer" aria-label="Order Via WhatsApp"
-                   class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-0 bg-[#25D366] text-white transition active:scale-95 hover:bg-[#1ebe5b]">
-<div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-md shrink-0">
-                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="w-8 h-8">
-                                    <path d="M12.02 3.25a8.73 8.73 0 0 0-7.45 13.28l.19.3-.98 3.59 3.68-.96.29.17a8.73 8.73 0 1 0 4.27-16.38Z" fill="#25D366"></path>
-                                    <path d="M17.06 14.31c-.28-.14-1.64-.81-1.89-.9-.25-.09-.44-.14-.62.14-.18.27-.71.9-.87 1.08-.16.18-.32.2-.6.07-.28-.14-1.16-.43-2.21-1.36-.82-.73-1.37-1.63-1.53-1.91-.16-.27-.02-.42.12-.56.13-.13.28-.32.42-.48.14-.16.18-.27.27-.46.09-.18.05-.34-.02-.48-.07-.14-.62-1.49-.85-2.04-.22-.53-.45-.46-.62-.47h-.53c-.18 0-.48.07-.73.34-.25.27-.96.94-.96 2.29 0 1.35.98 2.65 1.12 2.83.14.18 1.93 2.94 4.67 4.12.65.28 1.16.45 1.56.58.66.21 1.25.18 1.72.11.53-.08 1.64-.67 1.87-1.31.23-.64.23-1.2.16-1.31-.07-.12-.25-.19-.53-.33Z" fill="white"></path>
-                                </svg>
-                            </div>
-                </a>
-            @endif
-            <button type="button" @click="addCart()" :disabled="!canOrder"
-                    class="flex h-12 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border-0 bg-black px-2 text-xs font-bold text-white shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 shrink-0"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
-                <span class="truncate">Add Cart</span>
-            </button>
-            <button type="button" @click="buyNow()" :disabled="!canOrder"
-                    class="animate-order-pulse flex h-12 min-w-0 flex-[1.5] items-center justify-center gap-1.5 rounded-xl bg-rose-700 px-2 text-xs font-extrabold text-white shadow-[0_6px_16px_rgba(225,29,72,0.4)] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 shrink-0"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg>
-                <span class="truncate">Order Now</span>
-            </button>
-        </div>
-    </div>
 
     <!-- Lightbox -->
     <div x-show="lightboxOpen" x-cloak x-transition.opacity.duration.200ms
@@ -421,10 +422,11 @@ fbq('track', 'ViewContent', {
     }
 </style>
 <script>
-    function productDetail(variations, attributes) {
+    function productDetail(variations, attributes, basePrice) {
         return {
             variations: variations || [],
             attributes: attributes || [],
+            basePrice: Number(basePrice) || 0,
             defaultImage: '{{ $featuredImg ? Storage::url($featuredImg->image) : "/placeholder.png" }}',
             activeImage: '{{ $featuredImg ? Storage::url($featuredImg->image) : "/placeholder.png" }}',
             /** Selected value id per product attribute id. */
@@ -438,9 +440,26 @@ fbq('track', 'ViewContent', {
             productType: '{{ $product->product_type }}',
             simpleInStock: {{ $product->product_type === 'simple' ? ($product->manage_stock ? ($product->stock_quantity > 0 ? 'true' : 'false') : 'true') : 'true' }},
             
-            formattedPrice: '৳{{ number_format($product->getDisplayPrice(), 0) }}',
-            stockStatusText: 'Select an option',
-            buttonText: 'Select an option',
+            formattedPrice: '{{ $fallbackPrice ? '৳'.number_format((float) $fallbackPrice, 0, '', '') : 'N/A' }}',
+            stockStatusText: 'অপশন নির্বাচন করুন',
+            stockTone: 'neutral',
+            buttonText: 'অপশন নির্বাচন করুন',
+
+            /** Storefront copy for the variation picker. */
+            messages: {
+                selectOption: 'অপশন নির্বাচন করুন',
+                comboUnavailable: 'এই কম্বিনেশনটি নেই',
+                comboUnavailableShort: 'কম্বিনেশনটি নেই',
+                inStock: '✅ স্টকে আছে',
+                outOfStock: '❌ স্টক শেষ',
+                addToCart: '🛒 কার্টে যোগ করুন',
+                unavailable: '❌ এই অপশনটি নেই',
+                reasons: {
+                    disabled: 'এই অপশনটি নেই',
+                    out_of_stock: 'এই অপশনটি স্টক শেষ',
+                    no_price: 'এই অপশনের দাম এখনো নির্ধারণ করা হয়নি'
+                }
+            },
 
             imageUrls: {!! json_encode($imagesList->pluck('image')->map(fn($i) => Storage::url($i))->values()) !!},
             autoSlideInterval: null,
@@ -497,6 +516,9 @@ fbq('track', 'ViewContent', {
                 };
             },
 
+            // Toggles the size chart in place, above the Buy Now button.
+            sizeChartOpen: false,
+
             lightboxOpen: false,
             lightboxIndex: 0,
 
@@ -548,16 +570,17 @@ fbq('track', 'ViewContent', {
             },
 
             matchVariation() {
-                var basePrice = {{ $product->getDisplayPrice() ?: 0 }};
+                var basePrice = this.basePrice;
                 var required = this.variationAttributeIds;
 
                 this.selectedVariationId = '';
                 this.variationStock = 0;
                 this.variationOutOfStock = false;
                 this.variationPrice = basePrice;
-                this.formattedPrice = '৳' + Number(basePrice).toFixed(0);
-                this.stockStatusText = 'Select an option';
-                this.buttonText = 'Select an option';
+                this.formattedPrice = basePrice > 0 ? '৳' + basePrice.toFixed(0) : 'N/A';
+                this.stockStatusText = this.messages.selectOption;
+                this.stockTone = 'neutral';
+                this.buttonText = this.messages.selectOption;
 
                 // Nothing to match until every variation attribute is chosen.
                 var chosen = required.filter(id => this.selected[id]);
@@ -583,30 +606,23 @@ fbq('track', 'ViewContent', {
                     || this.variations.find(matches(true), this);
 
                 if (!match) {
-                    this.stockStatusText = 'This combination is unavailable';
+                    this.stockStatusText = this.messages.comboUnavailable;
+                    this.stockTone = 'unavailable';
                     this.formattedPrice = 'N/A';
-                    this.buttonText = 'Combination unavailable';
+                    this.buttonText = this.messages.comboUnavailableShort;
                     return;
                 }
 
-                // A published option can still be unbuyable, for instance when it
-                // has no price yet. Never show the parent's price for it and
-                // never let the shopper submit it.
-                if (match.purchasable === false) {
-                    this.stockStatusText = match.unavailable_reason || 'This option is unavailable';
-                    this.formattedPrice = 'N/A';
-                    this.buttonText = '❌ Unavailable';
-                    return;
-                }
+                var hasPrice = match.price !== null && match.price !== undefined;
 
-                this.selectedVariationId = match.id;
-                // null means stock is not tracked for this option, so the
-                // quantity display is left to the in-stock badge below.
-                this.variationStock = match.stock;
-
-                if (match.price !== null && match.price !== undefined) {
+                // An option that is out of stock still has a real price, so it
+                // is shown like any other. Only an option with no price at all
+                // falls back to N/A.
+                if (hasPrice) {
                     this.variationPrice = parseFloat(match.price);
                     this.formattedPrice = '৳' + this.variationPrice.toFixed(0);
+                } else {
+                    this.formattedPrice = 'N/A';
                 }
 
                 // A variation with its own image swaps the main image and holds
@@ -619,15 +635,67 @@ fbq('track', 'ViewContent', {
                     this.resetAutoSlide();
                 }
 
+                // An unbuyable option can never be submitted, so the variation id
+                // stays empty and the order buttons stay disabled.
+                if (match.purchasable === false) {
+                    this.variationStock = match.stock;
+                    this.variationOutOfStock = !match.in_stock;
+
+                    if (this.variationOutOfStock) {
+                        this.stockStatusText = this.messages.outOfStock;
+                        this.buttonText = this.messages.outOfStock;
+                        this.stockTone = 'outofstock';
+                    } else {
+                        this.stockStatusText = this.reasonText(match);
+                        this.buttonText = this.messages.unavailable;
+                        this.stockTone = 'unavailable';
+                    }
+                    return;
+                }
+
+                this.selectedVariationId = match.id;
+                // null means stock is not tracked for this option, so the
+                // quantity display is left to the in-stock badge below.
+                this.variationStock = match.stock;
+
                 if (match.in_stock) {
-                    this.stockStatusText = '✅ In Stock';
-                    this.buttonText = '🛒 Add to Cart';
+                    this.stockStatusText = this.messages.inStock;
+                    this.buttonText = this.messages.addToCart;
+                    this.stockTone = 'instock';
                 } else {
-                    this.stockStatusText = '❌ Out of Stock';
-                    this.buttonText = '❌ Out of Stock';
+                    this.stockStatusText = this.messages.outOfStock;
+                    this.buttonText = this.messages.outOfStock;
+                    this.stockTone = 'outofstock';
                 }
 
                 this.variationOutOfStock = !match.in_stock;
+            },
+
+            /**
+             * Why an option cannot be bought, in Bengali. The variation ships a
+             * stable `unavailable_code` so no English string matching is needed.
+             */
+            reasonText(match) {
+                var code = match.unavailable_code;
+
+                if (code && this.messages.reasons[code]) {
+                    return this.messages.reasons[code];
+                }
+
+                return this.messages.unavailable.replace('❌ ', '');
+            },
+
+            /** Badge colours follow the status tone rather than the wording, so a
+             *  translated label never gets the wrong colour. */
+            get stockBadgeClass() {
+                var tones = {
+                    instock: 'bg-green-50 text-green-700 border-green-200',
+                    outofstock: 'bg-red-50 text-red-700 border-red-200',
+                    unavailable: 'bg-amber-50 text-amber-700 border-amber-200',
+                    neutral: 'bg-gray-50 text-gray-600 border-gray-200'
+                };
+
+                return tones[this.stockTone] || tones.neutral;
             },
 
             get canOrder() {
@@ -639,13 +707,6 @@ fbq('track', 'ViewContent', {
                     return !this.variationOutOfStock;
                 }
                 return this.variationStock > 0;
-            },
-
-            get totalPrice() {
-                var unit = parseFloat(String(this.formattedPrice).replace(/[^0-9.]/g, ''));
-                if (isNaN(unit)) return this.formattedPrice;
-                var total = unit * (parseInt(this.qty, 10) || 1);
-                return '৳' + total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
             },
 
             addCart() {

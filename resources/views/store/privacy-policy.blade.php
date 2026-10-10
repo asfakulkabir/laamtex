@@ -5,7 +5,7 @@
 @php
     $ppEmail = App\Models\Setting::getValue('contact_email', 'laamtexoffice@gmail.com');
     $ppAddress = App\Models\Setting::getValue('office_address', 'House 12, Road 5, Dhanmondi, Dhaka 1205, Bangladesh');
-    $ppPhone = App\Models\Setting::getValue('whatsapp_number', '+8801769021221');
+    $ppPhone = contact_phone();
 @endphp
 
 @section('content')
@@ -94,7 +94,8 @@
                 <p>For any questions about this Privacy Policy, contact us at:</p>
                 <ul class="list-none space-y-1 mt-2">
                     <li><strong>Email:</strong> <a href="mailto:{{ $ppEmail }}" class="text-brand-600 hover:underline">{{ $ppEmail }}</a></li>
-                    <li><strong>Phone / WhatsApp:</strong> {{ $ppPhone }}</li>
+                    <li><strong>Phone:</strong> {{ $ppPhone }}</li>
+                    <li><strong>WhatsApp:</strong> {{ whatsapp_number() }}</li>
                     <li><strong>Address:</strong> {{ $ppAddress }}</li>
                 </ul>
             </section>
@@ -179,7 +180,8 @@
                 <p>এই গোপনীয়তা নীতি নিয়ে কোনো প্রশ্ন থাকলে আমাদের সাথে যোগাযোগ করুন:</p>
                 <ul class="list-none space-y-1 mt-2">
                     <li><strong>ইমেইল:</strong> <a href="mailto:{{ $ppEmail }}" class="text-brand-600 hover:underline">{{ $ppEmail }}</a></li>
-                    <li><strong>ফোন / হোয়াটসঅ্যাপ:</strong> {{ $ppPhone }}</li>
+                    <li><strong>ফোন:</strong> {{ $ppPhone }}</li>
+                    <li><strong>হোয়াটসঅ্যাপ:</strong> {{ whatsapp_number() }}</li>
                     <li><strong>ঠিকানা:</strong> {{ $ppAddress }}</li>
                 </ul>
             </section>

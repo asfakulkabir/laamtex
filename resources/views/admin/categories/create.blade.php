@@ -54,9 +54,13 @@
 
         <!-- Image Upload -->
         <div>
-            <label for="image" class="block text-sm font-bold uppercase tracking-wider text-slate-300 mb-2">Category Banner Image</label>
-            <input type="file" id="image" name="image" accept="image/*"
-                   class="w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-500/10 file:text-purple-400 hover:file:bg-purple-500/20">
+            <label class="block text-sm font-bold uppercase tracking-wider text-slate-300 mb-2">Category Banner Image</label>
+            @include('admin.partials.media-picker', [
+                'field' => 'image',
+                'kind' => 'image',
+                'label' => 'Category Banner',
+                'ratio' => '3/2',
+            ])
             <span class="text-sm text-slate-300 mt-1 block">PNG, JPG, JPEG or WEBP formats. Recommended size 600x400.</span>
             @error('image')
                 <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>

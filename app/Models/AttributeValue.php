@@ -67,7 +67,7 @@ class AttributeValue extends Model
         });
 
         static::deleting(function (self $value) {
-            if ($value->image) {
+            if ($value->image && ! Media::isLibraryPath($value->image)) {
                 Storage::disk('public')->delete($value->image);
             }
         });

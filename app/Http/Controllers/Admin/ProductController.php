@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Attribute;
 use App\Models\Category;
+use App\Models\Media;
 use App\Models\Product;
 use App\Models\ProductAttribute;
 use App\Models\ProductImage;
 use App\Models\ProductVariation;
+use App\Models\SizeChart;
 use App\Services\VariationService;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -145,6 +148,48 @@ class ProductController extends Controller
         }
 
         return $uploaded;
+    }
+
+    /**
+     * Gather a product gallery from whatever the form sent: fresh uploads,
+     * library picks, or both.
+     *
+     * The picker posts one object per row with a file and/or a media id, e.g.
+     * images[0][file] and images[0][media_id], keyed by the row index so it
+     * lines up with image_names/image_alts and the featured marks. The legacy
+     * flat images[] shape is still accepted so older forms keep working.
+     *
+     * @return array<int, string> Row index => stored path.
+     */
+    private function galleryRows(Request $request, string $filesKey, string $directory): array
+    {
+        $rows = [];
+
+        foreach ((array) $request->file($filesKey) as $index => $fileSet) {
+            $file = is_array($fileSet) ? ($fileSet['file'] ?? null) : $fileSet;
+
+            if ($file instanceof UploadedFile) {
+                $rows[(int) $index] = Media::storeUpload($file, $directory)->path;
+            }
+        }
+
+        foreach ((array) $request->input($filesKey) as $index => $row) {
+            $mediaId = is_array($row) ? ($row['media_id'] ?? null) : null;
+
+            if (! $mediaId) {
+                continue;
+            }
+
+            $picked = Media::find($mediaId);
+
+            if ($picked && $picked->isImage() && Storage::disk($picked->disk ?: 'public')->exists($picked->path)) {
+                $rows[(int) $index] = $picked->path;
+            }
+        }
+
+        ksort($rows, SORT_NUMERIC);
+
+        return $rows;
     }
 
     /**
@@ -340,7 +385,8 @@ class ProductController extends Controller
     {
         $categories = Category::orderBy('name')->get();
         $attributes = Attribute::with('values')->get();
-        return view('admin.products.create', compact('categories', 'attributes'));
+        $sizeCharts = SizeChart::orderBy('title')->get();
+        return view('admin.products.create', compact('categories', 'attributes', 'sizeCharts'));
     }
 
     public function store(Request $request)
@@ -357,6 +403,7 @@ class ProductController extends Controller
             'stock_status' => 'nullable|in:instock,outofstock,onbackorder',
             'categories' => 'nullable|array',
             'categories.*' => 'exists:categories,id',
+            'size_chart_id' => 'nullable|exists:size_charts,id',
             'short_description' => 'nullable|string',
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
@@ -385,10 +432,13 @@ class ProductController extends Controller
             'variations.*.stock_quantity' => 'nullable|integer|min:0',
             'variations.*.sku' => 'nullable|string|max:255',
             'variations.*.image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'variations.*.image_media_id' => 'nullable|integer',
 
             // Images validation
             'images' => 'nullable|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'images.*' => 'nullable',
+            'images.*.file' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'images.*.media_id' => 'nullable|integer',
             'image_names' => 'nullable|array',
             'image_alts' => 'nullable|array',
             'image_featured_index' => 'nullable|integer',
@@ -409,6 +459,9 @@ class ProductController extends Controller
         $productData['regular_price'] = $request->input('regular_price');
         $productData['sale_price'] = $request->input('sale_price');
         $productData['cost_price'] = $this->parseCostPrice($request);
+
+        // An empty select posts "", which means the admin picked "None".
+        $productData['size_chart_id'] = $request->input('size_chart_id') ?: null;
 
         if ($request->input('product_type') === 'simple') {
             $productData['stock_quantity'] = $request->input('stock_quantity', 10);
@@ -464,13 +517,13 @@ class ProductController extends Controller
         }
 
         // Upload Images
-        if ($request->hasFile('images')) {
+        $galleryRows = $this->galleryRows($request, 'images', 'product_images');
+
+        if ($galleryRows !== []) {
             $featuredIndex = $request->input('image_featured_index', 0);
             $secondaryIndex = $request->input('image_secondary_index');
-            $uploadedFiles = $request->file('images');
 
-            foreach ($uploadedFiles as $index => $file) {
-                $path = $file->store('product_images', 'public');
+            foreach ($galleryRows as $index => $path) {
                 $name = $request->input("image_names.{$index}") ?: ('image_' . Str::random(5));
                 $alt = $request->input("image_alts.{$index}") ?: $product->name;
                 $isFeatured = ($index == $featuredIndex);
@@ -499,8 +552,9 @@ class ProductController extends Controller
     {
         $categories = Category::orderBy('name')->get();
         $attributes = Attribute::with('values')->get();
-        $product->load(['categories', 'images', 'variations.attributeValues', 'productAttributes.values']);
-        return view('admin.products.edit', compact('product', 'categories', 'attributes'));
+        $sizeCharts = SizeChart::orderBy('title')->get();
+        $product->load(['categories', 'images', 'variations.attributeValues', 'productAttributes.values', 'sizeChart']);
+        return view('admin.products.edit', compact('product', 'categories', 'attributes', 'sizeCharts'));
     }
 
     public function update(Request $request, Product $product)
@@ -517,6 +571,7 @@ class ProductController extends Controller
             'stock_status' => 'nullable|in:instock,outofstock,onbackorder',
             'categories' => 'nullable|array',
             'categories.*' => 'exists:categories,id',
+            'size_chart_id' => 'nullable|exists:size_charts,id',
             'short_description' => 'nullable|string',
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
@@ -546,6 +601,7 @@ class ProductController extends Controller
             'variations.*.stock_quantity' => 'nullable|integer|min:0',
             'variations.*.sku' => 'nullable|string|max:255',
             'variations.*.image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'variations.*.image_media_id' => 'nullable|integer',
 
             // Existing images details updates
             'existing_images' => 'nullable|array',
@@ -560,7 +616,9 @@ class ProductController extends Controller
 
             // New Images upload
             'new_images' => 'nullable|array',
-            'new_images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'new_images.*' => 'nullable',
+            'new_images.*.file' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'new_images.*.media_id' => 'nullable|integer',
             'new_images_names' => 'nullable|array',
             'new_images_alts' => 'nullable|array',
             'new_image_featured_temp' => 'nullable|string', // "new_0", "existing_23"
@@ -583,18 +641,8 @@ class ProductController extends Controller
         $productData['sale_price'] = $request->input('sale_price');
         $productData['cost_price'] = $this->parseCostPrice($request);
 
-        // Two rows for one combination cannot both be stored, so saving would
-        // silently keep the last one and discard the other. Report it instead.
-        if ($request->input('product_type') === 'variable' && is_array($request->input('variations'))) {
-            $duplicates = $this->variationService
-                ->duplicateCombinationLabels($product, $request->input('variations', []));
-
-            if ($duplicates !== []) {
-                return back()
-                    ->withInput()
-                    ->withErrors(['variations' => 'Duplicate option combinations: ' . implode(', ', $duplicates) . '. Each combination can only be used once.']);
-            }
-        }
+        // An empty select posts "", which means the admin picked "None".
+        $productData['size_chart_id'] = $request->input('size_chart_id') ?: null;
 
         if ($request->input('product_type') === 'simple') {
             $productData['stock_quantity'] = $request->input('stock_quantity', 10);
@@ -618,17 +666,27 @@ class ProductController extends Controller
         if ($product->product_type === 'variable') {
             if ($request->has('attributes')) {
                 $this->variationService->syncAttributes($product, $request->input('attributes', []));
+            }
 
-                // Adding terms auto-generates the matching variation rows, the
-                // same way WooCommerce does it. Already existing combinations
-                // are left untouched by the idempotent generator.
-                $this->variationService->generateVariations($product);
+            // Two rows for one combination cannot both be stored, so saving would
+            // silently keep the last one and discard the other. Report it instead.
+            if (is_array($request->input('variations'))) {
+                $duplicates = $this->variationService
+                    ->duplicateCombinationLabels($product, $request->input('variations', []));
+
+                if ($duplicates !== []) {
+                    return back()
+                        ->withInput()
+                        ->withErrors(['variations' => 'Duplicate option combinations: ' . implode(', ', $duplicates) . '. Each combination can only be used once.']);
+                }
             }
 
             if ($this->submittedVariationsAreAttributeBased($request)) {
                 $this->variationService->saveVariations($product, $request->input('variations', []), $this->uploadedVariationImages($request));
             } elseif ($request->has('variations')) {
                 $this->updateLegacyVariations($product, $request);
+            } else {
+                $this->variationService->generateVariations($product);
             }
 
             $this->variationService->refreshPriceRange($product);
@@ -685,30 +743,22 @@ class ProductController extends Controller
         }
 
         // Upload New Images
-        if ($request->hasFile('new_images')) {
-            $newImages = $request->file('new_images');
-            foreach ($newImages as $index => $file) {
-                $path = $file->store('product_images', 'public');
-                $name = $request->input("new_images_names.{$index}") ?: ('image_' . Str::random(5));
-                $alt = $request->input("new_images_alts.{$index}") ?: $product->name;
+        foreach ($this->galleryRows($request, 'new_images', 'product_images') as $index => $path) {
+            $name = $request->input("new_images_names.{$index}") ?: ('image_' . Str::random(5));
+            $alt = $request->input("new_images_alts.{$index}") ?: $product->name;
 
-                $isFeatured = false;
-                if ($newFeaturedSelect === "new_" . $index) {
-                    $isFeatured = true;
-                }
+            $isFeatured = $newFeaturedSelect === "new_" . $index;
+            $isSecondary = $newSecondarySelect === "new_" . $index;
 
-                $isSecondary = $newSecondarySelect === "new_" . $index;
-
-                ProductImage::create([
-                    'product_id' => $product->id,
-                    'image' => $path,
-                    'name' => $name,
-                    'alt_text' => $alt,
-                    'is_featured' => $isFeatured,
-                    'is_secondary' => $isSecondary,
-                    'order' => 100 + $index, // Put new ones at the end
-                ]);
-            }
+            ProductImage::create([
+                'product_id' => $product->id,
+                'image' => $path,
+                'name' => $name,
+                'alt_text' => $alt,
+                'is_featured' => $isFeatured,
+                'is_secondary' => $isSecondary,
+                'order' => 100 + $index, // Put new ones at the end
+            ]);
         }
 
         $this->reconcileGalleryMarks($product);

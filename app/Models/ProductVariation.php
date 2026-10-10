@@ -166,16 +166,30 @@ class ProductVariation extends Model
      */
     public function unavailabilityReason(): ?string
     {
+        return match ($this->unavailabilityCode()) {
+            'disabled' => 'This option is not available.',
+            'out_of_stock' => 'This option is out of stock.',
+            'no_price' => 'This option has no price yet.',
+            default => null,
+        };
+    }
+
+    /**
+     * The same problem as `unavailabilityReason()` as a stable key, so a
+     * localized storefront can translate it instead of matching on English.
+     */
+    public function unavailabilityCode(): ?string
+    {
         if (! $this->isEnabled()) {
-            return 'This option is not available.';
+            return 'disabled';
         }
 
         if (! $this->isInStock()) {
-            return 'This option is out of stock.';
+            return 'out_of_stock';
         }
 
         if ($this->active_price === null) {
-            return 'This option has no price yet.';
+            return 'no_price';
         }
 
         return null;
@@ -183,7 +197,7 @@ class ProductVariation extends Model
 
     public function isPurchasable(): bool
     {
-        return $this->unavailabilityReason() === null;
+        return $this->unavailabilityCode() === null;
     }
 
     /**
@@ -273,7 +287,7 @@ class ProductVariation extends Model
     protected static function booted()
     {
         static::deleting(function (self $variation) {
-            if ($variation->image) {
+            if ($variation->image && ! Media::isLibraryPath($variation->image)) {
                 Storage::disk('public')->delete($variation->image);
             }
         });

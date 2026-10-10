@@ -10,6 +10,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductAttribute;
 use App\Models\ProductVariation;
+use App\Models\HomeSection;
 use App\Models\Slider;
 use App\Models\Testimonial;
 use App\Jobs\SendOrderNotification;
@@ -34,7 +35,19 @@ class StoreController extends Controller
 
         $testimonials = Testimonial::active()->get();
 
-        return view('store.index', compact('featuredCategories', 'featuredProducts', 'latestProducts', 'sliders', 'testimonials'));
+        // Admin-built category blocks. A section whose category holds no
+        // active products is dropped rather than rendered as an empty band.
+        // Sections are few, so the recursive category walk lazy-loads cheaply.
+        $homeSections = HomeSection::active()->with('category')->get()
+            ->map(function (HomeSection $section) {
+                $section->setRelation('displayProducts', $section->products());
+
+                return $section;
+            })
+            ->filter(fn (HomeSection $section) => $section->displayProducts->isNotEmpty())
+            ->values();
+
+        return view('store.index', compact('featuredCategories', 'featuredProducts', 'latestProducts', 'sliders', 'testimonials', 'homeSections'));
     }
 
     public function categories()
@@ -145,6 +158,7 @@ class StoreController extends Controller
             'categories',
             'variations.attributeValues',
             'productAttributes.values',
+            'sizeChart',
         ])->where('slug', $slug)->where('is_active', true)->firstOrFail();
         
         // Find related products
@@ -185,6 +199,7 @@ class StoreController extends Controller
                     'in_stock' => $variation->isInStock(),
                     'purchasable' => $variation->isPurchasable(),
                     'unavailable_reason' => $variation->unavailabilityReason(),
+                    'unavailable_code' => $variation->unavailabilityCode(),
                     'sku' => $variation->sku,
                     'image' => $variation->image ? Storage::url($variation->image) : null,
                 ];

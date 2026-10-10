@@ -62,8 +62,8 @@ class EditVariationPrefillTest extends TestCase
 
         // The value binding on <select> runs before x-for renders <option>,
         // so each option has to mark itself selected instead.
-        $this->assertStringContainsString(':selected="String(o.id) === String(v.values[pa.product_attribute_id] ?? \'\')"', $html);
-        $this->assertStringNotContainsString(':value="v.values[pa.product_attribute_id]', $html);
+        $this->assertStringContainsString(':selected="String(o.id) === String(v.values[pa.key] ?? \'\')"', $html);
+        $this->assertStringNotContainsString(':value="v.values[pa.key]', $html);
     }
 
     public function test_saving_the_edit_form_keeps_every_variation()
@@ -112,6 +112,51 @@ class EditVariationPrefillTest extends TestCase
             ['S / Red', 'S / Blue', 'M / Red', 'M / Blue'],
             $labels,
             'no combination may be dropped on re-save'
+        );
+    }
+
+    public function test_edit_page_recovers_empty_pivot_attribute_values_and_populates_options()
+    {
+        [$admin, $product, $service, $size, $color] = $this->makeProduct();
+
+        // Simulate corrupted/empty product_attribute_values pivot
+        \Illuminate\Support\Facades\DB::table('product_attribute_values')->delete();
+
+        $response = $this->actingAs($admin)->get(route('admin.products.edit', $product));
+        $html = $response->getContent();
+
+        // Variation options must have values from global attribute
+        preg_match('/variationOptions: (\[.*?\]),\s+attributes:/s', $html, $m);
+        $options = json_decode($m[1], true);
+        $this->assertNotEmpty($options[0]['values']);
+        $this->assertNotEmpty($options[1]['values']);
+
+        // Checkbox attribute rows should have recovered the used values
+        preg_match('/attributes: (\[.*?\]),\s+variations:/s', $html, $mAttr);
+        $attrs = json_decode($mAttr[1], true);
+        $this->assertNotEmpty($attrs[0]['value_ids']);
+        $this->assertNotEmpty($attrs[1]['value_ids']);
+    }
+
+    public function test_bulk_action_uses_correct_field_name_and_updates_variations()
+    {
+        [$admin, $product] = $this->makeProduct();
+
+        $html = $this->actingAs($admin)->get(route('admin.products.edit', $product))->getContent();
+        // Ensure form input is variation_ids[]
+        $this->assertStringContainsString(':name="`variation_ids[]`"', $html);
+
+        $variationIds = $product->variations()->pluck('id')->all();
+
+        $this->actingAs($admin)->post(route('admin.products.variations.bulk', $product), [
+            'action' => 'set_regular_price',
+            'params' => ['value' => '99.00'],
+            'variation_ids' => $variationIds,
+        ])->assertRedirect()->assertSessionHas('success');
+
+        $this->assertEqualsCanonicalizing(
+            ['99.00'],
+            $product->variations()->distinct()->pluck('regular_price')->all()
         );
     }
 }

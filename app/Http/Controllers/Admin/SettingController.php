@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Media;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -20,6 +21,7 @@ class SettingController extends Controller
         $metaPixelId = Setting::getValue('meta_pixel_id', '');
         $metaConversionApiToken = Setting::getValue('meta_conversion_api_token', '');
         $metaTestEventCode = Setting::getValue('meta_test_event_code', '');
+        $contactPhone = Setting::getValue('contact_phone', '');
         $whatsappNumber = Setting::getValue('whatsapp_number', '');
         $bkashNumber = Setting::getValue('bkash_number', '');
         $facebookUrl = Setting::getValue('facebook_url', '');
@@ -38,6 +40,7 @@ class SettingController extends Controller
             'metaPixelId',
             'metaConversionApiToken',
             'metaTestEventCode',
+            'contactPhone',
             'whatsappNumber',
             'bkashNumber',
             'facebookUrl',
@@ -55,12 +58,14 @@ class SettingController extends Controller
             'site_name' => 'nullable|string|max:255',
             'site_description' => 'nullable|string|max:1000',
             'site_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'site_logo_media_id' => 'nullable|integer',
             'primary_color' => ['nullable', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
             'accent_color' => ['nullable', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
             'order_notification_emails' => 'nullable|string|max:1000',
             'meta_pixel_id' => 'nullable|string|max:100',
             'meta_conversion_api_token' => 'nullable|string|max:255',
             'meta_test_event_code' => 'nullable|string|max:100',
+            'contact_phone' => 'nullable|string|max:30',
             'whatsapp_number' => 'nullable|string|max:30',
             'bkash_number' => 'nullable|string|max:30',
             'facebook_url' => 'nullable|url|max:500',
@@ -76,19 +81,33 @@ class SettingController extends Controller
         Setting::setValue('primary_color', $request->input('primary_color', '#7c3aed'));
         Setting::setValue('accent_color', $request->input('accent_color', primary_color()));
 
+        $logo = null;
+
         if ($request->hasFile('site_logo')) {
+            $logo = $request->file('site_logo')->store('settings', 'public');
+        } else {
+            $media = Media::find($request->input('site_logo_media_id'));
+
+            if ($media && $media->isImage() && Storage::disk($media->disk ?: 'public')->exists($media->path)) {
+                $logo = $media->path;
+            }
+        }
+
+        if ($logo !== null) {
             $oldLogo = Setting::getValue('site_logo', '');
-            if ($oldLogo) {
+
+            if ($oldLogo && $oldLogo !== $logo && ! Media::isLibraryPath($oldLogo)) {
                 Storage::disk('public')->delete($oldLogo);
             }
-            $siteLogo = $request->file('site_logo')->store('settings', 'public');
-            Setting::setValue('site_logo', $siteLogo);
+
+            Setting::setValue('site_logo', $logo);
         }
 
         Setting::setValue('order_notification_emails', $request->input('order_notification_emails', ''));
         Setting::setValue('meta_pixel_id', $request->input('meta_pixel_id', ''));
         Setting::setValue('meta_conversion_api_token', $request->input('meta_conversion_api_token', ''));
         Setting::setValue('meta_test_event_code', $request->input('meta_test_event_code', ''));
+        Setting::setValue('contact_phone', $request->input('contact_phone', ''));
         Setting::setValue('whatsapp_number', $request->input('whatsapp_number', ''));
         Setting::setValue('bkash_number', $request->input('bkash_number', ''));
         Setting::setValue('facebook_url', $request->input('facebook_url', ''));

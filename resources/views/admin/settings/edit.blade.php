@@ -92,29 +92,44 @@
             </div>
         </div>
 
-        <!-- WhatsApp Settings -->
+        <!-- Contact & WhatsApp Settings -->
         <div class="bg-gradient-to-br from-slate-900 to-emerald-950 border border-emerald-800/40 p-8 rounded-2xl shadow-lg">
             <div class="flex items-center gap-3 mb-6 pb-4 border-b border-emerald-800/30">
                 <span class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                 </span>
                 <div>
-                    <h3 class="font-bold text-white text-xl">WhatsApp Settings</h3>
-                    <p class="text-base text-emerald-300/70">Configure WhatsApp number for the contact button on product pages.</p>
+                    <h3 class="font-bold text-white text-xl">Contact & WhatsApp Settings</h3>
+                    <p class="text-base text-emerald-300/70">The contact number and the WhatsApp number are separate. Each one is used where it belongs.</p>
                 </div>
             </div>
-            <div>
-                <label for="whatsapp_number" class="block text-base font-bold uppercase tracking-wider text-emerald-300 mb-2">
-                    WhatsApp Number
-                </label>
-                <input type="text" id="whatsapp_number" name="whatsapp_number"
-                       value="{{ old('whatsapp_number', $whatsappNumber) }}"
-                       class="w-full bg-slate-800/60 border border-emerald-700/40 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600"
-                       placeholder="+8801XXXXXXXXX">
-                <p class="text-base text-emerald-300/50 mt-1">This number will appear on the WhatsApp contact button in product pages.</p>
-                @error('whatsapp_number')
-                    <span class="text-base text-red-500 mt-1 block">{{ $message }}</span>
-                @enderror
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="contact_phone" class="block text-base font-bold uppercase tracking-wider text-emerald-300 mb-2">
+                        Contact Phone Number
+                    </label>
+                    <input type="text" id="contact_phone" name="contact_phone"
+                           value="{{ old('contact_phone', $contactPhone) }}"
+                           class="w-full bg-slate-800/60 border border-emerald-700/40 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600"
+                           placeholder="+8801XXXXXXXXX">
+                    <p class="text-base text-emerald-300/50 mt-1">Shown as the click-to-call number in the footer Contact section.</p>
+                    @error('contact_phone')
+                        <span class="text-base text-red-500 mt-1 block">{{ $message }}</span>
+                    @enderror
+                </div>
+                <div>
+                    <label for="whatsapp_number" class="block text-base font-bold uppercase tracking-wider text-emerald-300 mb-2">
+                        WhatsApp Number
+                    </label>
+                    <input type="text" id="whatsapp_number" name="whatsapp_number"
+                           value="{{ old('whatsapp_number', $whatsappNumber) }}"
+                           class="w-full bg-slate-800/60 border border-emerald-700/40 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600"
+                           placeholder="+8801XXXXXXXXX">
+                    <p class="text-base text-emerald-300/50 mt-1">Used for the WhatsApp chat buttons in the navbar, product pages and footer.</p>
+                    @error('whatsapp_number')
+                        <span class="text-base text-red-500 mt-1 block">{{ $message }}</span>
+                    @enderror
+                </div>
             </div>
         </div>
 
@@ -265,7 +280,7 @@
                     @enderror
                 </div>
                 <div>
-                    <label for="site_logo" class="block text-base font-bold uppercase tracking-wider text-fuchsia-300 mb-2">
+                    <label class="block text-base font-bold uppercase tracking-wider text-fuchsia-300 mb-2">
                         Site Logo
                     </label>
                     <div class="flex items-start gap-4">
@@ -274,9 +289,13 @@
                              alt="Site Logo Preview"
                              class="w-24 h-16 object-contain rounded-lg bg-white border border-fuchsia-700/40 p-1">
                         <div class="flex-1">
-                            <input type="file" id="site_logo" name="site_logo" accept="image/*"
-                                   onchange="document.getElementById('logo-preview').src = URL.createObjectURL(this.files[0])"
-                                   class="w-full bg-slate-800/60 border border-fuchsia-700/40 rounded-lg px-4 py-3 text-base text-slate-200 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-fuchsia-500/20 file:text-fuchsia-300 file:font-bold file:cursor-pointer hover:file:bg-fuchsia-500/30">
+                            @include('admin.partials.media-picker', [
+                                'field' => 'site_logo',
+                                'kind' => 'image',
+                                'label' => 'Site Logo',
+                                'value' => $siteLogo,
+                                'ratio' => '3/2',
+                            ])
                             <p class="text-base text-fuchsia-300/50 mt-1">Recommended: transparent PNG or WebP, max 2MB.</p>
                         </div>
                     </div>

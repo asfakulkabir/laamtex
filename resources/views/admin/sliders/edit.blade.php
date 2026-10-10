@@ -4,14 +4,16 @@
 @section('page_title', 'Edit Slider')
 
 @section('content')
-<div class="max-w-xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800/50 p-8 rounded-2xl shadow-lg">
-    
+<div class="max-w-xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800/50 p-8 rounded-2xl shadow-lg"
+     x-data="sliderUpload({{ json_encode(\App\Http\Controllers\Admin\SliderController::uploadLimits()) }})">
+
     <div class="mb-6">
         <h3 class="font-bold text-white text-lg">Edit Slider Item</h3>
         <p class="text-sm text-slate-300 mt-1">Update image, video, audio or details.</p>
     </div>
 
-    <form action="{{ route('admin.sliders.update', $slider->id) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+    <form action="{{ route('admin.sliders.update', $slider->id) }}" method="POST" enctype="multipart/form-data" class="space-y-6"
+          @submit.prevent="submitForm($event)">
         @csrf
         @method('PUT')
 
@@ -54,8 +56,17 @@
 
         <div id="image_field">
             <label for="image" class="block text-sm font-bold uppercase tracking-wider text-slate-300 mb-2">{{ ($slider->isVideo() || $slider->isAudio()) ? 'Poster / Cover Image (optional)' : 'Replace Image (optional)' }}</label>
-            <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/webp"
-                   class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-slate-800/50 transition-all text-slate-200 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-purple-500/20 file:text-purple-400 hover:file:bg-purple-500/30">
+
+            @include('admin.partials.media-picker', [
+                'field' => 'image',
+                'kind' => 'image',
+                'label' => 'Image',
+                'value' => $slider->image,
+                'accept' => \App\Http\Controllers\Admin\SliderController::IMAGE_ACCEPT,
+                'ratio' => '16/9',
+            ])
+
+            <span class="text-xs text-slate-500 mt-1 block">Max {{ round(\App\Http\Controllers\Admin\SliderController::MAX_IMAGE_KB / 1024, 1) }} MB. Leave empty to keep the current one.</span>
             @error('image')
                 <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
             @enderror
@@ -63,9 +74,17 @@
 
         <div id="audio_field" class="{{ $slider->isAudio() ? '' : 'hidden' }}">
             <label for="audio" class="block text-sm font-bold uppercase tracking-wider text-slate-300 mb-2">Upload Audio</label>
-            <input type="file" id="audio" name="audio" accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/aac,audio/x-m4a,audio/flac"
-                   class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-slate-800/50 transition-all text-slate-200 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-purple-500/20 file:text-purple-400 hover:file:bg-purple-500/30">
-            <span class="text-xs text-slate-500 mt-1 block">MP3, WAV, OGG, M4A, AAC or FLAC. Max 20 MB. Leave empty to keep the current track.</span>
+
+            @include('admin.partials.media-picker', [
+                'field' => 'audio',
+                'kind' => 'audio',
+                'label' => 'Audio',
+                'value' => null,
+                'accept' => \App\Http\Controllers\Admin\SliderController::AUDIO_ACCEPT,
+                'ratio' => '16/9',
+            ])
+
+            <span class="text-xs text-slate-500 mt-1 block">MP3, WAV, OGG, M4A, AAC or FLAC. Max {{ round(\App\Http\Controllers\Admin\SliderController::MAX_AUDIO_KB / 1024) }} MB. Leave empty to keep the current track.</span>
             @error('audio')
                 <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
             @enderror
@@ -73,9 +92,17 @@
 
         <div id="video_upload_field" class="{{ $slider->isUploadedVideo() ? '' : 'hidden' }}">
             <label for="video" class="block text-sm font-bold uppercase tracking-wider text-slate-300 mb-2">Upload Video</label>
-            <input type="file" id="video" name="video" accept="video/mp4,video/webm,video/quicktime,video/ogg,video/x-m4v"
-                   class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-slate-800/50 transition-all text-slate-200 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-purple-500/20 file:text-purple-400 hover:file:bg-purple-500/30">
-            <span class="text-xs text-slate-500 mt-1 block">MP4, WebM, MOV or OGV. Max 50 MB. Leave empty to keep the current video.</span>
+
+            @include('admin.partials.media-picker', [
+                'field' => 'video',
+                'kind' => 'video',
+                'label' => 'Video',
+                'value' => $slider->isUploadedVideo() ? $slider->video : null,
+                'accept' => \App\Http\Controllers\Admin\SliderController::VIDEO_ACCEPT,
+                'ratio' => '16/9',
+            ])
+
+            <span class="text-xs text-slate-500 mt-1 block">MP4, WebM, MOV or OGV. Max {{ round(\App\Http\Controllers\Admin\SliderController::MAX_VIDEO_KB / 1024) }} MB. Leave empty to keep the current video. A progress bar appears while a new one uploads.</span>
             @error('video')
                 <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
             @enderror
@@ -132,10 +159,13 @@
             </div>
         </div>
 
+        @include('admin.sliders.partials.upload-progress')
+
         <div class="flex items-center space-x-4 pt-4 border-t border-slate-800/50">
-            <button type="submit"
-                    class="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-bold rounded-lg text-sm transition-all shadow-md">
-                Update Slider
+            <button type="submit" x-bind:disabled="uploading"
+                    class="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-bold rounded-lg text-sm transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-purple-600 disabled:hover:to-pink-500">
+                <span x-show="!uploading">Update Slider</span>
+                <span x-show="uploading" x-cloak>Uploading…</span>
             </button>
             <a href="{{ route('admin.sliders.index') }}"
                class="px-6 py-2.5 bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 font-bold rounded-lg text-sm transition-all">
@@ -146,6 +176,7 @@
 </div>
 
 @section('scripts')
+@include('admin.sliders.partials.upload-script')
 <script>
     function toggleSliderFields() {
         const type = document.getElementById('media_type').value;

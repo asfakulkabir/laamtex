@@ -30,6 +30,13 @@
             background: #000;
             border: 0;
         }
+        /*
+         * An iframe cannot use object-fit, so it is oversized and centred
+         * instead. The percentages are the frame's aspect ratio divided by
+         * 16/9, so the 16:9 player always covers the frame with no letterbox.
+         * On desktop the frame is a fixed 2.4 band, matching the recommended
+         * 1920 x 800 artwork, so this stays constant.
+         */
         @media (max-width: 639.98px) {
             .yt-cover-iframe { width: 111.112%; height: 100%; }
         }
@@ -37,10 +44,7 @@
             .yt-cover-iframe { width: 118.52%; height: 100%; }
         }
         @media (min-width: 768px) {
-            .yt-cover-iframe {
-                width: max(100%, calc(100% * 1.7777778 / var(--hero-ratio, 2.4)));
-                height: max(100%, calc(100% * var(--hero-ratio, 2.4) * 0.5625));
-            }
+            .yt-cover-iframe { width: 74.07%; height: 135%; }
         }
     </style>
     @if($sliders->count() > 0)
@@ -50,7 +54,14 @@
                  @mouseenter="beginInteract()" @mouseleave="endInteract()"
                  @touchstart.passive="beginInteract()" @touchend.passive="endInteract()"
                  @focusin="beginInteract()" @focusout="endInteract()">
-                <div class="relative w-full [aspect-ratio:16/10] sm:[aspect-ratio:3/2] md:[aspect-ratio:var(--hero-ratio)] 2xl:max-h-[min(68vh,600px)]" :style="'--hero-ratio:' + ratio + ';'">
+                {{--
+                    A fixed frame: a 2.4 band on desktop, matching the recommended
+                    1920 x 800 artwork. Every slide is cropped to fill it with
+                    object-cover, so the hero no longer changes height when the
+                    visitor moves between slides and a portrait video is not
+                    squeezed into a sliver.
+                --}}
+                <div class="relative w-full [aspect-ratio:16/10] sm:[aspect-ratio:3/2] md:[aspect-ratio:2.4] 2xl:max-h-[min(68vh,600px)]">
                     @foreach($sliders as $i => $slider)
                         <div x-show="activeSlide === {{ $i }}" x-transition:enter="transition-opacity duration-700" @if($i > 0) x-cloak @endif
                              class="absolute inset-0 w-full">
@@ -59,7 +70,7 @@
                                     @if($slider->image)
                                         @if($slider->link)<a href="{{ $slider->link }}" class="absolute inset-0 z-0" aria-label="{{ $slider->title ?? 'Shop now' }}"></a>@endif
                                         <img src="{{ asset('storage/' . $slider->image) }}" alt="{{ $slider->title ?? 'Audio cover' }}"
-                                             class="w-full h-full object-cover" @load="imgLoaded({{ $i }}, $event)" loading="eager">
+                                             class="w-full h-full object-cover object-center" loading="eager">
                                     @else
                                         <div class="w-full h-full bg-gradient-to-tr from-indigo-950 via-purple-900 to-pink-700"></div>
                                     @endif
@@ -100,8 +111,7 @@
                                            muted playsinline loop preload="auto"
                                            disablepictureinpicture x-webkit-airplay="deny"
                                            controlslist="nodownload nofullscreen noplaybackrate noremoteplayback"
-                                           class="hero-media w-full h-full object-cover bg-black"
-                                           @loadedmetadata="videoLoaded({{ $i }}, $event)"
+                                           class="hero-media w-full h-full object-cover object-center bg-black"
                                            @play="setVideoState({{ $i }}, true)"
                                            @playing="setVideoState({{ $i }}, true)"
                                            @pause="setVideoState({{ $i }}, false)"></video>
@@ -126,7 +136,7 @@
                                     <a href="{{ $slider->link }}">
                                 @endif
                                 <img src="{{ asset('storage/' . $slider->image) }}" alt="{{ $slider->title ?? 'Slider ' . ($i + 1) }}"
-                                     class="w-full h-full object-cover" @load="imgLoaded({{ $i }}, $event)" loading="eager">
+                                     class="w-full h-full object-cover object-center" loading="eager">
                                 @if($slider->link)
                                     </a>
                                 @endif
@@ -226,7 +236,7 @@
     @endif
 
     <!-- Latest Arrivals -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 pb-4 md:pb-6 2xl:pb-8">
         <div class="text-start space-y-2">
             <h2 class="text-lg sm:text-xl md:text-3xl font-bold md:font-extrabold tracking-tight text-gray-900">Latest Arrivals</h2>
             <p class="text-sm text-gray-500">Be the first to secure our fresh collections.</p>
@@ -238,6 +248,61 @@
             @endforeach
         </div>
     </section>
+
+    <!-- Admin-built category sections -->
+    @foreach($homeSections as $section)
+        @if($section->isSlider())
+            <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 pb-4 md:pb-6 2xl:pb-8"
+                     x-data="featuredSlider()" x-init="init()" @mouseenter="pause()" @mouseleave="play()">
+                <div class="flex justify-between items-end">
+                    <div class="space-y-1">
+                        <h2 class="text-lg sm:text-xl md:text-3xl font-bold md:font-extrabold tracking-tight text-gray-900">{{ $section->title }}</h2>
+                        @if($section->subtitle)
+                            <p class="text-sm text-gray-500 hidden md:block">{{ $section->subtitle }}</p>
+                        @endif
+                    </div>
+                    <div class="flex items-center gap-3 shrink-0">
+                        <div class="hidden md:flex items-center gap-2">
+                            <button type="button" @click="prevSlide()" class="w-9 h-9 rounded-full ring-1 ring-gray-300 text-gray-600 hover:bg-gray-900 hover:text-white hover:ring-gray-900 flex items-center justify-center transition" aria-label="Previous products">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                            </button>
+                            <button type="button" @click="nextSlide()" class="w-9 h-9 rounded-full ring-1 ring-gray-300 text-gray-600 hover:bg-gray-900 hover:text-white hover:ring-gray-900 flex items-center justify-center transition" aria-label="Next products">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                        </div>
+                        @if($section->category)
+                            <a href="{{ route('shop', ['category' => $section->category->slug]) }}" class="text-sm font-bold text-accent hover:text-accent transition">See All →</a>
+                        @else
+                            <a href="{{ route('shop') }}" class="text-sm font-bold text-accent hover:text-accent transition">See All Products →</a>
+                        @endif
+                    </div>
+                </div>
+
+                <div x-ref="track" class="flex gap-2 sm:gap-6 lg:gap-8 overflow-x-auto no-scrollbar pb-2">
+                    @foreach($section->displayProducts as $product)
+                        <div class="slide-item snap-start shrink-0 w-[calc(50%_-_4px)] sm:w-[calc(50%_-_12px)] md:w-[calc(33.33%_-_16px)] lg:w-[calc(33.33%_-_21.33px)] xl:w-[calc(33.33%_-_21.33px)] 2xl:w-[calc(33.33%_-_21.33px)]">
+                            @include('store.partials.product-card', ['product' => $product])
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+        @else
+            <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+                <div class="text-start space-y-2">
+                    <h2 class="text-lg sm:text-xl md:text-3xl font-bold md:font-extrabold tracking-tight text-gray-900">{{ $section->title }}</h2>
+                    @if($section->subtitle)
+                        <p class="text-sm text-gray-500">{{ $section->subtitle }}</p>
+                    @endif
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-6 lg:gap-8">
+                    @foreach($section->displayProducts as $product)
+                        @include('store.partials.product-card', ['product' => $product])
+                    @endforeach
+                </div>
+            </section>
+        @endif
+    @endforeach
 
     <!-- Customer Testimonials -->
     @if($testimonials->count() > 0)
@@ -443,13 +508,11 @@
         return {
             activeSlide: 0,
             timer: null,
-            ratios: [],
             videoSlides: videoSlides || [],
             audioPlaying: -1,
             audioProgress: {},
             videoState: {},
             userPaused: {},
-            ratio: '2.4',
             interacting: false,
             started: false,
             unlockPlayback: null,
@@ -461,10 +524,6 @@
                 if (this.started) return;
                 this.started = true;
 
-                this.videoSlides.forEach((isVideo, i) => {
-                    if (isVideo) this.ratios[i] = '2.2';
-                });
-                this.applyRatio();
                 this.resetTimer();
 
                 // If autoplay was blocked, the first tap anywhere starts the video.
@@ -528,7 +587,6 @@
             afterSlideChange() {
                 this.pauseAllAudio();
                 this.resetTimer();
-                this.applyRatio();
                 this.syncVideos();
             },
 
@@ -699,27 +757,6 @@
                 return m + ':' + (s < 10 ? '0' : '') + s;
             },
 
-            /* ---------- sizing ---------- */
-            imgLoaded(i, event) {
-                const img = event && event.currentTarget;
-                if (!img || !img.naturalWidth) return;
-                if (this.videoSlides[i]) return;
-                const r = img.naturalWidth / img.naturalHeight;
-                this.ratios[i] = Math.max(1.25, Math.min(3.4, r)).toFixed(3);
-                if (i === this.activeSlide) this.applyRatio();
-            },
-            videoLoaded(i, event) {
-                const video = event && event.currentTarget;
-                if (!video || !video.videoWidth) return;
-                const r = video.videoWidth / video.videoHeight;
-                this.ratios[i] = Math.max(1.25, Math.min(3.4, r)).toFixed(3);
-                if (i === this.activeSlide) this.applyRatio();
-            },
-            applyRatio() {
-                const r = this.ratios[this.activeSlide];
-                this.ratio = r ? String(r) : '2.4';
-            },
-
             /* ---------- auto-slide timer ---------- */
             beginInteract() {
                 this.interacting = true;
@@ -850,7 +887,7 @@
 </script>
 @endif
 
-@if($featuredProducts->count() > 0)
+@if($featuredProducts->count() > 0 || $homeSections->contains(fn ($s) => $s->isSlider()))
 <script>
     function featuredSlider() {
         return {

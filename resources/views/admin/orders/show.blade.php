@@ -225,13 +225,16 @@
                     <h3 class="font-bold text-sm uppercase tracking-wider text-emerald-400">Steadfast Courier</h3>
                     <p class="text-sm text-slate-400 mt-1">Send this order to Steadfast for shipping</p>
                 </div>
-                <form action="{{ route('admin.orders.send-to-steadfast', $order->id) }}" method="POST">
-                    @csrf
-                    <button type="submit"
-                            class="w-full py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm font-bold uppercase tracking-wider transition-all">
-                        Send to Steadfast
-                    </button>
-                </form>
+                <div class="flex items-center gap-3">
+                    @include('admin.orders.partials.fraud-check', ['order' => $order])
+                    <form action="{{ route('admin.orders.send-to-steadfast', $order->id) }}" method="POST" class="flex-1">
+                        @csrf
+                        <button type="submit"
+                                class="w-full py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm font-bold uppercase tracking-wider transition-all">
+                            Send to Steadfast
+                        </button>
+                    </form>
+                </div>
             </div>
             @endunless
 

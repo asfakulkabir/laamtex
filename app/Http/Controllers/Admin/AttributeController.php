@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Attribute;
 use App\Models\AttributeValue;
+use App\Models\Media;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -50,8 +51,8 @@ class AttributeController extends Controller
         $attribute->values()->create([
             'name' => $data['name'],
             'color_code' => $attribute->type === Attribute::TYPE_COLOR ? ($data['color_code'] ?? null) : null,
-            'image' => $attribute->type === Attribute::TYPE_IMAGE && $request->hasFile('image')
-                ? $request->file('image')->store('attributes', 'public')
+            'image' => $attribute->type === Attribute::TYPE_IMAGE
+                ? $this->resolveValueImage($request)
                 : null,
             'sort_order' => $data['sort_order'] ?? ((int) $attribute->values()->max('sort_order') + 1),
         ]);
@@ -74,9 +75,16 @@ class AttributeController extends Controller
         if ($attribute->type === Attribute::TYPE_IMAGE) {
             if ($request->boolean('remove_image')) {
                 $this->deleteValueImage($value);
-            } elseif ($request->hasFile('image')) {
-                $this->deleteValueImage($value);
-                $payload['image'] = $request->file('image')->store('attributes', 'public');
+            } else {
+                $newImage = $this->resolveValueImage($request);
+
+                if ($newImage !== null) {
+                    if ($value->image && $value->image !== $newImage && ! Media::isLibraryPath($value->image)) {
+                        Storage::disk('public')->delete($value->image);
+                    }
+
+                    $payload['image'] = $newImage;
+                }
             }
         }
 
@@ -85,12 +93,31 @@ class AttributeController extends Controller
         return back()->with('success', 'Value updated.');
     }
 
+    /**
+     * Resolve the swatch image from a fresh upload or a media library pick.
+     */
+    private function resolveValueImage(Request $request): ?string
+    {
+        if ($request->hasFile('image')) {
+            return $request->file('image')->store('attributes', 'public');
+        }
+
+        $media = Media::find($request->input('image_media_id'));
+
+        if ($media && $media->isImage() && Storage::disk($media->disk ?: 'public')->exists($media->path)) {
+            return $media->path;
+        }
+
+        return null;
+    }
+
     private function deleteValueImage(AttributeValue $value): void
     {
-        if ($value->image) {
+        if ($value->image && ! Media::isLibraryPath($value->image)) {
             Storage::disk('public')->delete($value->image);
-            $value->forceFill(['image' => null])->save();
         }
+
+        $value->forceFill(['image' => null])->save();
     }
 
     public function destroyValue(Attribute $attribute, AttributeValue $value)
@@ -131,6 +158,7 @@ class AttributeController extends Controller
             'name' => 'required|string|max:255',
             'color_code' => 'nullable|string|max:32',
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:2048',
+            'image_media_id' => 'nullable|integer',
             'sort_order' => 'nullable|integer',
         ]);
     }

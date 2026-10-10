@@ -93,6 +93,16 @@ class OrderController extends Controller
             ->with('success', "Order #{$order->id} status updated to " . (Order::STATUSES[$order->status] ?? ucfirst($order->status)) . '.');
     }
 
+    /**
+     * Steadfast delivery history for the customer number on this order. Kept as
+     * JSON and fetched on demand so the order list does not fire one API call
+     * per row on every page load.
+     */
+    public function fraudCheck(Order $order, SteadfastService $steadfast)
+    {
+        return response()->json($steadfast->fraudCheck($order->customer_phone));
+    }
+
     public function sendToSteadfast(Order $order, SteadfastService $steadfast)
     {
         if ($order->is_sent_to_steadfast) {

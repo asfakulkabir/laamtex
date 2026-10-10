@@ -22,7 +22,7 @@
     }
 
     $navCatUrl = fn ($slug) => $slug ? route('shop', ['category' => $slug]) : route('shop');
-    $waLink = $whatsapp ? 'https://wa.me/' . preg_replace('/[^0-9]/', '', $whatsapp) : '#';
+    $waLink = whatsapp_link();
 
     $currentRoute = request()->route() ? request()->route()->getName() : '';
     $isHome = in_array($currentRoute, ['home']);
@@ -597,6 +597,52 @@
         document.getElementById('megaMenuTitle').textContent = 'Shop by Category';
     }
 
+    // Desktop mega menu. CSS :hover alone kept the panel open because the nav
+    // item also owns a large transparent hover bridge. Explicitly tracking the
+    // item (which contains the panel) means the dropdown closes the moment the
+    // pointer leaves both the tab and the panel. The short close delay covers
+    // the seam while the pointer travels down into the panel.
+    document.querySelectorAll('.nav-category-item').forEach(function (item) {
+        var panel = item.querySelector('.mega-menu');
+        if (!panel) return;
+
+        var closeTimer = null;
+
+        function openPanel() {
+            if (closeTimer) {
+                clearTimeout(closeTimer);
+                closeTimer = null;
+            }
+            item.classList.add('mega-open');
+        }
+
+        function scheduleClose() {
+            if (closeTimer) clearTimeout(closeTimer);
+            closeTimer = setTimeout(function () {
+                closeTimer = null;
+                item.classList.remove('mega-open');
+            }, 120);
+        }
+
+        on(item, 'mouseenter', openPanel);
+        on(item, 'mouseleave', scheduleClose);
+        on(panel, 'mouseenter', openPanel);
+        on(panel, 'mouseleave', scheduleClose);
+        on(panel, 'focusin', openPanel);
+    });
+
+    function closeDesktopMegaMenus() {
+        document.querySelectorAll('.nav-category-item.mega-open').forEach(function (item) {
+            item.classList.remove('mega-open');
+        });
+    }
+
+    on(document, 'click', function (e) {
+        if (!e.target.closest || !e.target.closest('.nav-category-item')) {
+            closeDesktopMegaMenus();
+        }
+    });
+
     on(document.getElementById('openCategoryMenu'), 'click', function () { openMega(null); });
     on(document.getElementById('closeMegaMenu'), 'click', closeMega);
     on(megaBackdrop, 'click', closeMega);
@@ -633,6 +679,7 @@
             closeSearch();
             closeMega();
             setDesktopSearchOpen(false);
+            closeDesktopMegaMenus();
         }
     });
 

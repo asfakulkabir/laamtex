@@ -4,11 +4,17 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Media;
+use App\Services\MediaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class CategoryController extends Controller
 {
+    public function __construct(private readonly MediaService $media)
+    {
+    }
+
     public function index()
     {
         $categories = Category::with('parent')->orderBy('name')->paginate(10);
@@ -28,12 +34,13 @@ class CategoryController extends Controller
             'parent_id' => 'nullable|exists:categories,id',
             'group_name' => 'nullable|string|max:100',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'image_media_id' => 'nullable|integer',
         ]);
 
         $data = $request->only(['name', 'parent_id', 'group_name']);
 
-        if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('category_images', 'public');
+        if ($path = $this->media->resolve($request, 'image', 'category_images', 'image')) {
+            $data['image'] = $path;
         }
 
         Category::create($data);
@@ -61,16 +68,19 @@ class CategoryController extends Controller
             'parent_id' => 'nullable|exists:categories,id|different:id',
             'group_name' => 'nullable|string|max:100',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'image_media_id' => 'nullable|integer',
         ]);
 
         $data = $request->only(['name', 'parent_id', 'group_name']);
 
-        if ($request->hasFile('image')) {
-            // Delete old image
-            if ($category->image) {
+        if ($path = $this->media->resolve($request, 'image', 'category_images', 'image')) {
+            // Replace the old file, but leave a library asset in place so the
+            // same file can keep being reused by other categories or sliders.
+            if ($category->image && $category->image !== $path && ! Media::isLibraryPath($category->image)) {
                 Storage::disk('public')->delete($category->image);
             }
-            $data['image'] = $request->file('image')->store('category_images', 'public');
+
+            $data['image'] = $path;
         }
 
         $category->update($data);
@@ -80,8 +90,7 @@ class CategoryController extends Controller
 
     public function destroy(Category $category)
     {
-        // Delete image from disk (handled by model observer / booted event, but we can verify)
-        if ($category->image) {
+        if ($category->image && ! Media::isLibraryPath($category->image)) {
             Storage::disk('public')->delete($category->image);
         }
         $category->delete();

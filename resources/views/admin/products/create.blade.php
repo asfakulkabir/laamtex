@@ -366,12 +366,18 @@
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
-                                    <div>
-                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Image</label>
-                                        <input type="file" :name="`variations[${index}][image]`" accept="image/*"
-                                               class="text-[11px] text-slate-300 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-slate-700 file:text-white text-xs">
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Image</label>
+                                    <div class="max-w-xl">
+                                        @include('admin.partials.media-picker', [
+                                            'fieldExpr' => '`variations[${index}][image]`',
+                                            'kind' => 'image',
+                                            'label' => 'Image',
+                                        ])
                                     </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 items-end">
                                     <div>
                                         <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Weight</label>
                                         <input type="number" step="0.001" min="0" :name="`variations[${index}][weight_value]`" x-model="v.weight_value"
@@ -489,6 +495,33 @@
                     @enderror
                 </div>
 
+                <!-- Size Chart Selector -->
+                <div class="bg-slate-800/30 p-6 rounded-xl border border-slate-800/50">
+                    <h4 class="font-bold text-slate-200 text-sm mb-1">Size Chart</h4>
+                    <p class="text-xs text-slate-400 mb-4">Optional. Leave as "None" and no size chart link appears on the product page.</p>
+
+                    @if($sizeCharts->isEmpty())
+                        <p class="text-sm text-slate-400 mb-3">No size charts uploaded yet.</p>
+                        <a href="{{ route('admin.size-charts.create') }}" class="inline-block px-4 py-2 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-md text-xs font-bold hover:bg-purple-500/20 transition">
+                            + Add Size Chart
+                        </a>
+                    @else
+                        <select name="size_chart_id" id="size_chart_id"
+                                class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-slate-900/80 transition-all text-slate-200">
+                            <option value="">None</option>
+                            @foreach($sizeCharts as $sizeChart)
+                                <option value="{{ $sizeChart->id }}" @selected(old('size_chart_id') == $sizeChart->id)>
+                                    {{ $sizeChart->title }}
+                                </option>
+                            @endforeach
+                        </select>
+                    @endif
+
+                    @error('size_chart_id')
+                        <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
+                    @enderror
+                </div>
+
                 <!-- Product Images Upload -->
                 <div class="bg-slate-800/30 p-6 rounded-xl border border-slate-800/50 space-y-4">
                     <h4 class="font-bold text-slate-200 text-sm">Product Images Gallery</h4>
@@ -503,9 +536,13 @@
                                 <button type="button" @click="removeImageField(idx)" class="absolute top-2 right-2 text-pink-400 hover:text-pink-300 text-sm font-bold">✕</button>
                                 
                                 <div>
-                                    <label class="block text-sm font-bold text-slate-300 uppercase mb-1">Image File</label>
-                                    <input type="file" name="images[]" required accept="image/*"
-                                           class="w-full text-sm text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-purple-500/10 file:text-purple-400 file:text-sm">
+                                    <label class="block text-sm font-bold text-slate-300 uppercase mb-1">Image</label>
+                                    @include('admin.partials.media-picker', [
+                                        'fieldExpr' => '`images[${idx}][file]`',
+                                        'mediaIdFieldExpr' => '`images[${idx}][media_id]`',
+                                        'kind' => 'image',
+                                        'label' => 'Image',
+                                    ])
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
@@ -569,6 +606,10 @@
     ])->values();
 @endphp
 <script>
+    // Seeded into each newly generated variation row so it is not left at 0,
+    // which reads as "out of stock" until the admin types a real count.
+    const DEFAULT_VARIATION_STOCK = 5;
+
     function productForm() {
         return {
             productType: 'simple',
@@ -789,7 +830,7 @@
                             regular_price: '',
                             sale_price: '',
                             manage_stock: true,
-                            stock_quantity: 0,
+                            stock_quantity: DEFAULT_VARIATION_STOCK,
                             stock_status: 'instock',
                             sku: '',
                             weight_value: '',

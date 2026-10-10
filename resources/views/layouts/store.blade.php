@@ -164,7 +164,7 @@
     @php
         $parentCats = \App\Models\Category::whereNull('parent_id')->with('children')->orderBy('name')->get();
         $cartCount = count(session('cart', []));
-        $whatsapp = App\Models\Setting::getValue('whatsapp_number', '');
+        $whatsapp = whatsapp_number();
         $navCatProducts = [];
         foreach ($parentCats as $pcat) {
             $ids = collect([$pcat->id])->merge($pcat->children->pluck('id'));

@@ -5,10 +5,10 @@
     $twUrl = App\Models\Setting::getValue('twitter_url', '');
     $contactEmail = App\Models\Setting::getValue('contact_email', 'laamtexoffice@gmail.com');
     $storeAddress = App\Models\Setting::getValue('office_address', 'House 12, Road 5, Dhanmondi, Dhaka 1205, Bangladesh');
-    $storePhone = App\Models\Setting::getValue('whatsapp_number', '');
-    $storePhoneDigits = $storePhone ? preg_replace('/[^0-9]/', '', $storePhone) : '';
-    $waDigits = $storePhoneDigits;
-    $waLink = $waDigits ? 'https://wa.me/' . $waDigits : '#';
+    $storePhone = contact_phone();
+    $storePhoneDigits = contact_phone_digits();
+    $waDigits = whatsapp_number_digits();
+    $waLink = whatsapp_link();
     $socials = array_filter([
         ['url' => $fbUrl, 'label' => 'Facebook', 'path' => 'M13.58 22V12.88H16.64L17.1 9.32H13.58V7.04C13.58 6.01 13.87 5.3 15.34 5.3H17.22V2.12C16.89 2.08 15.76 2 14.45 2C11.72 2 9.86 3.67 9.86 6.73V9.32H6.8V12.88H9.86V22H13.58Z'],
         ['url' => $igUrl, 'label' => 'Instagram', 'path' => 'M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z'],

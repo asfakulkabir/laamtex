@@ -118,8 +118,15 @@
                                                             Remove
                                                         </label>
                                                     @endif
-                                                    <input type="file" name="image" accept="image/*"
-                                                           class="text-[11px] text-slate-300 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-slate-700 file:text-white text-xs">
+                                                    <div class="w-full sm:w-72">
+                                                        @include('admin.partials.media-picker', [
+                                                            'field' => 'image',
+                                                            'kind' => 'image',
+                                                            'label' => 'Swatch image',
+                                                            'value' => $value->image,
+                                                            'ratio' => '1/1',
+                                                        ])
+                                                    </div>
                                                 @endif
                                                 <button type="submit" class="px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-lg text-xs font-bold transition">Save</button>
                                             </form>
@@ -156,10 +163,14 @@
                             </div>
                         @endif
                         @if($attribute->type === 'image')
-                            <div>
+                            <div class="w-full sm:w-72">
                                 <label class="block text-xs font-bold uppercase text-slate-300 mb-2">Image</label>
-                                <input type="file" name="image" accept="image/*"
-                                       class="text-[11px] text-slate-300 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-slate-700 file:text-white text-xs">
+                                @include('admin.partials.media-picker', [
+                                    'field' => 'image',
+                                    'kind' => 'image',
+                                    'label' => 'Swatch image',
+                                    'ratio' => '1/1',
+                                ])
                             </div>
                         @endif
                         <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white rounded-lg text-sm font-bold transition">

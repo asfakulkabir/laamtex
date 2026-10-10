@@ -80,8 +80,12 @@
                 <!-- Product Name -->
                 <div>
                     <label for="name" class="block text-sm font-bold uppercase tracking-wider text-slate-300 mb-2">Product Title <span class="text-pink-500">*</span></label>
-                    <input type="text" id="name" name="name" value="{{ old('name', $product->name) }}" required
+                    <input type="text" id="name" name="name" value="{{ old('name', $product->name) }}" required x-model="name"
                            class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-slate-900/80 transition-all text-slate-200 placeholder-slate-600">
+                    {{-- The slug follows the title, so the resulting URL is shown before saving. --}}
+                    <p class="mt-1.5 text-xs text-slate-500 font-mono truncate">
+                        /product/<span x-text="slugPreview || '…'"></span>
+                    </p>
                     @error('name')
                         <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
                     @enderror
@@ -194,7 +198,7 @@
                                         <select :name="`attributes[${index}][attribute_id]`" x-model="a.attribute_id"
                                                 @change="onAttributeChange(index)"
                                                 class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
-                                            <option value="">— Custom attribute —</option>
+                                            <option value="">— Select attribute —</option>
                                             <template x-for="g in allAttributes" :key="g.id">
                                                 <option :value="g.id" x-text="g.name"></option>
                                             </template>
@@ -221,6 +225,7 @@
                                         </label>
                                         <label class="flex items-center gap-1.5 text-xs text-slate-300">
                                             <input type="checkbox" :name="`attributes[${index}][is_variation]`" value="1" x-model="a.is_variation"
+                                                   @change="syncVariationRows()"
                                                    class="h-3.5 w-3.5 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
                                             Used for variations
                                         </label>
@@ -235,8 +240,9 @@
                                     </template>
                                     <template x-for="v in optionsFor(index)" :key="v.id">
                                         <label class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border cursor-pointer transition"
-                                               :class="a.value_ids.includes(v.id) ? 'bg-purple-500/20 border-purple-500/50 text-purple-200' : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:border-purple-500/30'">
+                                               :class="(a.value_ids || []).map(String).includes(String(v.id)) ? 'bg-purple-500/20 border-purple-500/50 text-purple-200' : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:border-purple-500/30'">
                                             <input type="checkbox" :name="`attributes[${index}][value_ids][]`" :value="v.id" x-model="a.value_ids"
+                                                   @change="syncVariationRows()"
                                                    class="h-3 w-3 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
                                             <span x-show="v.color_code" class="inline-block h-3 w-3 rounded-full border border-slate-600" :style="`background-color:${v.color_code}`"></span>
                                             <span x-text="v.name"></span>
@@ -264,9 +270,18 @@
                 @endphp
                 <div x-show="productType === 'variable'" class="space-y-4 bg-purple-500/5 p-6 rounded-xl border border-purple-500/20">
                     <div class="flex flex-wrap justify-between items-center gap-3 pb-2 border-b border-purple-500/20">
-                        <h4 class="font-bold text-slate-200 text-sm">Variations</h4>
+                        <button type="button" @click="variationsOpen = !variationsOpen"
+                                class="flex items-center gap-2 text-left group" :aria-expanded="variationsOpen ? 'true' : 'false'"
+                                aria-controls="variations-panel">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                 class="w-4 h-4 text-purple-300 transition-transform" :class="variationsOpen && 'rotate-90'">
+                                <path d="m9 18 6-6-6-6"/>
+                            </svg>
+                            <h4 class="font-bold text-slate-200 text-sm group-hover:text-purple-200 transition">Variations</h4>
+                            <span class="text-xs text-slate-400" x-text="variationsOpen ? 'Hide' : `Show ${variations.length} row(s)`"></span>
+                        </button>
                         <div class="flex items-center gap-2">
-                            <button type="button" @click="addVariation()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-sm font-bold transition">
+                            <button type="button" @click="variationsOpen = true; addVariation()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-sm font-bold transition">
                                 + Add Variation
                             </button>
                             {{-- This posts to a different route, which accepts
@@ -281,6 +296,11 @@
                             </button>
                         </div>
                     </div>
+
+                    {{-- Collapsed by default: a variable product with many combinations is a wall
+                         of rows, and most edits are to the fields above. A failed save forces it
+                         open so the rejected rows are never hidden. --}}
+                    <div id="variations-panel" x-show="variationsOpen" x-cloak x-transition class="space-y-4">
 
                     <p class="text-xs text-slate-400">
                         Each row is one combination of attribute values. The name above each row is the combination
@@ -402,16 +422,16 @@
                                 </div>
 
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    <template x-for="pa in variationAttributes()" :key="pa.product_attribute_id">
+                                    <template x-for="pa in variationAttributes()" :key="pa.key">
                                         <div>
                                             <label class="block text-xs font-bold uppercase text-slate-400 mb-1" x-text="pa.name"></label>
-                                            <select :name="`variations[${index}][values][${pa.product_attribute_id}]`"
-                                                    @change="v.values[pa.product_attribute_id] = $event.target.value"
+                                            <select :name="`variations[${index}][values][${pa.key}]`"
+                                                    x-model="v.values[pa.key]"
                                                     class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
-                                                <option value="" :selected="!v.values[pa.product_attribute_id]">— Any —</option>
-                                                <template x-for="o in optionsForProductAttribute(pa)" :key="o.id">
-                                                    <option :value="o.id"
-                                                            :selected="String(o.id) === String(v.values[pa.product_attribute_id] ?? '')"
+                                                <option value="">— Any —</option>
+                                                <template x-for="o in pa.values" :key="o.id">
+                                                    <option :value="String(o.id)"
+                                                            :selected="String(o.id) === String(v.values[pa.key] ?? '')"
                                                             x-text="o.name"></option>
                                                 </template>
                                             </select>
@@ -460,37 +480,47 @@
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 items-end">
-                                    <div>
-                                        <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Image</label>
-                                        <input type="file" :name="`variations[${index}][image]`" accept="image/*"
-                                               class="w-full text-xs text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-slate-700 file:text-white">
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Image</label>
+                                    <div class="flex flex-wrap items-center gap-3">
+                                        <div class="min-w-0 flex-1 sm:max-w-xl">
+                                            @include('admin.partials.media-picker', [
+                                                'fieldExpr' => '`variations[${index}][image]`',
+                                                'kind' => 'image',
+                                                'label' => 'Image',
+                                            ])
+                                        </div>
+                                        <div x-show="v.image_url" class="flex items-center gap-2">
+                                            <img :src="v.image_url" class="h-12 w-12 object-cover rounded-lg border border-slate-700" alt="">
+                                            <label class="flex items-center gap-1.5 text-xs text-pink-400">
+                                                <input type="checkbox" :name="`variations[${index}][remove_image]`" value="1" x-model="v.remove_image"
+                                                       class="h-3.5 w-3.5 rounded border-slate-600 text-pink-400 focus:ring-pink-500">
+                                                Remove saved
+                                            </label>
+                                        </div>
                                     </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 items-end">
                                     <div>
                                         <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Weight</label>
                                         <input type="number" step="0.001" min="0" :name="`variations[${index}][weight_value]`" x-model="v.weight_value"
                                                class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
                                     </div>
-                                    <div class="flex items-center gap-1.5">
-                                        <input type="checkbox" :name="`variations[${index}][manage_stock]`" value="1" x-model="v.manage_stock"
-                                               class="h-3.5 w-3.5 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
-                                        <label class="text-xs text-slate-300">Manage stock here</label>
+                                    <div class="flex items-end">
+                                        <label class="flex items-center gap-1.5 text-xs text-slate-300">
+                                            <input type="checkbox" :name="`variations[${index}][manage_stock]`" value="1" x-model="v.manage_stock"
+                                                   class="h-3.5 w-3.5 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
+                                            Manage stock here
+                                        </label>
                                     </div>
-                                    <div class="flex items-center justify-between gap-2">
+                                    <div class="flex items-end justify-start">
                                         <label class="flex items-center gap-1.5 text-xs text-slate-400">
-                                            <input type="checkbox" form="bulkVariationForm" :name="`bulk_variation_ids[]`" :value="v.id"
+                                            <input type="checkbox" form="bulkVariationForm" :name="`variation_ids[]`" :value="v.id"
                                                    x-model="selectedVariationIds"
                                                    class="h-3.5 w-3.5 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
-                                            Select
+                                            Select (bulk edit)
                                         </label>
-                                        <div x-show="v.image_url" class="flex items-center gap-2">
-                                            <img :src="v.image_url" class="h-8 w-8 object-cover rounded border border-slate-700" alt="">
-                                            <label class="flex items-center gap-1 text-xs text-pink-400">
-                                                <input type="checkbox" :name="`variations[${index}][remove_image]`" value="1" x-model="v.remove_image"
-                                                       class="h-3 w-3 rounded border-slate-600 text-pink-400 focus:ring-pink-500">
-                                                Remove
-                                            </label>
-                                        </div>
                                     </div>
                                 </div>
 
@@ -500,6 +530,7 @@
                                 </div>
                             </div>
                         </template>
+                    </div>
                     </div>
                 </div>
 
@@ -581,6 +612,39 @@
                     @enderror
                 </div>
 
+                <!-- Size Chart Selector -->
+                <div class="bg-slate-800/30 p-6 rounded-xl border border-slate-800/50">
+                    <h4 class="font-bold text-slate-200 text-sm mb-1">Size Chart</h4>
+                    <p class="text-xs text-slate-400 mb-4">Optional. Choose "None" and no size chart link appears on the product page.</p>
+
+                    @if($sizeCharts->isEmpty())
+                        <p class="text-sm text-slate-400 mb-3">No size charts uploaded yet.</p>
+                        <a href="{{ route('admin.size-charts.create') }}" class="inline-block px-4 py-2 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-md text-xs font-bold hover:bg-purple-500/20 transition">
+                            + Add Size Chart
+                        </a>
+                    @else
+                        <select name="size_chart_id" id="size_chart_id"
+                                class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-slate-900/80 transition-all text-slate-200">
+                            <option value="">None</option>
+                            @foreach($sizeCharts as $sizeChart)
+                                <option value="{{ $sizeChart->id }}" @selected(old('size_chart_id', $product->size_chart_id) == $sizeChart->id)>
+                                    {{ $sizeChart->title }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        @if($product->sizeChart)
+                            <a href="{{ route('admin.size-charts.edit', $product->sizeChart->id) }}" class="mt-3 inline-block text-xs font-bold text-purple-400 hover:text-purple-300 transition">
+                                Edit "{{ $product->sizeChart->title }}" &rarr;
+                            </a>
+                        @endif
+                    @endif
+
+                    @error('size_chart_id')
+                        <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
+                    @enderror
+                </div>
+
                 <!-- Product Images Gallery Manager -->
                 <div class="bg-slate-800/30 p-6 rounded-xl border border-slate-800/50 space-y-4">
                     <h4 class="font-bold text-slate-200 text-sm">Product Images Gallery</h4>
@@ -653,9 +717,13 @@
                                     <button type="button" @click="removeImageField(idx)" class="absolute top-2 right-2 text-pink-400 hover:text-pink-300 text-sm font-bold">&#x2715;</button>
                                     
                                     <div>
-                                        <label class="block text-sm font-bold text-slate-300 uppercase mb-1">Image File</label>
-                                        <input type="file" name="new_images[]" required accept="image/*"
-                                               class="w-full text-sm text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-purple-500/10 file:text-purple-400 file:text-sm">
+                                        <label class="block text-sm font-bold text-slate-300 uppercase mb-1">Image</label>
+                                        @include('admin.partials.media-picker', [
+                                            'fieldExpr' => '`new_images[${idx}][file]`',
+                                            'mediaIdFieldExpr' => '`new_images[${idx}][media_id]`',
+                                            'kind' => 'image',
+                                            'label' => 'Image',
+                                        ])
                                     </div>
                                     <div class="grid grid-cols-2 gap-2">
                                         <div>
@@ -779,11 +847,21 @@
         'attribute_id' => $productAttribute->attribute_id,
         'name' => $productAttribute->display_name,
         'is_variation' => (bool) $productAttribute->is_variation,
-        'values' => $productAttribute->values->map(fn ($value) => [
-            'id' => $value->id,
-            'name' => $value->name,
-            'color_code' => $value->color_code,
-        ])->values(),
+        'values' => $productAttribute->isCustom()
+            ? $productAttribute->values->map(fn ($value) => [
+                'id' => $value->id,
+                'name' => $value->name,
+                'color_code' => $value->color_code,
+            ])->values()
+            : ($productAttribute->attribute ? $productAttribute->attribute->values->map(fn ($value) => [
+                'id' => $value->id,
+                'name' => $value->name,
+                'color_code' => $value->color_code,
+            ])->values() : $productAttribute->values->map(fn ($value) => [
+                'id' => $value->id,
+                'name' => $value->name,
+                'color_code' => $value->color_code,
+            ])->values()),
     ])->values();
 
     $variationRows = $product->variations->map(fn ($variation) => [
@@ -805,24 +883,50 @@
         'remove_image' => false,
     ])->values();
 
-    $attributeRowsPayload = $product->productAttributes->map(fn ($productAttribute) => [
-        'product_attribute_id' => $productAttribute->id,
-        'attribute_id' => $productAttribute->attribute_id,
-        'custom_name' => $productAttribute->custom_name,
-        'options' => implode(', ', (array) $productAttribute->custom_options),
-        'value_ids' => $productAttribute->values->pluck('id')->map(fn ($id) => (int) $id)->all(),
-        'is_visible' => (bool) $productAttribute->is_visible,
-        'is_variation' => (bool) $productAttribute->is_variation,
-    ])->values();
+    $attributeRowsPayload = $product->productAttributes->map(function ($productAttribute) {
+        $valueIds = $productAttribute->values->pluck('id')->map(fn ($id) => (int) $id)->all();
+        if (empty($valueIds)) {
+            $used = \Illuminate\Support\Facades\DB::table('variation_attribute_values')
+                ->where('product_attribute_id', $productAttribute->id)
+                ->whereNotNull('attribute_value_id')
+                ->pluck('attribute_value_id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
+            if (!empty($used)) {
+                $valueIds = $used;
+                $productAttribute->values()->syncWithoutDetaching($used);
+            }
+        }
+        return [
+            'product_attribute_id' => $productAttribute->id,
+            'attribute_id' => $productAttribute->attribute_id,
+            'custom_name' => $productAttribute->custom_name,
+            'options' => implode(', ', (array) $productAttribute->custom_options),
+            'value_ids' => $valueIds,
+            'is_visible' => (bool) $productAttribute->is_visible,
+            'is_variation' => (bool) $productAttribute->is_variation,
+        ];
+    })->values();
 @endphp
     <script>
+    // Seeded into a freshly added variation row so it is not left at 0, which
+    // reads as "out of stock" until the admin types a real count.
+    const DEFAULT_VARIATION_STOCK = 5;
+
     function productForm() {
         return {
             productType: '{{ $product->product_type }}',
+            name: {!! json_encode(old('name', $product->name)) !!},
             allAttributes: {!! json_encode($allAttributesPayload) !!},
             variationOptions: {!! json_encode($variationOptionsPayload) !!},
             attributes: {!! json_encode($attributeRowsPayload) !!},
             variations: {!! json_encode($variationRows) !!},
+
+            // The variation table stays folded away until it is asked for, but a
+            // rejected save has to show the rows that failed validation.
+            variationsOpen: {{ collect($errors->keys())->contains(fn ($key) => str_starts_with($key, 'variations')) ? 'true' : 'false' }},
 
             // Prices typed once and copied into the variation rows below.
             bulkPrice: {
@@ -940,17 +1044,123 @@
                 const row = this.attributes[index];
                 if (!row || !row.attribute_id) return [];
 
-                const attribute = this.allAttributes.find(a => a.id == row.attribute_id);
-                return attribute ? attribute.values : [];
+                const attribute = this.allAttributes.find(a => String(a.id) === String(row.attribute_id));
+                return attribute ? (attribute.values || []) : [];
             },
 
             onAttributeChange(index) {
                 this.attributes[index].value_ids = [];
+                this.syncVariationRows();
+            },
+
+            /**
+             * Add a variation row for every combination the ticked values imply
+             * but the table is missing.
+             *
+             * Until this existed, ticking a new Size or Color only updated the
+             * attribute row; the combination row appeared solely after
+             * "Generate from Attributes", which posts the whole form and reloads.
+             * Now the row appears straight away and is persisted by the normal
+             * Save. Rows already present are left untouched, so prices, stock and
+             * images typed into them are never rebuilt.
+             */
+            syncVariationRows() {
+                const slots = this.variationSlots();
+                if (!slots.length) return;
+
+                const combinations = slots.map(slot => {
+                    const row = this.attributes.find(a => slot.attribute_id
+                        ? String(a.attribute_id) === String(slot.attribute_id)
+                        : (a.custom_name && a.custom_name === slot.name)
+                    );
+                    const ticked = row ? (row.value_ids || []).map(String) : [];
+
+                    if (slot.attribute_id) {
+                        return slot.values.filter(v => ticked.includes(String(v.id))).map(v => String(v.id));
+                    }
+                    return (slot.values || []).map(v => String(v.id));
+                });
+
+                // Wait until every variation attribute has at least one value
+                if (combinations.some(list => !list.length)) return;
+
+                let rows = [[]];
+
+                combinations.forEach(list => {
+                    const next = [];
+                    rows.forEach(combo => list.forEach(id => next.push([...combo, id])));
+                    rows = next;
+                });
+
+                rows.forEach(combo => {
+                    const alreadyListed = this.variations.some(v =>
+                        slots.every((slot, i) => String((v.values && v.values[slot.key]) ?? '') === combo[i])
+                    );
+
+                    if (alreadyListed) return;
+
+                    const values = {};
+                    slots.forEach((slot, i) => { values[slot.key] = combo[i]; });
+
+                    this.variations.push(this.blankVariation(values));
+                });
+
+                this.variationsOpen = true;
             },
 
             /** Only the attributes flagged for variations, in display order. */
             variationAttributes() {
-                return this.variationOptions.filter(a => a.is_variation);
+                return this.variationSlots();
+            },
+
+            /**
+             * One slot per attribute the admin marked "Used for variations",
+             * built from the live attribute rows rather than the saved ones.
+             *
+             * Reading only variationOptions (the product attributes already in
+             * the database) meant that picking Size or Color for the first time
+             * produced no combinations at all, because the new attribute had no
+             * product_attribute_id yet. That is why the create page appears to
+             * work and the edit page did not.
+             *
+             * A slot already linked to the product is keyed by its
+             * product_attribute_id. One added in this session has no id until it
+             * is saved, so it is keyed by its position, "p0", "p1" ... and the
+             * server resolves that key back to the attribute it creates.
+             */
+            variationSlots() {
+                return this.attributes
+                    .map((a, index) => {
+                        if (!a.is_variation) return null;
+
+                        const saved = a.attribute_id
+                            ? this.variationOptions.find(pa => String(pa.attribute_id) === String(a.attribute_id))
+                            : this.variationOptions.find(pa => pa.product_attribute_id && pa.product_attribute_id === a.product_attribute_id);
+
+                        let options = [];
+                        if (a.attribute_id) {
+                            const globalAttr = this.allAttributes.find(g => String(g.id) === String(a.attribute_id));
+                            options = globalAttr ? globalAttr.values : (saved?.values || []);
+                        } else {
+                            if (saved && saved.values && saved.values.length) {
+                                options = saved.values;
+                            } else if (a.options) {
+                                const raw = Array.isArray(a.options) ? a.options : String(a.options).split(',');
+                                options = raw.map(s => s.trim()).filter(Boolean).map(name => ({ id: name, name: name }));
+                            }
+                        }
+
+                        return {
+                            key: saved ? saved.product_attribute_id : 'p' + index,
+                            product_attribute_id: saved ? saved.product_attribute_id : null,
+                            attribute_id: a.attribute_id,
+                            name: a.attribute_id
+                                ? (this.allAttributes.find(g => String(g.id) === String(a.attribute_id))?.name || saved?.name || '')
+                                : (a.custom_name || saved?.name || 'Custom'),
+                            values: options,
+                        };
+                    })
+                    .filter(Boolean);
             },
 
             optionsForProductAttribute(productAttribute) {
@@ -963,35 +1173,57 @@
             },
 
             /**
+             * Mirrors Str::slug so the admin can see the URL the title will
+             * produce. The real slug is generated server side, so this is only
+             * a preview of what the title will become.
+             */
+            slugPreview() {
+                return String(this.name || '')
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[̀-ͯ]/g, '')
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .trim()
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-');
+            },
+
+            /**
              * The option names a row currently selects, e.g. "S / Red". A slot
              * left on "— Any —" reads as "Any" so it is obvious the row is a
              * wildcard rather than a blank row.
              */
             variationLabel(variation) {
-                const parts = this.variationAttributes().map(pa => {
-                    const selectedId = variation.values[pa.product_attribute_id];
+                const slots = this.variationSlots();
+                if (!slots.length) return variation.label || 'Variation';
+
+                const parts = slots.map(pa => {
+                    const selectedId = variation.values ? variation.values[pa.key] : null;
 
                     if (selectedId === undefined || selectedId === null || selectedId === '') {
-                        return 'Any';
+                        return 'Any ' + pa.name;
                     }
 
-                    const option = this.optionsForProductAttribute(pa)
-                        .find(o => String(o.id) === String(selectedId));
+                    const option = pa.values.find(o => String(o.id) === String(selectedId));
 
-                    return option ? option.name : 'Any';
+                    return option ? option.name : (variation.label || String(selectedId) || 'Any');
                 });
 
-                return parts.length ? parts.join(' / ') : (variation.label || 'Any');
+                return parts.join(' / ');
             },
 
             addVariation() {
-                this.variations.push({
+                this.variations.push(this.blankVariation({}));
+            },
+
+            blankVariation(values) {
+                return {
                     id: '',
-                    values: {},
+                    values: values || {},
                     regular_price: '',
                     sale_price: '',
                     manage_stock: true,
-                    stock_quantity: 0,
+                    stock_quantity: DEFAULT_VARIATION_STOCK,
                     stock_status: 'instock',
                     sku: '',
                     weight_value: '',
@@ -999,7 +1231,7 @@
                     combo_key: null,
                     image_url: null,
                     remove_image: false,
-                });
+                };
             },
 
             removeVariation(index) {

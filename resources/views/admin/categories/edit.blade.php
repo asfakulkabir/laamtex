@@ -56,7 +56,7 @@
         <!-- Current Image Banner & New Image Upload -->
         <div>
             <label class="block text-sm font-bold uppercase tracking-wider text-slate-300 mb-2">Category Banner Image</label>
-            
+
             @if($category->image)
                 <div class="mb-4">
                     <p class="text-sm text-slate-300 mb-2">Current Image:</p>
@@ -64,9 +64,14 @@
                 </div>
             @endif
 
-            <input type="file" id="image" name="image" accept="image/*"
-                   class="w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-500/10 file:text-purple-400 hover:file:bg-purple-500/20">
-            <span class="text-sm text-slate-300 mt-1 block">Upload a file only if you wish to replace the current banner. PNG, JPG, JPEG or WEBP formats.</span>
+            @include('admin.partials.media-picker', [
+                'field' => 'image',
+                'kind' => 'image',
+                'label' => 'Category Banner',
+                'value' => $category->image,
+                'ratio' => '3/2',
+            ])
+            <span class="text-sm text-slate-300 mt-1 block">Pick a banner or upload a new one only if you wish to replace the current banner. PNG, JPG, JPEG or WEBP formats.</span>
             @error('image')
                 <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
             @enderror

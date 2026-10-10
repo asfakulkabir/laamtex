@@ -5,7 +5,7 @@
     $hoverUrl = $hoverImage ? Storage::url($hoverImage->image) : null;
 @endphp
 
-<a href="{{ $product->slug ? route('product.detail', $product->slug) : '#' }}" class="group relative block h-full flex flex-col rounded-2xl bg-white ring-1 ring-gray-300 hover:ring-gray-900 hover:shadow-md transition-all duration-300 ease-in-out overflow-hidden">
+<a href="{{ $product->slug ? route('product.detail', $product->slug) : '#' }}" class="group relative block h-full flex flex-col rounded-2xl bg-slate-50 ring-1 ring-gray-200 shadow-sm hover:shadow-[0_20px_35px_-12px_rgba(15,23,42,0.25)] hover:shadow-[0_8px_16px_-8px_rgba(15,23,42,0.15)] hover:-translate-y-1 transition-all duration-300 ease-in-out overflow-hidden">
     <div class="relative aspect-square bg-slate-100 overflow-hidden">
         @if($imageUrl)
             <img src="{{ $imageUrl }}" alt="" aria-hidden="true" loading="lazy" decoding="async"
@@ -33,17 +33,17 @@
     </div>
 
     <div class="p-3 sm:p-4 flex-1 flex flex-col">
-        <h3 class="text-lg md:text-xl font-semibold text-slate-900 line-clamp-2 group-hover:text-brand-600 transition">
+        <h3 class="text-lg md:text-xl font-semibold text-slate-900 line-clamp-2 group-hover:text-brand-600 transition leading-tight md:leading-tight mb-2">
             {{ $product->name }}
         </h3>
         <div class="flex items-baseline gap-2 mt-auto">
             @if($product->sale_price !== null)
-                <span class="text-base font-bold text-slate-900">৳{{ number_format($product->sale_price, 0) }}</span>
-                <span class="text-xs text-slate-400 line-through">৳{{ number_format($product->regular_price, 0) }}</span>
+                <span class="text-xl md:text-2xl font-extrabold text-emerald-600">৳{{ number_format($product->sale_price, 0, '', '') }}</span>
+                <span class="text-sm text-slate-400 line-through">৳{{ number_format($product->regular_price, 0, '', '') }}</span>
             @elseif($product->regular_price !== null)
-                <span class="text-base font-bold text-slate-900">৳{{ number_format($product->regular_price, 0) }}</span>
+                <span class="text-xl md:text-2xl font-extrabold text-emerald-600">৳{{ number_format($product->regular_price, 0, '', '') }}</span>
             @else
-                <span class="text-xs text-slate-400 italic">Options Available</span>
+                <span class="text-sm text-slate-400 italic">Options Available</span>
             @endif
         </div>
     </div>

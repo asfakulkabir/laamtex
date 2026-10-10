@@ -1044,7 +1044,7 @@ body.storefront {
     border-bottom-color: var(--cat-color, var(--nav-hover));
 }
 
-/* Hover backdrop + hover bridge (keeps mega menu open while crossing the gap) */
+/* Hover backdrop dimming the page below the header */
 .nav-category-item::before {
     content: '';
     position: fixed;
@@ -1058,25 +1058,9 @@ body.storefront {
     z-index: 997;
 }
 
-.nav-category-item:hover::before {
+.nav-category-item:hover::before,
+.nav-category-item.mega-open::before {
     background: rgba(0, 0, 0, 0.3);
-}
-
-.nav-category-item::after {
-    content: '';
-    position: fixed;
-    top: var(--nav-height);
-    left: 50%;
-    transform: translateX(-50%);
-    width: 980px;
-    height: var(--nav-mega-height, 500px);
-    max-width: 96vw;
-    pointer-events: none;
-    z-index: 996;
-}
-
-.nav-category-item:hover::after {
-    pointer-events: auto;
 }
 
 /* Mega menu - centered under the header */
@@ -1097,7 +1081,11 @@ body.storefront {
     overflow: auto;
 }
 
+/* .mega-open is set by JS on mouseenter/mouseleave of the nav item so the
+   panel closes as soon as the pointer leaves it. The :hover rules stay as the
+   no-JS fallback. */
 .nav-category-item:hover .mega-menu,
+.nav-category-item.mega-open .mega-menu,
 .mega-menu:hover {
     opacity: 1;
     visibility: visible;

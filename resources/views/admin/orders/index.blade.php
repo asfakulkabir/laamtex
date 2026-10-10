@@ -258,6 +258,7 @@
                                         <div>
                                             <span class="text-xs font-bold uppercase text-slate-400 block">Phone</span>
                                             <span class="font-semibold text-slate-200 font-mono">{{ $order->customer_phone }}</span>
+                                            @include('admin.orders.partials.fraud-check', ['order' => $order])
                                         </div>
                                         <div>
                                             <span class="text-xs font-bold uppercase text-slate-400 block">Payment</span>

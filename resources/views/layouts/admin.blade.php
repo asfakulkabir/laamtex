@@ -56,7 +56,7 @@
 <body class="bg-slate-950 text-slate-300 flex min-h-screen scroll-smooth" x-data="{ sidebarOpen: false }">
 
     <!-- Sidebar Navigation (Fixed) -->
-    <aside class="w-64 bg-slate-900/80 backdrop-blur-xl text-white flex-shrink-0 flex flex-col z-40 transition-all duration-300 fixed h-screen left-0 top-0 border-r border-slate-800/50"
+    <aside class="w-64 bg-slate-900/80 backdrop-blur-xl text-white flex-shrink-0 flex flex-col z-50 transition-all duration-300 fixed h-screen left-0 top-0 border-r border-slate-800/50"
         :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'">
         
         <!-- Sidebar Header -->
@@ -93,7 +93,8 @@
                 @php
                     $productMenuActive = request()->routeIs('admin.products.*')
                         || request()->routeIs('admin.categories.*')
-                        || request()->routeIs('admin.attributes.*');
+                        || request()->routeIs('admin.attributes.*')
+                        || request()->routeIs('admin.size-charts.*');
                 @endphp
                 <div x-data="{ open: @js($productMenuActive) }">
                     <button type="button" @click="open = !open"
@@ -121,6 +122,10 @@
                         <a href="{{ route('admin.attributes.index') }}" class="block py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 {{ request()->routeIs('admin.attributes.*') ? 'bg-purple-500/10 text-purple-300' : 'text-slate-400 hover:bg-slate-800/60 hover:text-purple-300' }}">
                             Attributes
                         </a>
+
+                        <a href="{{ route('admin.size-charts.index') }}" class="block py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 {{ request()->routeIs('admin.size-charts.*') ? 'bg-purple-500/10 text-purple-300' : 'text-slate-400 hover:bg-slate-800/60 hover:text-purple-300' }}">
+                            Size Charts
+                        </a>
                     </div>
                 </div>
 
@@ -137,6 +142,16 @@
                 <a href="{{ route('admin.sliders.index') }}" class="flex items-center space-x-3 px-3 md:px-4 py-3 md:py-3.5 rounded-xl text-base md:text-base font-semibold transition-all duration-200 {{ request()->routeIs('admin.sliders.*') ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 border border-purple-500/30 text-purple-300 shadow-sm shadow-purple-500/5' : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-pink-500/10 hover:border hover:border-purple-500/30 hover:text-purple-300 border border-transparent' }}">
                     <span class="text-lg">🎠</span>
                     <span>Home Slider</span>
+                </a>
+
+                <a href="{{ route('admin.media.index') }}" class="flex items-center space-x-3 px-3 md:px-4 py-3 md:py-3.5 rounded-xl text-base md:text-base font-semibold transition-all duration-200 {{ request()->routeIs('admin.media.*') ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 border border-purple-500/30 text-purple-300 shadow-sm shadow-purple-500/5' : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-pink-500/10 hover:border hover:border-purple-500/30 hover:text-purple-300 border border-transparent' }}">
+                    <span class="text-lg">🗂️</span>
+                    <span>Media Library</span>
+                </a>
+
+                <a href="{{ route('admin.home-sections.index') }}" class="flex items-center space-x-3 px-3 md:px-4 py-3 md:py-3.5 rounded-xl text-base md:text-base font-semibold transition-all duration-200 {{ request()->routeIs('admin.home-sections.*') ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 border border-purple-500/30 text-purple-300 shadow-sm shadow-purple-500/5' : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-pink-500/10 hover:border hover:border-purple-500/30 hover:text-purple-300 border border-transparent' }}">
+                    <span class="text-lg">🏗️</span>
+                    <span>Home Content</span>
                 </a>
 
                 <a href="{{ route('admin.testimonials.index') }}" class="flex items-center space-x-3 px-3 md:px-4 py-3 md:py-3.5 rounded-xl text-base md:text-base font-semibold transition-all duration-200 {{ request()->routeIs('admin.testimonials.*') ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 border border-purple-500/30 text-purple-300 shadow-sm shadow-purple-500/5' : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-pink-500/10 hover:border hover:border-purple-500/30 hover:text-purple-300 border border-transparent' }}">
@@ -180,7 +195,7 @@
     </aside>
 
     <!-- Mobile Backdrop -->
-    <div class="fixed inset-0 bg-black/70 z-30 md:hidden transition-opacity duration-300 backdrop-blur-sm"
+    <div class="fixed inset-0 bg-black/70 z-40 md:hidden transition-opacity duration-300 backdrop-blur-sm"
          @click="sidebarOpen = false"
          :class="sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'">
     </div>
@@ -188,7 +203,7 @@
     <!-- Main Section -->
     <div class="flex-1 flex flex-col min-w-0 md:ml-64">
         <!-- Top bar -->
-        <header class="h-14 md:h-16 lg:h-20 bg-slate-900/60 backdrop-blur-xl border-b border-slate-800/50 flex items-center justify-between px-3 md:px-6 lg:px-8">
+        <header class="relative z-30 h-14 md:h-16 lg:h-20 bg-slate-900/60 backdrop-blur-xl border-b border-slate-800/50 flex items-center justify-between px-3 md:px-6 lg:px-8">
             <div class="flex items-center space-x-2 md:space-x-4 min-w-0">
                 <button @click="sidebarOpen = !sidebarOpen" class="md:hidden text-slate-400 hover:text-white flex-shrink-0 p-1">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -316,7 +331,7 @@
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
 
     <!-- New order toast (appears without a page reload) -->
-    <div class="fixed top-3 md:top-5 right-3 md:right-6 z-[60] space-y-2 w-[calc(100vw-1.5rem)] sm:w-96"
+    <div class="fixed top-3 md:top-5 right-3 md:right-6 z-[1000] space-y-2 w-[calc(100vw-1.5rem)] sm:w-96"
          x-data="newOrderToasts()" @order-arrived.window="push($event.detail)">
         <template x-for="toast in toasts" :key="toast.id">
             <div class="pointer-events-auto">
@@ -442,6 +457,124 @@
         }
     </script>
 
-    @yield('scripts')
+    {{-- Steadfast fraud check. Delegated so it serves the order list and the
+         single order page, where the partial is included once per order row. --}}
+    <script>
+        (function () {
+            function text(scope, selector, value) {
+                var el = scope.querySelector(selector);
+                if (el) el.textContent = value;
+            }
+
+            function show(scope, selector, visible) {
+                var el = scope.querySelector(selector);
+                if (el) el.classList.toggle('hidden', !visible);
+            }
+
+            /**
+             * Steadfast does not return every counter on every payload, so an
+             * absent value is rendered as "—" rather than 0. A missing record and
+             * a genuine zero are very different when judging a COD parcel.
+             */
+            function counter(value) {
+                return value === null || value === undefined ? '—' : value;
+            }
+
+            function renderFraudCheck(scope, data) {
+                show(scope, '.js-fraud-check-loading', false);
+
+                if (!data.ok) {
+                    text(scope, '.js-fraud-check-error', data.message || 'Fraud check failed.');
+                    show(scope, '.js-fraud-check-error', true);
+                    show(scope, '.js-fraud-check-body', false);
+                    return;
+                }
+
+                show(scope, '.js-fraud-check-error', false);
+                show(scope, '.js-fraud-check-body', true);
+
+                // Prefer the number stored on the order; only fall back to the
+                // API form when the order itself has no phone.
+                var phone = scope.getAttribute('data-phone') || data.phone;
+                if (phone) text(scope, '.js-fraud-check-phone', phone);
+
+                text(scope, '.js-fraud-check-delivered', counter(data.total_delivered));
+                text(scope, '.js-fraud-check-cancelled', counter(data.total_cancelled));
+                text(scope, '.js-fraud-check-reports', counter(data.total_fraud_reports));
+
+                var missing = [];
+                if (data.total_delivered === null || data.total_delivered === undefined) missing.push('delivered');
+                if (data.total_cancelled === null || data.total_cancelled === undefined) missing.push('cancelled');
+                if (data.total_fraud_reports === null || data.total_fraud_reports === undefined) missing.push('fraud reports');
+
+                if (missing.length) {
+                    text(scope, '.js-fraud-check-unavailable', 'Steadfast did not report ' + missing.join(', ') + ' for this number.');
+                    show(scope, '.js-fraud-check-unavailable', true);
+                } else {
+                    show(scope, '.js-fraud-check-unavailable', false);
+                }
+
+                // The score endpoint sends ratios, not tallies, so these figures
+                // are rebuilt from the volume. Saying so keeps an admin from
+                // treating a rounded estimate as an exact Steadfast record.
+                if (data.derived && !missing.length) {
+                    text(scope, '.js-fraud-check-derived', 'Delivered and cancelled are estimated from Steadfast\'s parcel volume and success rate.');
+                    show(scope, '.js-fraud-check-derived', true);
+                } else {
+                    show(scope, '.js-fraud-check-derived', false);
+                }
+
+                var extra = [];
+                if (data.total_parcels !== null && data.total_parcels !== undefined) extra.push('Total parcels: ' + data.total_parcels);
+                else if (data.volume_range) extra.push('Total parcels: ' + data.volume_range);
+                if (data.delivery_ratio !== null && data.delivery_ratio !== undefined) extra.push('Delivery rate: ' + data.delivery_ratio + '%');
+                if (data.cancellation_ratio !== null && data.cancellation_ratio !== undefined) extra.push('Cancel rate: ' + data.cancellation_ratio + '%');
+                if (data.volume_band) extra.push('Volume: ' + data.volume_band);
+                if (data.level) extra.push('Risk level: ' + data.level);
+
+                text(scope, '.js-fraud-check-extra', extra.join(' · '));
+                show(scope, '.js-fraud-check-extra', extra.length > 0);
+            }
+
+            document.addEventListener('click', function (event) {
+                var button = event.target.closest('.js-fraud-check-toggle');
+                if (!button) return;
+
+                var scope = button.closest('.js-fraud-check');
+                var panel = scope.querySelector('.js-fraud-check-panel');
+                var body = scope.querySelector('.js-fraud-check-body');
+                var alreadyOpen = !panel.classList.contains('hidden');
+
+                panel.classList.toggle('hidden');
+                button.setAttribute('aria-expanded', alreadyOpen ? 'false' : 'true');
+
+                if (alreadyOpen || body && !body.classList.contains('hidden')) return;
+
+                show(scope, '.js-fraud-check-error', false);
+                show(scope, '.js-fraud-check-body', false);
+                show(scope, '.js-fraud-check-unavailable', false);
+                show(scope, '.js-fraud-check-derived', false);
+                show(scope, '.js-fraud-check-extra', false);
+                show(scope, '.js-fraud-check-loading', true);
+
+                fetch(scope.getAttribute('data-url'), {
+                    headers: { 'Accept': 'application/json' },
+                })
+                    .then(function (response) {
+                        if (!response.ok) throw new Error('Request failed.');
+                        return response.json();
+                    })
+                    .then(function (data) { renderFraudCheck(scope, data); })
+                    .catch(function () {
+                        show(scope, '.js-fraud-check-loading', false);
+                        text(scope, '.js-fraud-check-error', 'Could not load the fraud check. Please try again.');
+                        show(scope, '.js-fraud-check-error', true);
+                    });
+            });
+        })();
+    </script>
+
+    @include('admin.partials.media-picker-script')
+@yield('scripts')
 </body>
 </html>
