@@ -13,9 +13,7 @@
         <div class="relative">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-semibold text-slate-400">Welcome back,</p>
                     <h2 class="text-2xl md:text-3xl font-extrabold text-white mt-1">{{ auth()->user()->name }}</h2>
-                    <p class="text-slate-300 text-sm mt-1">Here's what's happening with your store today.</p>
                 </div>
                 <div class="hidden md:flex items-center space-x-2 px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-xl">
                     <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -27,87 +25,23 @@
         </div>
     </div>
 
-    <!-- Quick Statistics Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-
-        <!-- Total Revenue -->
-        <div class="group bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800/50 p-6 rounded-2xl shadow-lg hover:border-purple-500/30 hover:shadow-purple-500/5 transition-all duration-300 relative overflow-hidden">
-            <div class="absolute -right-8 -top-8 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl group-hover:bg-purple-500/10 transition-all duration-500"></div>
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-gradient-to-br from-purple-500/20 to-purple-600/10 border border-purple-500/20 rounded-xl flex items-center justify-center">
-                    <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </div>
-                <span class="text-sm font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">+12.5%</span>
-            </div>
-            <p class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Total Revenue</p>
-            <h3 class="text-3xl font-extrabold text-white mt-1.5">৳{{ number_format($totalRevenue, 2) }}</h3>
-            <div class="mt-3 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                <div class="h-full w-3/4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
-            </div>
-            <p class="text-sm text-slate-600 mt-2">Revenue from delivered orders</p>
-        </div>
-
-        <!-- Total Orders -->
-        <div class="group bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800/50 p-6 rounded-2xl shadow-lg hover:border-blue-500/30 hover:shadow-blue-500/5 transition-all duration-300 relative overflow-hidden">
-            <div class="absolute -right-8 -top-8 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-all duration-500"></div>
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/20 rounded-xl flex items-center justify-center">
-                    <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                    </svg>
-                </div>
-                <span class="text-sm font-semibold text-blue-400 bg-blue-500/10 px-2 py-1 rounded-full border border-blue-500/20">+5.2%</span>
-            </div>
+    <!-- Quick Summary -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div class="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800/50 p-6 rounded-2xl shadow-lg">
             <p class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Total Orders</p>
             <h3 class="text-3xl font-extrabold text-white mt-1.5">{{ $ordersCount }}</h3>
-            <div class="mt-3 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                <div class="h-full w-1/2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"></div>
-            </div>
-            <p class="text-sm text-slate-600 mt-2">Received through store checkout</p>
         </div>
-
-        <!-- Active Products -->
-        <div class="group bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800/50 p-6 rounded-2xl shadow-lg hover:border-emerald-500/30 hover:shadow-emerald-500/5 transition-all duration-300 relative overflow-hidden">
-            <div class="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-all duration-500"></div>
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border border-emerald-500/20 rounded-xl flex items-center justify-center">
-                    <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                    </svg>
-                </div>
-                <span class="text-sm font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">Active</span>
-            </div>
-            <p class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Active Products</p>
-            <h3 class="text-3xl font-extrabold text-white mt-1.5">{{ $productsCount }}</h3>
-            <div class="mt-3 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                <div class="h-full w-[60%] bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"></div>
-            </div>
-            <p class="text-sm text-slate-600 mt-2">Listed in catalog</p>
+        <div class="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800/50 p-6 rounded-2xl shadow-lg">
+            <p class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Total Delivered</p>
+            <h3 class="text-3xl font-extrabold text-white mt-1.5">{{ \App\Models\Order::where('status','delivered')->count() }}</h3>
         </div>
-
-        <!-- Out Of Stock -->
-        <div class="group bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800/50 p-6 rounded-2xl shadow-lg hover:border-pink-500/30 hover:shadow-pink-500/5 transition-all duration-300 relative overflow-hidden">
-            <div class="absolute -right-8 -top-8 w-24 h-24 bg-pink-500/5 rounded-full blur-2xl group-hover:bg-pink-500/10 transition-all duration-500"></div>
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-gradient-to-br from-pink-500/20 to-pink-600/10 border border-pink-500/20 rounded-xl flex items-center justify-center">
-                    <svg class="w-6 h-6 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
-                    </svg>
-                </div>
-                @if($outOfStockCount > 0)
-                    <span class="text-sm font-semibold text-pink-400 bg-pink-500/10 px-2 py-1 rounded-full border border-pink-500/20">Needs attention</span>
-                @else
-                    <span class="text-sm font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">All good</span>
-                @endif
-            </div>
-            <p class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Out of Stock</p>
-            <h3 class="text-3xl font-extrabold text-white mt-1.5">{{ $outOfStockCount }}</h3>
-            <div class="mt-3 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                <div class="h-full {{ $outOfStockCount > 0 ? 'w-1/4 bg-gradient-to-r from-pink-500 to-rose-500' : 'w-0' }} rounded-full"></div>
-            </div>
-            <p class="text-sm text-slate-600 mt-2">Requires stock replenishment</p>
+        <div class="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800/50 p-6 rounded-2xl shadow-lg">
+            <p class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Total Cancelled</p>
+            <h3 class="text-3xl font-extrabold text-white mt-1.5">{{ \App\Models\Order::where('status','cancelled')->count() }}</h3>
+        </div>
+        <div class="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800/50 p-6 rounded-2xl shadow-lg">
+            <p class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Total Shipped</p>
+            <h3 class="text-3xl font-extrabold text-white mt-1.5">{{ \App\Models\Order::where('status','shipped')->count() }}</h3>
         </div>
     </div>
 
