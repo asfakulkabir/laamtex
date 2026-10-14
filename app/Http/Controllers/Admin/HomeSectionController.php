@@ -94,15 +94,23 @@ class HomeSectionController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'subtitle' => ['nullable', 'string', 'max:255'],
+            'content_type' => ['nullable', 'in:' . implode(',', array_keys(HomeSection::contentTypes()))],
             'category_id' => ['nullable', 'exists:categories,id'],
             'layout' => ['required', 'in:' . HomeSection::LAYOUT_SLIDER . ',' . HomeSection::LAYOUT_GRID],
             'product_limit' => ['required', 'integer', 'min:1', 'max:' . HomeSection::MAX_PRODUCT_LIMIT],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        // A missing or empty select means the admin picked "All", so the key
-        // may be absent entirely and has to be normalised either way.
-        $data['category_id'] = ($data['category_id'] ?? null) ?: null;
+        $data['content_type'] = $data['content_type'] ?? HomeSection::CONTENT_CATEGORY;
+
+        // Featured and latest sections are not tied to a category, so the
+        // stored category is cleared. A missing or empty select on a category
+        // section means "All", so the key may be absent entirely.
+        if ($data['content_type'] !== HomeSection::CONTENT_CATEGORY) {
+            $data['category_id'] = null;
+        } else {
+            $data['category_id'] = ($data['category_id'] ?? null) ?: null;
+        }
 
         return $data;
     }

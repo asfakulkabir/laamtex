@@ -130,6 +130,31 @@
                         <span class="text-base text-red-500 mt-1 block">{{ $message }}</span>
                     @enderror
                 </div>
+                <div class="md:col-span-2">
+                    <label for="office_address" class="block text-base font-bold uppercase tracking-wider text-emerald-300 mb-2">
+                        Office Address
+                    </label>
+                    <textarea id="office_address" name="office_address" rows="3"
+                              class="w-full bg-slate-800/60 border border-emerald-700/40 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600"
+                              placeholder="House 12, Road 5, Dhanmondi, Dhaka 1205, Bangladesh">{{ old('office_address', $officeAddress) }}</textarea>
+                    <p class="text-base text-emerald-300/50 mt-1">Shown in the footer Contact section, the Contact Us page and the Privacy Policy.</p>
+                    @error('office_address')
+                        <span class="text-base text-red-500 mt-1 block">{{ $message }}</span>
+                    @enderror
+                </div>
+                <div class="md:col-span-2">
+                    <label for="contact_email" class="block text-base font-bold uppercase tracking-wider text-emerald-300 mb-2">
+                        Contact Email Address
+                    </label>
+                    <input type="email" id="contact_email" name="contact_email"
+                           value="{{ old('contact_email', $contactEmail) }}"
+                           class="w-full bg-slate-800/60 border border-emerald-700/40 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600"
+                           placeholder="you@example.com">
+                    <p class="text-base text-emerald-300/50 mt-1">Shown as a click-to-email link in the footer Contact section and on the Contact Us page.</p>
+                    @error('contact_email')
+                        <span class="text-base text-red-500 mt-1 block">{{ $message }}</span>
+                    @enderror
+                </div>
             </div>
         </div>
 

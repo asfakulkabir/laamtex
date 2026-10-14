@@ -27,8 +27,35 @@ class HeroFrameTest extends TestCase
         ]);
 
         // A fixed frame is what makes every slide fill the same full-width band.
-        $this->assertStringContainsString('md:[aspect-ratio:2.4]', $html);
+        // Desktop lives in the .hero-frame rule, which also adds the 50px the
+        // frame is grown by on desktop only.
+        $this->assertStringContainsString('class="hero-frame relative w-full"', $html);
+        $this->assertMatchesRegularExpression(
+            '/@media \(min-width: 768px\) \{\s*\.hero-frame \{[^}]*aspect-ratio: 2\.4;/',
+            $html
+        );
         $this->assertStringNotContainsString('--hero-ratio', $html);
+    }
+
+    public function test_the_desktop_hero_frame_is_fifty_pixels_taller()
+    {
+        $html = $this->render([
+            ['image' => 'sliders/wide.jpg'],
+        ]);
+
+        // The extra height is padding on a content-box frame, so the absolutely
+        // positioned slides fill it instead of leaving an empty black strip.
+        $this->assertMatchesRegularExpression(
+            '/@media \(min-width: 768px\) \{\s*\.hero-frame \{[^}]*box-sizing: content-box;[^}]*padding-bottom: 50px;/s',
+            $html
+        );
+
+        // Phone and tablet keep their original bands, so the 50px stays desktop-only.
+        $this->assertMatchesRegularExpression('/\.hero-frame \{ aspect-ratio: 16 \/ 10; \}/', $html);
+        $this->assertMatchesRegularExpression(
+            '/@media \(min-width: 640px\) \{\s*\.hero-frame \{ aspect-ratio: 3 \/ 2; \}/',
+            $html
+        );
     }
 
     public function test_slide_video_covers_the_frame()

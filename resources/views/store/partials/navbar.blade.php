@@ -28,6 +28,7 @@
     $isHome = in_array($currentRoute, ['home']);
     $isShop = in_array($currentRoute, ['shop', 'categories', 'product.detail']);
     $isCart = in_array($currentRoute, ['cart', 'checkout', 'order.success']);
+    $isTrack = in_array($currentRoute, ['order.tracking']);
 
     $popularSearches = ['T-Shirt', 'Polo', 'Hoodie', 'Joggers', 'Kurti', 'Shirt'];
 @endphp
@@ -154,6 +155,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v8m4-4-4-4-4 4"></path><path d="M3 21V9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12"></path></svg>
                 <span>Checkout</span>
             </a>
+            <a href="{{ route('order.tracking') }}" class="side-menu-item highlight">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                <span>Track Order</span>
+            </a>
         </div>
 
         <div class="side-menu-divider"></div>
@@ -163,9 +168,9 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                 <span>Chat / WhatsApp</span>
             </a>
-            <a href="{{ route('admin.login') }}" class="side-menu-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                <span>Admin</span>
+            <a href="{{ route('contact.page') }}" class="side-menu-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-10 6L2 7"></path></svg>
+                <span>Contact Us</span>
             </a>
         </div>
     </div>
@@ -203,11 +208,11 @@
         <span class="nav-label">Shop</span>
     </a>
 
-    <a href="{{ $waLink }}" target="_blank" rel="noopener" class="bottom-nav-item" data-nav="chat">
+    <a href="{{ route('order.tracking') }}" class="bottom-nav-item {{ $isTrack ? 'active' : '' }}" data-nav="track">
         <div class="nav-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h15v13H1z"></path><path d="M16 8h4l3 3v5h-7z"></path><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
         </div>
-        <span class="nav-label">Chat</span>
+        <span class="nav-label">Track</span>
     </a>
 </nav>
 
@@ -417,9 +422,13 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v8m4-4-4-4-4 4"></path><path d="M3 21V9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12"></path></svg>
                             Checkout
                         </a>
-                        <a href="#">
+                        <a href="{{ route('contact.page') }}">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                             Contact Us
+                        </a>
+                        <a href="{{ route('order.tracking') }}" class="is-highlight">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                            Track Order
                         </a>
                     </div>
                 </div>

@@ -8,10 +8,10 @@
 
     <div class="mb-6">
         <h3 class="font-bold text-white text-lg">New Home Section</h3>
-        <p class="text-sm text-slate-300 mt-1">Show a category's products on the home page, as a slider or a grid.</p>
+        <p class="text-sm text-slate-300 mt-1">Show a category's products, the featured products or the latest arrivals on the home page, as a slider or a grid.</p>
     </div>
 
-    <form action="{{ route('admin.home-sections.store') }}" method="POST" class="space-y-6" x-data="{ layout: '{{ old('layout', 'grid') }}' }">
+    <form action="{{ route('admin.home-sections.store') }}" method="POST" class="space-y-6" x-data="{ layout: '{{ old('layout', 'grid') }}', content: '{{ old('content_type', 'category') }}' }">
         @csrf
 
         <div>
@@ -38,6 +38,26 @@
         </div>
 
         <div>
+            <label for="content_type" class="block text-sm font-bold uppercase tracking-wider text-slate-300 mb-2">
+                Content <span class="text-pink-500">*</span>
+            </label>
+            <select id="content_type" name="content_type" x-model="content"
+                    class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-slate-900/80 transition-all text-slate-200">
+                @foreach(\App\Models\HomeSection::contentTypes() as $value => $label)
+                    <option value="{{ $value }}" @selected(old('content_type', 'category') === $value)>{{ $label }}</option>
+                @endforeach
+            </select>
+            <p class="text-xs text-slate-500 mt-1" x-text="content === 'category'
+                ? 'Shows products from the category you pick below.'
+                : (content === 'featured'
+                    ? 'Shows the products marked as featured in the product list.'
+                    : 'Shows the newest active products.')"></p>
+            @error('content_type')
+                <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
+            @enderror
+        </div>
+
+        <div x-show="content === 'category'" x-cloak>
             <label for="category_id" class="block text-sm font-bold uppercase tracking-wider text-slate-300 mb-2">Category</label>
             <select id="category_id" name="category_id"
                     class="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-slate-900/80 transition-all text-slate-200">

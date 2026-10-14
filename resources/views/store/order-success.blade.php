@@ -25,10 +25,12 @@ fbq('track', 'Purchase', @json($pixelPurchase));
             <h1 class="text-3xl font-extrabold tracking-tight text-gray-900">Order Placed Successfully!</h1>
             <p class="text-sm text-gray-500">Thank you, <strong>{{ $order->customer_name }}</strong>! Your order has been received and will be processed shortly.</p>
         </div>
-        <div class="inline-flex items-center space-x-3 bg-purple-50 border border-purple-100 px-6 py-3 rounded-full">
+        <a href="{{ route('order.tracking', ['phone' => $order->customer_phone]) }}"
+           class="inline-flex items-center space-x-3 bg-purple-50 border border-purple-100 hover:border-purple-300 px-6 py-3 rounded-full transition">
             <span class="text-sm text-gray-500">Order ID:</span>
             <span class="text-lg font-extrabold text-primary">#{{ $order->id }}</span>
-        </div>
+            <span class="text-xs font-bold uppercase tracking-wider text-purple-600">Track →</span>
+        </a>
     </div>
 
     <!-- Invoice Card -->
@@ -150,7 +152,12 @@ fbq('track', 'Purchase', @json($pixelPurchase));
     </div>
 
     <!-- CTA Buttons -->
-    <div class="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-6 pt-4">
+    <div class="flex flex-col sm:flex-row justify-center items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 pt-4">
+        <a href="{{ route('order.tracking', ['phone' => $order->customer_phone]) }}"
+           class="inline-flex items-center justify-center gap-2 px-7 py-3 bg-rose-700 hover:bg-rose-800 text-white font-extrabold rounded-full shadow-lg shadow-rose-900/20 text-center transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            Track This Order
+        </a>
         <a href="{{ route('home') }}" class="px-8 py-3 bg-white border-2 border-purple-200 hover:border-purple-400 text-purple-600 font-bold rounded-full text-center transition">Back to Home</a>
         <a href="{{ route('shop') }}" class="px-8 py-3 bg-gradient-to-r from-emerald-700 to-green-900 hover:from-emerald-600 hover:to-green-800 text-white font-bold rounded-full shadow-lg shadow-emerald-900/15 text-center transition">Continue Shopping</a>
     </div>

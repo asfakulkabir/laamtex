@@ -1459,7 +1459,7 @@ body.storefront {
     position: absolute;
     top: 100%;
     right: 0;
-    width: 250px;
+    width: 330px;
     background: var(--nav-bg);
     box-shadow: var(--nav-shadow-lg);
     opacity: 0;
@@ -1502,26 +1502,61 @@ body.storefront {
     color: var(--nav-muted);
 }
 
+/* Links sit in a 2-column grid so the four shortcuts read as one compact
+   2x2 block (logged-in customers get six, which wraps to a third row). */
 .profile-dropdown-links {
-    padding: 12px 0;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
 }
 
 .profile-dropdown-links a {
-    display: block;
-    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 14px;
     font-size: 14px;
+    font-weight: 600;
     color: var(--nav-text);
-    transition: background 0.15s ease;
+    border: 1px solid var(--nav-border);
+    border-radius: 10px;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .profile-dropdown-links a:hover {
     background: var(--nav-bg-2);
+    border-color: var(--nav-hover);
+    color: var(--nav-hover);
+}
+
+/* Track Order is the shortcut most guests come here for, so it stays loud. */
+.profile-dropdown-links a.is-highlight {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #047857;
+    font-weight: 700;
+}
+
+.profile-dropdown-links a.is-highlight svg {
+    color: #059669;
+}
+
+.profile-dropdown-links a.is-highlight:hover {
+    background: #059669;
+    border-color: #059669;
+    color: #fff;
+}
+
+.profile-dropdown-links a.is-highlight:hover svg {
+    color: #fff;
 }
 
 .profile-dropdown-links a svg {
     width: 16px;
     height: 16px;
-    margin-right: 12px;
+    margin-right: 0;
+    flex: none;
     color: var(--nav-muted);
     vertical-align: -2px;
 }

@@ -32,6 +32,8 @@ Route::get('/categories', [StoreController::class, 'categories'])->name('categor
 Route::get('/shop', [StoreController::class, 'shop'])->name('shop');
 Route::get('/product/{slug}', [StoreController::class, 'product'])->name('product.detail');
 Route::get('/privacy-policy', [StoreController::class, 'privacyPolicy'])->name('privacy.policy');
+Route::get('/contact', [StoreController::class, 'contact'])->name('contact.page');
+Route::get('/order-tracking', [StoreController::class, 'trackOrder'])->middleware('throttle:30,1')->name('order.tracking');
 
 // Cart Routes
 Route::get('/cart', [StoreController::class, 'cart'])->name('cart');

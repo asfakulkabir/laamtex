@@ -363,6 +363,15 @@ class VariationService
      *
      * @return array<int, string> Human readable labels, e.g. "Pink / S".
      */
+    /**
+     * Combinations submitted more than once in a single save.
+     *
+     * When the clash is with a row that is already stored but Disabled, the
+     * label says so: the admin keeps adding a new row for an option that is
+     * already on screen, and the fix is to enable that row, not add another.
+     *
+     * @return string[]
+     */
     public function duplicateCombinationLabels(Product $product, array $rows): array
     {
         $variationAttributes = $product->variationAttributes()->with('values')->get();
@@ -379,7 +388,14 @@ class VariationService
             $comboKey = $this->comboKey($selected);
 
             if (isset($seen[$comboKey])) {
-                $duplicates[] = $this->describeCombination($selected, $variationAttributes);
+                $label = $this->describeCombination($selected, $variationAttributes);
+                $existing = $product->variations()->where('combo_key', $comboKey)->first();
+
+                if ($existing && $existing->status === ProductVariation::STATUS_PRIVATE) {
+                    $label .= ' (already added but Disabled — enable that row instead of adding a new one)';
+                }
+
+                $duplicates[] = $label;
                 continue;
             }
 

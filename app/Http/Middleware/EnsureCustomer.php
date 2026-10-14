@@ -18,6 +18,10 @@ class EnsureCustomer
             return $next($request);
         }
 
-        return redirect()->route('customer.login')->with('error', 'Please login to access your account.');
+        // guest() stores the requested URL in the session so the login page can
+        // send the customer back to where they were heading, instead of always
+        // dropping them on the dashboard.
+        return redirect()->guest(route('customer.login'))
+            ->with('error', 'Please login to access your account.');
     }
 }

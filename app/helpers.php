@@ -62,6 +62,59 @@ if (!function_exists('whatsapp_link')) {
     }
 }
 
+if (!function_exists('mask_address')) {
+    /**
+     * Mask an address for public order tracking: only the tail stays readable.
+     * At most 5 characters are revealed, and never more than half of the
+     * address, so a short address cannot leak in full.
+     */
+    function mask_address(?string $address, int $visible = 5): string
+    {
+        $address = trim((string) $address);
+
+        if ($address === '') {
+            return '';
+        }
+
+        $length = mb_strlen($address);
+        $keep = min($visible, max(1, intdiv($length, 2)));
+
+        if ($length <= 1) {
+            return $address;
+        }
+
+        return str_repeat('*', $length - $keep) . mb_substr($address, -$keep);
+    }
+}
+
+if (!function_exists('normalize_bd_phone')) {
+    /**
+     * Turn any Bangladeshi phone format into the last 10 digits (the
+     * subscriber number), so 01712345678, +8801712345678 and 8801712345678
+     * all resolve to the same key for lookups.
+     */
+    function normalize_bd_phone(?string $phone): string
+    {
+        $digits = preg_replace('/\D/', '', (string) $phone);
+
+        return strlen($digits) > 10 ? substr($digits, -10) : $digits;
+    }
+}
+
+if (!function_exists('contact_email')) {
+    function contact_email(): string
+    {
+        return (string) Setting::getValue('contact_email', 'laamtexoffice@gmail.com');
+    }
+}
+
+if (!function_exists('office_address')) {
+    function office_address(): string
+    {
+        return (string) Setting::getValue('office_address', 'House 12, Road 5, Dhanmondi, Dhaka 1205, Bangladesh');
+    }
+}
+
 if (!function_exists('primary_color')) {
     function primary_color(): string
     {

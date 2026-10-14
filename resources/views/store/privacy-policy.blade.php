@@ -3,8 +3,8 @@
 @section('title', 'Privacy Policy - ' . site_name())
 
 @php
-    $ppEmail = App\Models\Setting::getValue('contact_email', 'laamtexoffice@gmail.com');
-    $ppAddress = App\Models\Setting::getValue('office_address', 'House 12, Road 5, Dhanmondi, Dhaka 1205, Bangladesh');
+    $ppEmail = contact_email();
+    $ppAddress = office_address();
     $ppPhone = contact_phone();
 @endphp
 

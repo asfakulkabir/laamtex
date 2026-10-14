@@ -46,6 +46,32 @@
         @media (min-width: 768px) {
             .yt-cover-iframe { width: 74.07%; height: 135%; }
         }
+
+        /*
+         * Hero frame height.
+         *
+         * Phone and tablet keep their original bands. From md up the frame is
+         * 50px taller than the old 2.4 band, so desktop shows more of the
+         * artwork. The extra 50px is padding on a content-box frame: the slides
+         * are absolutely positioned against the padding box, so the media
+         * genuinely grows by 50px instead of leaving an empty black strip. The
+         * 2xl cap applies to the content box, so it also stays 50px short of
+         * the old total.
+         */
+        .hero-frame { aspect-ratio: 16 / 10; }
+        @media (min-width: 640px) {
+            .hero-frame { aspect-ratio: 3 / 2; }
+        }
+        @media (min-width: 768px) {
+            .hero-frame {
+                aspect-ratio: 2.4;
+                box-sizing: content-box;
+                padding-bottom: 50px;
+            }
+        }
+        @media (min-width: 1536px) {
+            .hero-frame { max-height: min(68vh, 600px); }
+        }
     </style>
     @if($sliders->count() > 0)
         <section class="w-full">
@@ -55,13 +81,14 @@
                  @touchstart.passive="beginInteract()" @touchend.passive="endInteract()"
                  @focusin="beginInteract()" @focusout="endInteract()">
                 {{--
-                    A fixed frame: a 2.4 band on desktop, matching the recommended
-                    1920 x 800 artwork. Every slide is cropped to fill it with
-                    object-cover, so the hero no longer changes height when the
-                    visitor moves between slides and a portrait video is not
-                    squeezed into a sliver.
+                    A fixed band: 2.4 on desktop, matching the recommended
+                    1920 x 800 artwork, plus the 50px the .hero-frame rule
+                    adds. Every slide is cropped to fill it with object-cover,
+                    so the hero never changes height when the visitor moves
+                    between slides and a portrait video is not squeezed into a
+                    sliver.
                 --}}
-                <div class="relative w-full [aspect-ratio:16/10] sm:[aspect-ratio:3/2] md:[aspect-ratio:2.4] 2xl:max-h-[min(68vh,600px)]">
+                <div class="hero-frame relative w-full">
                     @foreach($sliders as $i => $slider)
                         <div x-show="activeSlide === {{ $i }}" x-transition:enter="transition-opacity duration-700" @if($i > 0) x-cloak @endif
                              class="absolute inset-0 w-full">
@@ -171,7 +198,7 @@
     @endif
 
     <!-- Featured Categories -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-14">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-base sm:text-lg md:text-2xl font-bold md:font-extrabold tracking-tight text-gray-900">Shop by Category</h2>
             <a href="{{ route('categories') }}" class="text-xs sm:text-sm font-bold text-purple-600 hover:text-purple-800 transition">View All &rarr;</a>
@@ -204,55 +231,10 @@
         </div>
     </section>
 
-    <!-- Featured Products -->
-    @if($featuredProducts->count() > 0)
-        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 pb-4 md:pb-6 2xl:pb-8" x-data="featuredSlider()" x-init="init()" @mouseenter="pause()" @mouseleave="play()">
-            <div class="flex justify-between items-end">
-                <div class="space-y-1">
-                    <h2 class="text-lg sm:text-xl md:text-3xl font-bold md:font-extrabold tracking-tight text-gray-900">Featured Additions</h2>
-                    <p class="text-sm text-gray-500 hidden md:block">Handpicked premium pieces from the current season.</p>
-                </div>
-                <div class="flex items-center gap-3 shrink-0">
-                    <div class="hidden md:flex items-center gap-2">
-                        <button type="button" @click="prevSlide()" class="w-9 h-9 rounded-full ring-1 ring-gray-300 text-gray-600 hover:bg-gray-900 hover:text-white hover:ring-gray-900 flex items-center justify-center transition" aria-label="Previous products">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                        </button>
-                        <button type="button" @click="nextSlide()" class="w-9 h-9 rounded-full ring-1 ring-gray-300 text-gray-600 hover:bg-gray-900 hover:text-white hover:ring-gray-900 flex items-center justify-center transition" aria-label="Next products">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        </button>
-                    </div>
-                    <a href="{{ route('shop') }}" class="text-sm font-bold text-accent hover:text-accent transition">See All Products →</a>
-                </div>
-            </div>
-
-            <div x-ref="track" class="flex gap-2 sm:gap-6 lg:gap-8 overflow-x-auto no-scrollbar pb-2">
-                @foreach($featuredProducts as $product)
-                    <div class="slide-item snap-start shrink-0 w-[calc(50%_-_4px)] sm:w-[calc(50%_-_12px)] md:w-[calc(33.33%_-_16px)] lg:w-[calc(33.33%_-_21.33px)] xl:w-[calc(33.33%_-_21.33px)] 2xl:w-[calc(33.33%_-_21.33px)]">
-                        @include('store.partials.product-card', ['product' => $product])
-                    </div>
-                @endforeach
-            </div>
-        </section>
-    @endif
-
-    <!-- Latest Arrivals -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 pb-4 md:pb-6 2xl:pb-8">
-        <div class="text-start space-y-2">
-            <h2 class="text-lg sm:text-xl md:text-3xl font-bold md:font-extrabold tracking-tight text-gray-900">Latest Arrivals</h2>
-            <p class="text-sm text-gray-500">Be the first to secure our fresh collections.</p>
-        </div>
-
-        <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-6 lg:gap-8">
-            @foreach($latestProducts as $product)
-                @include('store.partials.product-card', ['product' => $product])
-            @endforeach
-        </div>
-    </section>
-
-    <!-- Admin-built category sections -->
+    <!-- Admin-built product sections (category, featured or latest) -->
     @foreach($homeSections as $section)
         @if($section->isSlider())
-            <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 pb-4 md:pb-6 2xl:pb-8"
+            <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 md:space-y-5 pt-2 md:pt-8 pb-8 md:pb-14"
                      x-data="featuredSlider()" x-init="init()" @mouseenter="pause()" @mouseleave="play()">
                 <div class="flex justify-between items-end">
                     <div class="space-y-1">
@@ -287,7 +269,7 @@
                 </div>
             </section>
         @else
-            <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+            <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 pt-2 md:pt-8 pb-8 md:pb-14">
                 <div class="text-start space-y-2">
                     <h2 class="text-lg sm:text-xl md:text-3xl font-bold md:font-extrabold tracking-tight text-gray-900">{{ $section->title }}</h2>
                     @if($section->subtitle)
@@ -306,7 +288,7 @@
 
     <!-- Customer Testimonials -->
     @if($testimonials->count() > 0)
-        <section class="mt-12 md:mt-16"
+        <section class="mt-16 md:mt-24"
                  x-data="testimonialSlider()"
                  x-init="init()"
                  @mouseenter="pause()" @mouseleave="play()"
@@ -381,7 +363,7 @@
     @endif
 
     <!-- Info / Help Cards -->
-    <section class="mx-auto max-w-[1280px] px-4 sm:px-6 mt-12">
+    <section class="mx-auto max-w-[1280px] px-4 sm:px-6 mt-16 md:mt-24">
         <div class="grid md:grid-cols-3 gap-4">
             <div class="group bg-amber-100 rounded-2xl p-6 relative overflow-hidden hover:shadow-md transition">
                 <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-200 text-amber-800 mb-4">
@@ -408,7 +390,7 @@
     </section>
 
     <!-- Trust Badges -->
-    <section class="mx-auto max-w-[1280px] px-4 sm:px-6 mt-12">
+    <section class="mx-auto max-w-[1280px] px-4 sm:px-6 mt-16 md:mt-24">
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div class="flex items-start gap-3 p-4 rounded-xl bg-white ring-1 ring-gray-300 hover:ring-gray-300 hover:shadow-sm transition">
                 <div class="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center shrink-0">
@@ -887,7 +869,7 @@
 </script>
 @endif
 
-@if($featuredProducts->count() > 0 || $homeSections->contains(fn ($s) => $s->isSlider()))
+@if($homeSections->contains(fn ($s) => $s->isSlider()))
 <script>
     function featuredSlider() {
         return {

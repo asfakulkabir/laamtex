@@ -4,7 +4,7 @@
     $ytUrl = App\Models\Setting::getValue('youtube_url', '');
     $twUrl = App\Models\Setting::getValue('twitter_url', '');
     $contactEmail = App\Models\Setting::getValue('contact_email', 'laamtexoffice@gmail.com');
-    $storeAddress = App\Models\Setting::getValue('office_address', 'House 12, Road 5, Dhanmondi, Dhaka 1205, Bangladesh');
+    $storeAddress = office_address();
     $storePhone = contact_phone();
     $storePhoneDigits = contact_phone_digits();
     $waDigits = whatsapp_number_digits();
@@ -61,14 +61,16 @@
             <div class="lg:col-span-3">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-gray-900">Customer Care</h3>
                 <ul class="mt-4 space-y-2.5 text-sm">
-                    <li><a href="{{ route('customer.login') }}" class="text-gray-500 hover:text-gray-900 transition">My Account</a></li>
-                    <li><a href="{{ route('customer.dashboard') }}" class="text-gray-500 hover:text-gray-900 transition">My Orders</a></li>
-                    <li><a href="{{ route('customer.login') }}?checkout_redirect=1" class="text-gray-500 hover:text-gray-900 transition">Checkout</a></li>
+                    @if(auth()->check() && auth()->user()->isCustomer())
+                        <li><a href="{{ route('customer.dashboard') }}" class="text-gray-500 hover:text-gray-900 transition">My Orders</a></li>
+                    @else
+                        {{-- Guests get the public phone lookup instead of a login wall --}}
+                        <li><a href="{{ route('order.tracking') }}" class="text-gray-500 hover:text-gray-900 transition">My Orders</a></li>
+                    @endif
+                    <li><a href="{{ route('checkout') }}" class="text-gray-500 hover:text-gray-900 transition">Checkout</a></li>
+                    <li><a href="{{ route('contact.page') }}" class="text-gray-500 hover:text-gray-900 transition">Contact Us</a></li>
+                    <li><a href="{{ route('order.tracking') }}" class="text-gray-500 hover:text-gray-900 transition">Track Your Order</a></li>
                     <li><a href="{{ route('privacy.policy') }}" class="text-gray-500 hover:text-gray-900 transition">Privacy Policy</a></li>
-                    <li>
-                        <button type="button" onclick="window.scrollTo({ top: 0, behavior: 'smooth' })"
-                                class="text-gray-500 hover:text-gray-900 transition">Back to Top ↑</button>
-                    </li>
                 </ul>
             </div>
 

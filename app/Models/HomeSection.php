@@ -13,12 +13,19 @@ class HomeSection extends Model
 
     public const LAYOUT_GRID = 'grid';
 
+    public const CONTENT_CATEGORY = 'category';
+
+    public const CONTENT_FEATURED = 'featured';
+
+    public const CONTENT_LATEST = 'latest';
+
     /** Keeps a runaway limit from stalling the home page. */
     public const MAX_PRODUCT_LIMIT = 24;
 
     protected $fillable = [
         'title',
         'subtitle',
+        'content_type',
         'category_id',
         'layout',
         'product_limit',
@@ -46,6 +53,47 @@ class HomeSection extends Model
     public function isSlider(): bool
     {
         return $this->layout === self::LAYOUT_SLIDER;
+    }
+
+    public function isCategory(): bool
+    {
+        return $this->content_type === self::CONTENT_CATEGORY || $this->content_type === null;
+    }
+
+    public function isFeatured(): bool
+    {
+        return $this->content_type === self::CONTENT_FEATURED;
+    }
+
+    public function isLatest(): bool
+    {
+        return $this->content_type === self::CONTENT_LATEST;
+    }
+
+    /**
+     * Human label for the admin list and form hints.
+     */
+    public function contentTypeLabel(): string
+    {
+        return match ($this->content_type) {
+            self::CONTENT_FEATURED => 'Featured products',
+            self::CONTENT_LATEST => 'Latest products',
+            default => 'Category products',
+        };
+    }
+
+    /**
+     * Content types an admin can pick for a section.
+     *
+     * @return array<string,string>
+     */
+    public static function contentTypes(): array
+    {
+        return [
+            self::CONTENT_CATEGORY => 'Products from a category',
+            self::CONTENT_FEATURED => 'Featured products',
+            self::CONTENT_LATEST => 'Latest products',
+        ];
     }
 
     /**
@@ -93,20 +141,28 @@ class HomeSection extends Model
     }
 
     /**
-     * The active products this section shows, newest first within the manual
-     * sort order the product list uses.
+     * The active products this section shows. Category and featured sections
+     * follow the manual sort order the product list uses, while a latest
+     * section is purely newest-first.
      */
     public function products()
     {
-        $query = Product::with(['images', 'categories'])
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->latest();
+        $query = Product::with(['images', 'categories'])->where('is_active', true);
 
-        $categoryIds = $this->categoryIds();
+        if ($this->isLatest()) {
+            return $query->latest('created_at')->limit($this->effective_limit)->get();
+        }
 
-        if ($categoryIds !== []) {
-            $query->whereHas('categories', fn ($q) => $q->whereIn('categories.id', $categoryIds));
+        $query->orderBy('sort_order')->latest();
+
+        if ($this->isFeatured()) {
+            $query->where('is_featured', true);
+        } elseif ($this->isCategory()) {
+            $categoryIds = $this->categoryIds();
+
+            if ($categoryIds !== []) {
+                $query->whereHas('categories', fn ($q) => $q->whereIn('categories.id', $categoryIds));
+            }
         }
 
         return $query->limit($this->effective_limit)->get();

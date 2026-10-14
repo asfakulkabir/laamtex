@@ -25,8 +25,6 @@ class StoreController extends Controller
     public function index()
     {
         $featuredCategories = Category::whereNull('parent_id')->limit(6)->get();
-        $featuredProducts = Product::with(['images', 'categories'])->where('is_active', true)->where('is_featured', true)->orderBy('sort_order')->latest()->limit(8)->get();
-        $latestProducts = Product::with(['images', 'categories'])->where('is_active', true)->orderBy('sort_order')->latest()->limit(8)->get();
         $sliders = Slider::active()->get();
         $mediaSliders = $sliders->filter(fn (Slider $slider) => $slider->isVideo() || $slider->isAudio())->values();
         if ($mediaSliders->isNotEmpty()) {
@@ -47,7 +45,7 @@ class StoreController extends Controller
             ->filter(fn (HomeSection $section) => $section->displayProducts->isNotEmpty())
             ->values();
 
-        return view('store.index', compact('featuredCategories', 'featuredProducts', 'latestProducts', 'sliders', 'testimonials', 'homeSections'));
+        return view('store.index', compact('featuredCategories', 'sliders', 'testimonials', 'homeSections'));
     }
 
     public function categories()
@@ -60,6 +58,37 @@ class StoreController extends Controller
     public function privacyPolicy()
     {
         return view('store.privacy-policy');
+    }
+
+    public function contact()
+    {
+        return view('store.contact');
+    }
+
+    /**
+     * Public order tracking: a customer looks up their orders by the phone
+     * number they ordered with. Only a masked address is exposed.
+     */
+    public function trackOrder(Request $request)
+    {
+        $phone = trim((string) $request->query('phone', ''));
+        $subscriberNumber = normalize_bd_phone($phone);
+
+        $error = null;
+        $orders = collect();
+
+        if ($phone !== '') {
+            if (strlen($subscriberNumber) < 10) {
+                $error = 'Please enter a valid phone number (at least 10 digits).';
+            } else {
+                // Match on the last 10 digits so 017…, +88017… and 88017… all hit.
+                $orders = Order::where('customer_phone', 'like', '%' . $subscriberNumber)
+                    ->latest()
+                    ->get();
+            }
+        }
+
+        return view('store.order-tracking', compact('phone', 'orders', 'error'));
     }
 
     public function shop(Request $request)

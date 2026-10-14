@@ -66,14 +66,14 @@ fbq('track', 'InitiateCheckout', {
                     <div class="space-y-2 md:space-y-4">
                         <!-- Full Name -->
                         <div>
-                            <label for="customer_name" class="flex items-baseline gap-2 flex-wrap text-sm font-bold text-gray-600 mb-1.5 ml-1">
+                            <label for="customer_name" class="flex items-baseline gap-2 flex-wrap text-base font-bold text-gray-900 mb-1.5 ml-1">
                                 <span>Your Name *</span>
-                                <span lang="bn" class="text-[13px] font-semibold text-gray-600">আপনার নাম</span>
+                                <span lang="bn" class="text-sm font-semibold text-gray-600">আপনার নাম</span>
                             </label>
                             <div class="relative">
                                 <input type="text" id="customer_name" name="customer_name"
                                        value="{{ old('customer_name', $customer->name ?? '') }}" required
-                                       class="w-full bg-emerald-50/70 border-[3px] border-emerald-400 rounded-xl md:rounded-2xl pl-12 pr-4 py-2 md:py-3.5 text-base font-semibold text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-emerald-500 focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-200"
+                                       class="w-full border-[3px] border-emerald-400 rounded-xl md:rounded-2xl pl-12 pr-4 py-2 md:py-3.5 text-base font-semibold text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-emerald-500 focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-200"
                                        placeholder="Enter your full name">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                             </div>
@@ -84,33 +84,33 @@ fbq('track', 'InitiateCheckout', {
 
                         <!-- Phone -->
                         <div>
-                            <label for="customer_phone" class="flex items-baseline gap-2 flex-wrap text-sm font-bold text-gray-600 mb-1.5 ml-1">
+                            <label for="customer_phone" class="flex items-baseline gap-2 flex-wrap text-base font-bold text-gray-900 mb-1.5 ml-1">
                                 <span>Mobile Number *</span>
-                                <span lang="bn" class="text-[13px] font-semibold text-gray-600">মোবাইল নম্বর</span>
+                                <span lang="bn" class="text-sm font-semibold text-gray-600">মোবাইল নম্বর</span>
                             </label>
                             <div class="relative">
                                 <input type="tel" id="customer_phone" name="customer_phone"
                                        value="{{ old('customer_phone', $customer->phone ?? '') }}" required
                                        pattern="^(\+?88)?01[3-9]\d{8}$"
-                                       class="w-full bg-emerald-50/70 border-[3px] border-emerald-400 rounded-xl md:rounded-2xl pl-12 pr-4 py-2 md:py-3.5 text-base font-semibold text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-emerald-500 focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-200"
+                                       class="w-full border-[3px] border-emerald-400 rounded-xl md:rounded-2xl pl-12 pr-4 py-2 md:py-3.5 text-base font-semibold text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-emerald-500 focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-200"
                                        placeholder="01XXXXXXXXX">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                             </div>
                             @error('customer_phone')
                                 <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
                             @enderror
-                            <p class="text-sm text-gray-500 font-semibold mt-1 ml-1">Format: 01XXXXXXXXX (Bangladeshi number)</p>
+                            <p class="text-sm text-gray-600 font-semibold mt-1 ml-1">Format: 01XXXXXXXXX (Bangladeshi number)</p>
                         </div>
 
                         <!-- Address -->
                         <div>
-                            <label for="customer_address" class="flex items-baseline gap-2 flex-wrap text-sm font-bold text-gray-600 mb-1.5 ml-1">
+                            <label for="customer_address" class="flex items-baseline gap-2 flex-wrap text-base font-bold text-gray-900 mb-1.5 ml-1">
                                 <span>Full Address *</span>
-                                <span lang="bn" class="text-[13px] font-semibold text-gray-600">সম্পূর্ণ ঠিকানা</span>
+                                <span lang="bn" class="text-sm font-semibold text-gray-600">সম্পূর্ণ ঠিকানা</span>
                             </label>
                             <div class="relative">
                                 <textarea id="customer_address" name="customer_address" rows="3" required
-                                          class="w-full bg-emerald-50/70 border-[3px] border-emerald-400 rounded-xl md:rounded-2xl pl-12 pr-4 py-2 md:py-3.5 text-base font-semibold text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-emerald-500 focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-200 resize-none min-h-[7rem] md:min-h-[9rem]"
+                                          class="w-full border-[3px] border-emerald-400 rounded-xl md:rounded-2xl pl-12 pr-4 py-2 md:py-3.5 text-base font-semibold text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-emerald-500 focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-200 resize-none min-h-[7rem] md:min-h-[9rem]"
                                           placeholder="House, Road, Area, City">{{ old('customer_address', $customer->address ?? '') }}</textarea>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-5 text-emerald-500"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
                             </div>
@@ -118,6 +118,24 @@ fbq('track', 'InitiateCheckout', {
                                 <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
                             @enderror
                         </div>
+                                        <!-- Custom note (collapsible, optional) -->
+                <div x-data="{ noteOpen: {{ old('customer_note') ? 'true' : 'false' }} }">
+                    <button type="button" @click="noteOpen = !noteOpen" :aria-expanded="noteOpen"
+                            class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-rose-700 transition ml-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                             class="transition-transform duration-200" :class="noteOpen && 'rotate-45'"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                        <span x-text="noteOpen ? 'Hide note' : 'Add a note (optional)'"></span>
+                    </button>
+
+                    <div x-show="noteOpen" x-cloak x-transition class="mt-2">
+                        <textarea name="customer_note" id="customer_note" rows="3" maxlength="500"
+                                  placeholder="e.g. Please deliver after 6 PM..."
+                                  class="w-full border-[3px] border-emerald-400 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-emerald-500 focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-200 resize-none min-h-[7rem]">{{ old('customer_note') }}</textarea>
+                        @error('customer_note')
+                            <span class="text-sm text-red-500 mt-1 block ml-1">{{ $message }}</span>
+                        @enderror
+                    </div>
+                </div>
                                             <!-- Delivery area -->
                     <div class="border-t-2 border-dashed border-gray-200 pt-1 space-y-3">
                         <h4 class="text-sm font-extrabold text-gray-700 flex items-center uppercase tracking-wider">
@@ -158,33 +176,16 @@ fbq('track', 'InitiateCheckout', {
                     </div>
                 </section>
 
-                <!-- Custom note (collapsible, optional) -->
-                <div x-data="{ noteOpen: {{ old('customer_note') ? 'true' : 'false' }} }">
-                    <button type="button" @click="noteOpen = !noteOpen" :aria-expanded="noteOpen"
-                            class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-rose-700 transition ml-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-                             class="transition-transform duration-200" :class="noteOpen && 'rotate-45'"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-                        <span x-text="noteOpen ? 'Hide note' : 'Add a note (optional)'"></span>
-                    </button>
 
-                    <div x-show="noteOpen" x-cloak x-transition class="mt-2">
-                        <textarea name="customer_note" id="customer_note" rows="3" maxlength="500"
-                                  placeholder="e.g. Please deliver after 6 PM..."
-                                  class="w-full bg-emerald-50/70 border-[3px] border-emerald-400 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-emerald-500 focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-200 resize-none min-h-[7rem]">{{ old('customer_note') }}</textarea>
-                        @error('customer_note')
-                            <span class="text-sm text-red-500 mt-1 block ml-1">{{ $message }}</span>
-                        @enderror
-                    </div>
-                </div>
             </div>
 
             <!-- Right: summary -->
             <div class="lg:col-span-5 h-fit lg:sticky lg:top-24">
                 <div class="bg-white p-3 sm:p-6 md:p-8 rounded-2xl border border-gray-200 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.15)] space-y-2">
 
-                    <h3 class="text-lg md:text-xl font-extrabold text-gray-900 border-b-2 border-gray-100 pb-3 flex items-center justify-between tracking-tight">
+                    <h3 class="text-xl md:text-2xl font-extrabold text-gray-900 border-b-2 border-gray-100 pb-3 flex items-center justify-between tracking-tight">
                         Order Summary
-                        <span class="text-sm bg-gray-100 text-gray-600 px-3 py-1 rounded-full font-bold">{{ count($cart) }} {{ count($cart) > 1 ? 'items' : 'item' }}</span>
+                        <span class="text-base bg-gray-100 text-gray-600 px-3 py-1 rounded-full font-bold">{{ count($cart) }} {{ count($cart) > 1 ? 'items' : 'item' }}</span>
                     </h3>
 
                     <!-- Items -->
@@ -202,13 +203,13 @@ fbq('track', 'InitiateCheckout', {
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <div class="flex justify-between items-start gap-2">
-                                        <span class="font-bold text-gray-900 text-base truncate">{{ $item['name'] }}</span>
-                                        <span class="text-base font-extrabold text-gray-900 shrink-0">৳{{ number_format($item['price'] * $item['quantity'], 0) }}</span>
+                                        <span class="font-bold text-gray-900 text-base sm:text-lg truncate">{{ $item['name'] }}</span>
+                                        <span class="text-lg font-extrabold text-gray-900 shrink-0">৳{{ number_format($item['price'] * $item['quantity'], 0) }}</span>
                                     </div>
                                     @if($item['variation_details'])
-                                        <span class="text-sm text-rose-700 font-bold block mt-0.5">{{ $item['variation_details'] }}</span>
+                                        <span class="text-sm sm:text-base text-rose-700 font-bold block mt-0.5">{{ $item['variation_details'] }}</span>
                                     @endif
-                                    <span class="text-sm text-gray-500 font-semibold">Qty: {{ $item['quantity'] }}</span>
+                                    <span class="text-sm sm:text-base text-gray-500 font-semibold">Qty: {{ $item['quantity'] }}</span>
                                 </div>
                             </div>
                         @endforeach
@@ -216,7 +217,7 @@ fbq('track', 'InitiateCheckout', {
 
                     <!-- Payment method -->
                     <div class="border-t-2 border-dashed border-gray-200 pt-4 space-y-3">
-                        <h4 class="text-sm font-extrabold text-gray-700 flex items-center uppercase tracking-wider">
+                        <h4 class="text-base font-extrabold text-gray-700 flex items-center uppercase tracking-wider">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-rose-600"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
                             Payment Method
                         </h4>
@@ -229,8 +230,8 @@ fbq('track', 'InitiateCheckout', {
                                        class="h-4 w-4 border-gray-300 text-rose-600 focus:ring-rose-500"
                                        {{ old('payment_method', 'cod') === 'cod' ? 'checked' : '' }}>
                                 <div class="flex-1">
-                                    <span class="block font-bold text-gray-900 text-sm">Cash on Delivery</span>
-                                    <span class="block text-sm font-semibold text-gray-600 mt-0.5">Pay when the order arrives at your door</span>
+                                    <span class="block font-bold text-gray-900 text-base">Cash on Delivery</span>
+                                    <span class="block text-sm sm:text-base font-semibold text-gray-600 mt-0.5">Pay when the order arrives at your door</span>
                                 </div>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" :class="selectedPayment === 'cod' ? 'text-rose-600' : 'text-gray-300'"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
                             </label>
@@ -242,8 +243,8 @@ fbq('track', 'InitiateCheckout', {
                                        class="h-4 w-4 border-gray-300 text-pink-600 focus:ring-pink-500"
                                        {{ old('payment_method') === 'bkash' ? 'checked' : '' }}>
                                 <div class="flex-1">
-                                    <span class="block font-bold text-gray-900 text-sm">bKash Send Money</span>
-                                    <span class="block text-sm font-semibold text-gray-600 mt-0.5">Send the full payment using Send Money</span>
+                                    <span class="block font-bold text-gray-900 text-base">bKash Send Money</span>
+                                    <span class="block text-sm sm:text-base font-semibold text-gray-600 mt-0.5">Send the full payment using Send Money</span>
                                 </div>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0" :class="selectedPayment === 'bkash' ? 'text-pink-600' : 'text-gray-300'"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
                             </label>
@@ -287,7 +288,7 @@ fbq('track', 'InitiateCheckout', {
                     </div>
 
                     <!-- Totals -->
-                    <div class="space-y-2 text-sm">
+                    <div class="space-y-2 text-base sm:text-lg">
                         <div class="flex justify-between items-center text-gray-500 font-bold">
                             <span>Subtotal</span>
                             <span class="text-gray-900">৳{{ number_format($subtotal, 0) }}</span>
@@ -299,25 +300,25 @@ fbq('track', 'InitiateCheckout', {
                         </div>
 
                         <div class="flex items-end justify-between border-t border-gray-100">
-                            <span class="text-lg font-extrabold text-gray-900">Total</span>
-                            <span class="text-3xl font-extrabold text-rose-700" x-text="formattedGrandTotal">৳{{ number_format($subtotal, 0) }}</span>
+                            <span class="text-xl font-extrabold text-gray-900">Total</span>
+                            <span class="text-4xl font-extrabold text-rose-700 leading-none" x-text="formattedGrandTotal">৳{{ number_format($subtotal, 0) }}</span>
                         </div>
                     </div>
 
                     <!-- Confirm Order -->
                     <div class="border-t-2 border-dashed border-gray-200 pt-4">
                         <button type="submit" form="checkout-form" :disabled="submitting"
-                                class="w-full bg-rose-700 text-white py-4 md:py-5 px-4 rounded-2xl font-extrabold text-lg md:text-xl hover:bg-rose-800 shadow-[0_20px_40px_-15px_rgba(225,29,72,0.5)] transition-all hover:-translate-y-0.5 active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0">
-                            <span x-show="!submitting" class="flex items-center gap-3">Confirm Order <span class="text-xl md:text-2xl" x-text="formattedGrandTotal">৳{{ number_format($subtotal, 0) }}</span></span>
+                                class="w-full bg-rose-700 text-white py-4 md:py-5 px-4 rounded-2xl font-extrabold text-xl md:text-2xl hover:bg-rose-800 shadow-[0_20px_40px_-15px_rgba(225,29,72,0.5)] transition-all hover:-translate-y-0.5 active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                            <span x-show="!submitting" class="flex items-center gap-3">Confirm Order <span class="text-2xl md:text-3xl" x-text="formattedGrandTotal">৳{{ number_format($subtotal, 0) }}</span></span>
                             <span x-show="submitting" x-cloak>Processing your order...</span>
                         </button>
 
                         <div class="flex items-center justify-center gap-2 text-gray-400 mt-4">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                            <p class="text-[11px] font-bold uppercase tracking-wide">Secure checkout · {{ site_name() }}</p>
+                            <p class="text-xs font-bold uppercase tracking-wide">Secure checkout · {{ site_name() }}</p>
                         </div>
 
-                        <a href="{{ route('cart') }}" class="block w-full text-center mt-3 text-xs font-bold text-gray-400 hover:text-gray-700 transition">
+                        <a href="{{ route('cart') }}" class="block w-full text-center mt-3 text-sm font-bold text-gray-400 hover:text-gray-700 transition">
                             ← Edit Cart
                         </a>
                     </div>

@@ -8,9 +8,10 @@
 
     <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
         <p class="text-sm text-slate-300">
-            Build the extra product blocks on the home page. Each section picks a category and shows that category's
-            products, either as a scrolling slider or a simple grid. Child categories are included automatically,
-            and you choose how many products to show. Drag the handle to reorder, then press Save Order.
+            Build the product blocks on the home page. A section can show a category's products, the featured
+            products or the latest arrivals, either as a scrolling slider or a simple grid. Child categories are
+            included automatically, and you choose how many products to show. Toggle a section to hide it from the
+            home page, drag the handle to reorder, then press Save Order.
         </p>
         <a href="{{ route('admin.home-sections.create') }}" class="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white rounded-lg text-sm font-bold shadow transition-all whitespace-nowrap">
             + Add Section
@@ -60,6 +61,10 @@
                                          {{ $section->isSlider() ? 'bg-purple-500/10 text-purple-400' : 'bg-sky-500/10 text-sky-400' }}">
                                 {{ $section->isSlider() ? 'Slider' : 'Grid' }}
                             </span>
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider
+                                         {{ $section->isFeatured() ? 'bg-amber-500/10 text-amber-400' : ($section->isLatest() ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-500/10 text-slate-400') }}">
+                                {{ $section->contentTypeLabel() }}
+                            </span>
                             @unless($section->is_active)
                                 <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-500/15 text-slate-400">Hidden</span>
                             @endunless
@@ -70,10 +75,15 @@
                         @endif
 
                         <p class="text-xs text-slate-500">
-                            Category:
-                            <span class="font-semibold {{ $section->category ? 'text-slate-300' : 'text-slate-500' }}">
-                                {{ $section->category?->name ?? 'All categories' }}
-                            </span>
+                            @if($section->isCategory())
+                                Category:
+                                <span class="font-semibold {{ $section->category ? 'text-slate-300' : 'text-slate-500' }}">
+                                    {{ $section->category?->name ?? 'All categories' }}
+                                </span>
+                            @else
+                                Source:
+                                <span class="font-semibold text-slate-300">{{ $section->contentTypeLabel() }}</span>
+                            @endif
                             &middot; Shows up to
                             <span class="font-semibold text-slate-300">{{ $section->effective_limit }}</span>
                             {{ Str::plural('product', $section->effective_limit) }}

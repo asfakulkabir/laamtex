@@ -22,8 +22,12 @@ fbq('track', 'ViewContent', {
     $fallbackPrice = $product->isVariable()
         ? ($product->min_price ?? $product->publishedVariations()->get()->map(fn ($v) => $v->active_price)->filter()->min())
         : $product->getDisplayPrice();
+
+    // The product's own regular (or sale) price. Shown when a selection has no
+    // matching variation, instead of leaving the shopper with "N/A".
+    $defaultProductPrice = $product->getDisplayPrice();
 @endphp
-<div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 md:py-6" x-data="productDetail({{ json_encode($variationsJson) }}, {{ json_encode($attributesJson) }}, {{ json_encode((float) ($fallbackPrice ?? 0)) }})">
+<div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 md:py-6" x-data="productDetail({{ json_encode($variationsJson) }}, {{ json_encode($attributesJson) }}, {{ json_encode((float) ($fallbackPrice ?? 0)) }}, {{ json_encode((float) ($defaultProductPrice ?? 0)) }})">
     
     <!-- Breadcrumbs (desktop only) -->
     <nav class="hidden md:flex text-xs font-bold text-gray-400 mb-3 space-x-2">
@@ -94,7 +98,7 @@ fbq('track', 'ViewContent', {
             </div>
 
             <!-- Price + Stock -->
-            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 pt-0.5">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
                 @if($product->product_type === 'simple')
                     @if($product->sale_price !== null)
                         <span class="font-extrabold text-emerald-600 text-3xl md:text-4xl" x-text="formattedPrice">৳{{ number_format($product->sale_price, 0, '', '') }}</span>
@@ -131,7 +135,7 @@ fbq('track', 'ViewContent', {
 
             <!-- Short Description -->
             @if($product->short_description)
-                <div class="text-base text-gray-600 leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-purple-600 [&_a]:underline p-2 bg-gray-100 border border-slate-500 rounded-md">{!! $product->short_description !!}</div>
+                <div class="text-base text-black leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-purple-600 [&_a]:underline p-2 bg-neutral-50 rounded-md">{!! $product->short_description !!}</div>
             @endif
 
             <!-- Form -->
@@ -216,8 +220,11 @@ fbq('track', 'ViewContent', {
                         <button type="button" @click="buyNow()" :disabled="!canOrder"
                                 class="animate-order-pulse flex h-[56px] min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-lg font-extrabold tracking-wide text-white shadow-[0_10px_24px_rgba(225,29,72,0.35)] transition hover:-translate-y-0.5 hover:bg-rose-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 shrink-0"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg>
-                            <span class="truncate sm:hidden">অর্ডার করুন</span>
-                            <span class="hidden truncate sm:inline">এখনই অর্ডার করুন</span>
+                            <span class="truncate" x-show="canOrder" x-cloak>
+                                <span class="sm:hidden">অর্ডার করুন</span>
+                                <span class="hidden sm:inline">এখনই অর্ডার করুন</span>
+                            </span>
+                            <span class="truncate" x-show="!canOrder" x-text="disabledButtonText" x-cloak></span>
                         </button>
                     </div>
 
@@ -226,7 +233,8 @@ fbq('track', 'ViewContent', {
                         <button type="button" @click="addCart()" :disabled="!canOrder"
                                 class="flex h-[52px] min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border-0 bg-black px-3 text-base font-extrabold text-white shadow-[0_8px_18px_rgba(0,0,0,0.25)] transition hover:-translate-y-0.5 hover:bg-gray-900 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 shrink-0"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
-                            <span class="truncate">কার্টে যোগ করুন</span>
+                            <span class="truncate" x-show="canOrder" x-cloak>কার্টে যোগ করুন</span>
+                            <span class="truncate" x-show="!canOrder" x-text="disabledButtonText" x-cloak></span>
                         </button>
                         @if($contactPhone)
                             <a href="tel:+{{ $contactPhoneDigits }}"
@@ -422,11 +430,18 @@ fbq('track', 'ViewContent', {
     }
 </style>
 <script>
-    function productDetail(variations, attributes, basePrice) {
+    function productDetail(variations, attributes, basePrice, defaultPrice) {
         return {
             variations: variations || [],
             attributes: attributes || [],
             basePrice: Number(basePrice) || 0,
+            /**
+             * The product's own regular/sale price. Used as the last resort for
+             * a selection that has no matching variation (or a variation with no
+             * price of its own), so the page never shows a bare "N/A" when the
+             * admin did set a default price.
+             */
+            defaultPrice: Number(defaultPrice) || 0,
             defaultImage: '{{ $featuredImg ? Storage::url($featuredImg->image) : "/placeholder.png" }}',
             activeImage: '{{ $featuredImg ? Storage::url($featuredImg->image) : "/placeholder.png" }}',
             /** Selected value id per product attribute id. */
@@ -483,6 +498,23 @@ fbq('track', 'ViewContent', {
             select(attributeId, valueId) {
                 this.selected[attributeId] = valueId;
                 this.matchVariation();
+            },
+
+            /** "৳1,200", or "N/A" only when no price is known at all. */
+            priceText(price) {
+                var value = Number(price) || 0;
+                return value > 0 ? '৳' + value.toFixed(0) : 'N/A';
+            },
+
+            /**
+             * Why the order buttons are greyed out. Shown in place of their
+             * label so a shopper who cannot order yet knows what to fix.
+             */
+            get disabledButtonText() {
+                if (this.canOrder) return '';
+                if (this.productType === 'simple') return this.messages.outOfStock;
+
+                return this.buttonText || this.messages.selectOption;
             },
 
             isSelected(attributeId, valueId) {
@@ -576,8 +608,8 @@ fbq('track', 'ViewContent', {
                 this.selectedVariationId = '';
                 this.variationStock = 0;
                 this.variationOutOfStock = false;
-                this.variationPrice = basePrice;
-                this.formattedPrice = basePrice > 0 ? '৳' + basePrice.toFixed(0) : 'N/A';
+                this.variationPrice = basePrice || this.defaultPrice;
+                this.formattedPrice = this.priceText(this.variationPrice);
                 this.stockStatusText = this.messages.selectOption;
                 this.stockTone = 'neutral';
                 this.buttonText = this.messages.selectOption;
@@ -608,7 +640,8 @@ fbq('track', 'ViewContent', {
                 if (!match) {
                     this.stockStatusText = this.messages.comboUnavailable;
                     this.stockTone = 'unavailable';
-                    this.formattedPrice = 'N/A';
+                    this.variationPrice = this.defaultPrice || basePrice;
+                    this.formattedPrice = this.priceText(this.variationPrice);
                     this.buttonText = this.messages.comboUnavailableShort;
                     return;
                 }
@@ -616,14 +649,15 @@ fbq('track', 'ViewContent', {
                 var hasPrice = match.price !== null && match.price !== undefined;
 
                 // An option that is out of stock still has a real price, so it
-                // is shown like any other. Only an option with no price at all
-                // falls back to N/A.
+                // is shown like any other. A variation with no price of its own
+                // falls back to the product's default price.
                 if (hasPrice) {
                     this.variationPrice = parseFloat(match.price);
-                    this.formattedPrice = '৳' + this.variationPrice.toFixed(0);
                 } else {
-                    this.formattedPrice = 'N/A';
+                    this.variationPrice = this.defaultPrice || basePrice;
                 }
+
+                this.formattedPrice = this.priceText(this.variationPrice);
 
                 // A variation with its own image swaps the main image and holds
                 // it there; otherwise the gallery keeps auto-rotating.

@@ -405,4 +405,142 @@ class HomeSectionTest extends TestCase
     {
         $this->get(route('admin.home-sections.index'))->assertRedirect(route('admin.login'));
     }
+
+    public function test_content_type_must_be_known()
+    {
+        $admin = $this->superAdmin();
+
+        $this->actingAs($admin)->post(route('admin.home-sections.store'), [
+            'title' => 'Bad source',
+            'layout' => 'grid',
+            'product_limit' => 4,
+            'content_type' => 'random',
+        ])->assertSessionHasErrors('content_type');
+
+        $this->assertSame(0, HomeSection::count());
+    }
+
+    public function test_a_section_defaults_to_category_content()
+    {
+        $admin = $this->superAdmin();
+
+        $this->actingAs($admin)->post(route('admin.home-sections.store'), [
+            'title' => 'Plain',
+            'layout' => 'grid',
+            'product_limit' => 4,
+        ])->assertRedirect(route('admin.home-sections.index'));
+
+        $this->assertSame('category', HomeSection::first()->content_type);
+    }
+
+    public function test_featured_section_shows_only_featured_products()
+    {
+        $category = $this->category('Shirts');
+        $this->product('Picked', [$category], ['is_featured' => true]);
+        $this->product('Ignored', [$category], ['is_featured' => false]);
+
+        $section = HomeSection::create([
+            'title' => 'Featured Picks',
+            'content_type' => HomeSection::CONTENT_FEATURED,
+            'layout' => 'grid',
+            'product_limit' => 10,
+            'is_active' => true,
+        ]);
+
+        $this->assertSame(['Picked'], $section->products()->pluck('name')->all());
+    }
+
+    public function test_latest_section_shows_the_newest_products()
+    {
+        $category = $this->category('Shirts');
+        $older = $this->product('Older', [$category], ['is_featured' => true]);
+        $newer = $this->product('Newer', [$category]);
+
+        // created_at is not mass assignable, so it is stamped afterwards.
+        $older->forceFill(['created_at' => now()->subDays(3)])->save();
+        $newer->forceFill(['created_at' => now()->subDay()])->save();
+
+        $section = HomeSection::create([
+            'title' => 'Latest Arrivals',
+            'content_type' => HomeSection::CONTENT_LATEST,
+            'layout' => 'grid',
+            'product_limit' => 10,
+            'is_active' => true,
+        ]);
+
+        $this->assertSame(['Newer', 'Older'], $section->products()->pluck('name')->all());
+    }
+
+    public function test_featured_and_latest_sections_ignore_the_category()
+    {
+        $category = $this->category('Shirts');
+
+        $section = HomeSection::create([
+            'title' => 'Featured',
+            'content_type' => HomeSection::CONTENT_FEATURED,
+            'category_id' => $category->id,
+            'layout' => 'grid',
+            'product_limit' => 10,
+            'is_active' => true,
+        ]);
+
+        // The category is kept in the row, but it does not filter anything.
+        $this->product('Elsewhere', [], ['is_featured' => true]);
+        $this->assertSame(['Elsewhere'], $section->products()->pluck('name')->all());
+    }
+
+    public function test_choosing_featured_content_clears_the_category()
+    {
+        $admin = $this->superAdmin();
+        $category = $this->category('Shirts');
+
+        $section = HomeSection::create([
+            'title' => 'Picks',
+            'category_id' => $category->id,
+            'layout' => 'grid',
+            'product_limit' => 4,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)->put(route('admin.home-sections.update', $section), [
+            'title' => 'Picks',
+            'content_type' => HomeSection::CONTENT_FEATURED,
+            'layout' => 'grid',
+            'product_limit' => 4,
+            'category_id' => $category->id,
+            'is_active' => '1',
+        ])->assertRedirect(route('admin.home-sections.index'));
+
+        $section->refresh();
+        $this->assertSame('featured', $section->content_type);
+        $this->assertNull($section->category_id);
+    }
+
+    public function test_home_page_renders_a_featured_section_and_hides_a_disabled_one()
+    {
+        $category = $this->category('Shirts');
+        $this->product('Chosen One', [$category], ['is_featured' => true]);
+
+        HomeSection::create([
+            'title' => 'Featured Additions',
+            'content_type' => HomeSection::CONTENT_FEATURED,
+            'layout' => 'slider',
+            'product_limit' => 4,
+            'is_active' => true,
+        ]);
+
+        HomeSection::create([
+            'title' => 'Latest Arrivals',
+            'content_type' => HomeSection::CONTENT_LATEST,
+            'layout' => 'grid',
+            'product_limit' => 4,
+            'is_active' => false,
+        ]);
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('Featured Additions')
+            ->assertSee('Chosen One')
+            ->assertDontSee('Latest Arrivals');
+    }
 }
