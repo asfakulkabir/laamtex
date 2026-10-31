@@ -174,49 +174,6 @@
                 </div>
             </div>
 
-            <!-- Status Update -->
-            <div class="bg-slate-900 text-white p-6 rounded-2xl border border-slate-800 space-y-6 shadow-xl">
-                <div>
-                    <h3 class="font-bold text-sm uppercase tracking-wider text-pink-400">Order Management</h3>
-                    <p class="text-sm text-slate-400 mt-1">Change order fulfillment status</p>
-                </div>
-
-                <!-- Status Badge -->
-                <div class="py-2 px-4 bg-slate-950 border border-slate-800 rounded-lg flex items-center justify-between">
-                    <span class="text-sm text-slate-400">Current Status:</span>
-                    @php
-                        $statusColors = [
-                            'processing' => 'text-blue-400',
-                            'shipped'    => 'text-purple-400',
-                            'delivered'  => 'text-green-400',
-                            'cancelled'  => 'text-red-400',
-                        ];
-                        $color = $statusColors[$order->status] ?? 'text-white';
-                    @endphp
-                    <span class="text-sm font-bold {{ $color }}">
-                        {{ \App\Models\Order::STATUSES[$order->status] ?? ucfirst($order->status) }}
-                    </span>
-                </div>
-
-                <!-- Update Status Form -->
-                <form action="{{ route('admin.orders.status', $order->id) }}" method="POST" class="space-y-4 pt-4 border-t border-slate-800">
-                    @csrf
-                    <div>
-                        <label for="status" class="block text-sm font-bold text-slate-400 uppercase mb-2">Change Status To:</label>
-                        <select id="status" name="status"
-                                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-pink-500 transition-all">
-                            @foreach(\App\Models\Order::STATUSES as $val => $label)
-                                <option value="{{ $val }}" {{ $order->status === $val ? 'selected' : '' }}>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white rounded-lg text-sm font-bold uppercase tracking-wider transition-all">
-                        Update Status
-                    </button>
-                </form>
-            </div>
-
             <!-- Steadfast Info (if applicable) -->
             @if($order->is_sent_to_steadfast)
             <div class="bg-emerald-500/10 border border-emerald-500/20 p-6 rounded-2xl space-y-2 text-sm">
@@ -259,6 +216,47 @@
                         </span>
                     </div>
                 </div>
+            </div>
+
+            <!-- Order Management -->
+            <div class="bg-gradient-to-br from-slate-900 to-slate-950 text-white p-6 rounded-2xl space-y-5 shadow-lg">
+                <div>
+                    <h3 class="font-bold text-sm uppercase tracking-wider text-pink-400">Order Management</h3>
+                    <p class="text-sm text-slate-400 mt-1">Manage the order and delivery status.</p>
+                </div>
+
+                @php
+                    $statusColors = [
+                        'processing' => 'text-blue-300 bg-blue-500/10 border-blue-500/20',
+                        'shipped'    => 'text-purple-300 bg-purple-500/10 border-purple-500/20',
+                        'delivered'  => 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20',
+                        'cancelled'  => 'text-red-300 bg-red-500/10 border-red-500/20',
+                    ];
+                    $statusStyle = $statusColors[$order->status] ?? 'text-slate-200 bg-slate-800/50 border-slate-700';
+                @endphp
+                <div class="flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-950/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <span class="text-sm text-slate-400">Delivery status</span>
+                    <span class="inline-flex w-fit items-center rounded-full border px-3 py-1 text-sm font-bold {{ $statusStyle }}">
+                        {{ \App\Models\Order::STATUSES[$order->status] ?? ucfirst($order->status) }}
+                    </span>
+                </div>
+
+                <form action="{{ route('admin.orders.status', $order->id) }}" method="POST" class="space-y-4 border-t border-slate-800 pt-5">
+                    @csrf
+                    <div>
+                        <label for="status" class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-400">Update delivery status</label>
+                        <select id="status" name="status"
+                                class="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white transition-all focus:border-pink-500 focus:outline-none focus:ring-2 focus:ring-pink-500/30">
+                            @foreach(\App\Models\Order::STATUSES as $val => $label)
+                                <option value="{{ $val }}" {{ $order->status === $val ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <button type="submit" class="w-full rounded-lg bg-gradient-to-r from-purple-600 to-pink-500 py-2.5 text-sm font-bold uppercase tracking-wider text-white transition-all hover:from-purple-700 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-pink-400/50">
+                        Update Status
+                    </button>
+                </form>
             </div>
 
             <!-- Send to Steadfast -->
