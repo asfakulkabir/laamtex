@@ -53,10 +53,38 @@ if (!function_exists('whatsapp_number_digits')) {
     }
 }
 
+if (!function_exists('whatsapp_bottom_number')) {
+    function whatsapp_bottom_number(): string
+    {
+        $bottom = (string) Setting::getValue('whatsapp_number_bottom', '');
+        return $bottom !== '' ? $bottom : whatsapp_number();
+    }
+}
+
+if (!function_exists('whatsapp_bottom_number_digits')) {
+    function whatsapp_bottom_number_digits(): string
+    {
+        return (string) preg_replace('/[^0-9]/', '', whatsapp_bottom_number());
+    }
+}
+
+if (!function_exists('whatsapp_bottom_link')) {
+    function whatsapp_bottom_link(): string
+    {
+        $digits = whatsapp_bottom_number_digits();
+
+        return $digits !== '' ? 'https://wa.me/' . $digits : '#';
+    }
+}
+
 if (!function_exists('whatsapp_link')) {
     function whatsapp_link(): string
     {
-        $digits = whatsapp_number_digits();
+        $digits = whatsapp_bottom_number_digits();
+
+        if ($digits === '') {
+            $digits = whatsapp_number_digits();
+        }
 
         return $digits !== '' ? 'https://wa.me/' . $digits : '#';
     }
@@ -112,6 +140,13 @@ if (!function_exists('office_address')) {
     function office_address(): string
     {
         return (string) Setting::getValue('office_address', 'House 12, Road 5, Dhanmondi, Dhaka 1205, Bangladesh');
+    }
+}
+
+if (!function_exists('factory_address')) {
+    function factory_address(): string
+    {
+        return (string) Setting::getValue('factory_address', '');
     }
 }
 

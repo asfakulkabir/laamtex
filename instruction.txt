@@ -84,3 +84,18 @@ Locally this is mirrored by `php artisan serve` (uses root server.php).
     and blocks .env, app/, vendor/, storage/framework/ etc.
 
     Admin panel: /admin
+
+
+
+
+    php artisan tinker
+$user = new App\Models\User;
+$user->name = 'Super Admin';
+$user->email = 'admin@laamtex.com';
+$user->password = 'laamtex@Rajib';
+$user->role = 'super_admin';
+$user->save();
+
+
+The GET method is not supported for route admin/orders/1/status. Supported methods: POST.
+GET laamtex.com

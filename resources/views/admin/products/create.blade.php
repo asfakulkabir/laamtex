@@ -471,6 +471,18 @@
                                class="h-4 w-4 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
                         <label for="is_featured" class="ml-2 block text-sm font-semibold text-slate-300">Featured Highlight</label>
                     </div>
+
+                    <div class="flex items-center">
+                        <input id="free_delivery" name="free_delivery" type="checkbox" value="1"
+                               class="h-4 w-4 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
+                        <label for="free_delivery" class="ml-2 block text-sm font-semibold text-slate-300">Free Delivery</label>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input id="take_advance" name="take_advance" type="checkbox" value="1"
+                               class="h-4 w-4 rounded border-slate-600 text-purple-400 focus:ring-purple-500">
+                        <label for="take_advance" class="ml-2 block text-sm font-semibold text-slate-300">Take Advance (bKash only)</label>
+                    </div>
                 </div>
 
                 <!-- Categories Checkboxes -->

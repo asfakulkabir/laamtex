@@ -5,6 +5,7 @@
     $twUrl = App\Models\Setting::getValue('twitter_url', '');
     $contactEmail = App\Models\Setting::getValue('contact_email', 'laamtexoffice@gmail.com');
     $storeAddress = office_address();
+    $factoryAddress = factory_address();
     $storePhone = contact_phone();
     $storePhoneDigits = contact_phone_digits();
     $waDigits = whatsapp_number_digits();
@@ -17,14 +18,14 @@
     ]);
 @endphp
 
-<footer class="mt-auto relative border-t border-gray-200 bg-white text-gray-600">
+<footer class="mt-auto relative border-t border-gray-200 bg-gray-50 text-gray-600">
 
     <!-- Footer links -->
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-        <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-12 lg:gap-8">
+        <div class="grid grid-cols-2 gap-6 sm:grid-cols-2 lg:grid-cols-12 lg:gap-8">
 
             <!-- Brand -->
-            <div class="lg:col-span-4">
+            <div class="col-span-2 lg:col-span-3">
                 <a href="{{ route('home') }}" class="inline-block">
                     <img src="{{ site_logo() }}" alt="{{ site_name() }}" class="h-12 w-auto max-w-[220px] object-contain">
                 </a>
@@ -57,8 +58,18 @@
                 </ul>
             </div>
 
+            <!-- Categories -->
+            <div class="lg:col-span-2">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-gray-900">Categories</h3>
+                <ul class="mt-4 space-y-2.5 text-sm">
+                    @foreach(($parentCats ?? collect())->take(8) as $cat)
+                        <li><a href="{{ route('shop', ['category' => $cat->slug]) }}" class="text-gray-500 hover:text-gray-900 transition">{{ $cat->name }}</a></li>
+                    @endforeach
+                </ul>
+            </div>
+
             <!-- Customer care -->
-            <div class="lg:col-span-3">
+            <div class="lg:col-span-2">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-gray-900">Customer Care</h3>
                 <ul class="mt-4 space-y-2.5 text-sm">
                     @if(auth()->check() && auth()->user()->isCustomer())
@@ -85,7 +96,10 @@
                         <li><a href="tel:{{ $storePhoneDigits }}" class="text-gray-500 hover:text-gray-900 transition">{{ $storePhone }}</a></li>
                     @endif
                     @if($storeAddress)
-                        <li class="text-gray-500 leading-relaxed">{{ $storeAddress }}</li>
+                        <li class="text-gray-500 leading-relaxed"><span class="font-semibold text-gray-700">Office:</span> {{ $storeAddress }}</li>
+                    @endif
+                    @if($factoryAddress)
+                        <li class="text-gray-500 leading-relaxed"><span class="font-semibold text-gray-700">Factory:</span> {{ $factoryAddress }}</li>
                     @endif
                     @if($waLink !== '#')
                         <li><a href="{{ $waLink }}" target="_blank" rel="noopener" class="text-gray-500 hover:text-gray-900 transition">WhatsApp</a></li>

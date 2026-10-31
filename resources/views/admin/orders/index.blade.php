@@ -191,16 +191,15 @@
                         $chargeAmount   = $deliveryCharge ? $deliveryCharge->charge : 0;
                         $zoneName       = $deliveryCharge ? $deliveryCharge->zone   : 'N/A';
                     @endphp
-                    <tbody x-data="{ open: false }" class="divide-y divide-slate-800/30 text-slate-400">
+                    <tbody class="divide-y divide-slate-800/30 text-slate-400">
                         <tr class="hover:bg-slate-800/30 transition-all duration-150">
-                            <td class="px-8 py-4 font-bold text-white">#{{ $order->id }}</td>
-                            <td class="px-8 py-4 cursor-pointer" @click="open = !open">
-                                <div class="font-semibold text-slate-200 hover:text-purple-400 transition-colors">
+                            <td class="px-8 py-4 font-bold">
+                                <a href="{{ route('admin.orders.show', $order->id) }}" class="text-white hover:text-purple-400 hover:underline">#{{ $order->id }}</a>
+                            </td>
+                            <td class="px-8 py-4">
+                                <a href="{{ route('admin.orders.show', $order->id) }}" class="font-semibold text-slate-200 hover:text-purple-400 hover:underline transition-colors">
                                     {{ $order->customer_name }}
-                                    <svg class="w-3.5 h-3.5 inline-block ml-1 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
-                                    </svg>
-                                </div>
+                                </a>
                                 <div class="text-sm text-slate-300 font-mono">{{ $order->customer_phone }}</div>
                             </td>
                             <td class="px-8 py-4 text-sm">{{ $order->created_at->format('d M Y, h:i A') }}</td>
@@ -238,183 +237,21 @@
                                 @endif
                             </td>
                             <td class="px-8 py-4 text-right">
-                                <button @click="open = !open"
-                                        class="px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 rounded-lg text-sm font-bold transition">
-                                    <span x-show="!open">Expand</span>
-                                    <span x-show="open">Collapse</span>
-                                </button>
-                            </td>
-                        </tr>
-                        <tr x-show="open" x-cloak>
-                            <td colspan="8" class="p-0 bg-slate-900/70">
-                                <div class="p-6 space-y-6">
-
-                                    <!-- Customer & Payment Info -->
-                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                        <div>
-                                            <span class="text-xs font-bold uppercase text-slate-400 block">Customer</span>
-                                            <span class="font-semibold text-slate-200">{{ $order->customer_name }}</span>
-                                        </div>
-                                        <div>
-                                            <span class="text-xs font-bold uppercase text-slate-400 block">Phone</span>
-                                            <span class="font-semibold text-slate-200 font-mono">{{ $order->customer_phone }}</span>
-                                            @include('admin.orders.partials.fraud-check', ['order' => $order])
-                                        </div>
-                                        <div>
-                                            <span class="text-xs font-bold uppercase text-slate-400 block">Payment</span>
-                                            <span class="font-semibold text-slate-200">{{ $order->payment_method }}</span>
-                                        </div>
-                                        <div>
-                                            <span class="text-xs font-bold uppercase text-slate-400 block">Delivery Zone</span>
-                                            <span class="font-semibold text-slate-200">{{ $zoneName }}</span>
-                                        </div>
-                                        @if($order->discount_amount > 0)
-                                        <div>
-                                            <span class="text-xs font-bold uppercase text-slate-400 block">Discount</span>
-                                            <span class="font-semibold text-emerald-400">-৳{{ number_format($order->discount_amount, 0) }}</span>
-                                        </div>
-                                        @endif
-                                        <div class="col-span-2 md:col-span-4">
-                                            <span class="text-xs font-bold uppercase text-slate-400 block">Address</span>
-                                            <span class="font-semibold text-slate-200">{{ $order->customer_address }}</span>
-                                        </div>
-                                        @if($order->bkash_trx_id)
-                                        <div>
-                                            <span class="text-xs font-bold uppercase text-slate-400 block">bKash TrxID</span>
-                                            <span class="font-semibold text-slate-200 font-mono">{{ $order->bkash_trx_id }}</span>
-                                        </div>
-                                        @endif
-                                        @if($order->bkash_sender_last4)
-                                        <div>
-                                            <span class="text-xs font-bold uppercase text-slate-400 block">bKash Last4</span>
-                                            <span class="font-semibold text-slate-200 font-mono">{{ $order->bkash_sender_last4 }}</span>
-                                        </div>
-                                        @endif
-                                        <div>
-                                            <span class="text-xs font-bold uppercase text-slate-400 block">Order Date</span>
-                                            <span class="font-semibold text-slate-200">{{ $order->created_at->format('d M Y, h:i A') }}</span>
-                                        </div>
-                                    </div>
-
-                                    <!-- Actions: Status Update + Send to Steadfast -->
-                                    <div class="border-t border-slate-800/50 pt-4">
-                                        <div class="flex items-end gap-3">
-                                            <form action="{{ route('admin.orders.status', $order->id) }}" method="POST" class="flex-1">
-                                                @csrf
-                                                <label class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Update Status</label>
-                                                <div class="flex gap-2">
-                                                    <select name="status"
-                                                            class="flex-1 bg-slate-800 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500">
-                                                        @foreach(\App\Models\Order::STATUSES as $val => $label)
-                                                            <option value="{{ $val }}" {{ $order->status === $val ? 'selected' : '' }}>{{ $label }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                    <button type="submit"
-                                                            class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white rounded-lg text-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap">
-                                                        Update
-                                                    </button>
-                                                </div>
-                                            </form>
-                                            @if($order->is_sent_to_steadfast)
-                                                <div class="flex-shrink-0">
-                                                    <label class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">&nbsp;</label>
-                                                    <span class="inline-block px-4 py-2 bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm font-bold uppercase tracking-wider whitespace-nowrap">
-                                                        ✅ Sent
-                                                    </span>
-                                                </div>
-                                            @else
-                                            <form action="{{ route('admin.orders.send-to-steadfast', $order->id) }}" method="POST" class="flex-shrink-0">
-                                                @csrf
-                                                <label class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">&nbsp;</label>
-                                                <button type="submit"
-                                                        class="px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap">
-                                                    Send to Steadfast
-                                                </button>
-                                            </form>
-                                            @endif
-                                            @if(auth()->user()->isSuperAdmin())
-                                                <form action="{{ route('admin.orders.destroy', $order->id) }}" method="POST" class="flex-shrink-0" onsubmit="return confirm('Are you sure you want to delete Order #{{ $order->id }}? This action cannot be undone.');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <label class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">&nbsp;</label>
-                                                    <button type="submit"
-                                                            class="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 rounded-lg text-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap">
-                                                        Delete
-                                                    </button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    </div>
-
-                                    <!-- Items Table (at bottom) -->
-                                    <div class="border-t border-slate-800/50 pt-4">
-                                        <h4 class="text-sm font-bold uppercase tracking-wider text-slate-300 mb-3">Order Items</h4>
-                                        <table class="w-full text-left border-collapse text-sm">
-                                            <thead>
-                                                <tr class="bg-slate-800/30 border-b border-slate-800/50 text-xs font-bold uppercase text-slate-400">
-                                                    <th style="width:84px"></th>
-                                                    <th class="px-4 py-2">Product</th>
-                                                    <th class="px-4 py-2 text-center">Price</th>
-                                                    <th class="px-4 py-2 text-center">Qty</th>
-                                                    <th class="px-4 py-2 text-right">Total</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="divide-y divide-slate-800/30 text-slate-400">
-                                                @foreach($order->items as $item)
-                                                    @php
-                                                        $is_arr = is_array($item);
-                                                        $iname  = $is_arr ? ($item['name'] ?? '—') : $item->product_name;
-                                                        $idet   = $is_arr ? ($item['variation_details'] ?? '') : ($item->variation_details ?? '');
-                                                        $iqty   = $is_arr ? ($item['quantity'] ?? 1) : $item->quantity;
-                                                        $iprice = $is_arr ? ($item['price'] ?? 0) : $item->price;
-                                                        $iimage = $is_arr ? ($item['image'] ?? null) : null;
-                                                        if (!$iimage && !$is_arr && $item->product && $item->product->images->isNotEmpty()) {
-                                                            $iimage = $item->product->images->where('is_featured', true)->first()?->image ?? $item->product->images->first()?->image;
-                                                        }
-                                                    @endphp
-                                                    <tr>
-                                                        <td class="pl-4 py-2" style="width:84px">
-                                                            @if($iimage)
-                                                                <a href="{{ Storage::url($iimage) }}" target="_blank" rel="noopener" title="View full size image">
-                                                                    <img src="{{ Storage::url($iimage) }}" alt="{{ $iname }}" width="84" height="84" loading="lazy" style="border-radius:6px;object-fit:cover;display:block;border:1px solid rgb(51 65 85);" class="hover:opacity-80 transition-opacity">
-                                                                </a>
-                                                            @else
-                                                                <span style="display:inline-block;width:84px;height:84px;background:#1e293b;border-radius:6px;border:1px solid rgb(51 65 85);"></span>
-                                                            @endif
-                                                        </td>
-                                                        <td class="px-4 py-2">
-                                                            <span class="font-semibold text-slate-200">{{ $iname }}</span>
-                                                            @if($idet)
-                                                                <span class="text-xs text-purple-400 font-semibold block">Option: {{ $idet }}</span>
-                                                            @endif
-                                                        </td>
-                                                        <td class="px-4 py-2 text-center">৳{{ number_format($iprice, 0) }}</td>
-                                                        <td class="px-4 py-2 text-center">{{ $iqty }}</td>
-                                                        <td class="px-4 py-2 text-right font-bold text-white">৳{{ number_format($iprice * $iqty, 0) }}</td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                        <div class="flex justify-end mt-2 text-sm flex-wrap gap-x-6">
-                                            <span class="text-slate-400">Subtotal:</span>
-                                            <span class="font-semibold text-slate-200">৳{{ number_format($order->subtotal, 0) }}</span>
-                                        </div>
-                                        @if($order->discount_amount > 0)
-                                        <div class="flex justify-end mt-1 text-sm flex-wrap gap-x-6">
-                                            <span class="text-slate-400">Discount:</span>
-                                            <span class="font-semibold text-emerald-400">-৳{{ number_format($order->discount_amount, 0) }}</span>
-                                        </div>
-                                        @endif
-                                        <div class="flex justify-end mt-1 text-sm flex-wrap gap-x-6">
-                                            <span class="text-slate-400">Delivery ({{ $zoneName }}):</span>
-                                            <span class="font-semibold text-slate-200">৳{{ number_format($chargeAmount, 0) }}</span>
-                                        </div>
-                                        <div class="flex justify-end mt-1 text-base font-bold text-white flex-wrap gap-x-6">
-                                            <span>Grand Total:</span>
-                                            <span class="text-purple-400">৳{{ number_format($order->total_amount, 0) }}</span>
-                                        </div>
-                                    </div>
-
+                                <div class="flex justify-end items-center gap-2">
+                                    <a href="{{ route('admin.orders.show', $order->id) }}"
+                                       class="px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 rounded-lg text-sm font-bold transition">
+                                        View
+                                    </a>
+                                    @if(auth()->user()->isSuperAdmin())
+                                        <form action="{{ route('admin.orders.destroy', $order->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete Order #{{ $order->id }}? This action cannot be undone.');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                    class="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 rounded-lg text-sm font-bold transition">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    @endif
                                 </div>
                             </td>
                         </tr>

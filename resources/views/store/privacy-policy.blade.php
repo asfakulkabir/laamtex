@@ -95,7 +95,7 @@
                 <ul class="list-none space-y-1 mt-2">
                     <li><strong>Email:</strong> <a href="mailto:{{ $ppEmail }}" class="text-brand-600 hover:underline">{{ $ppEmail }}</a></li>
                     <li><strong>Phone:</strong> {{ $ppPhone }}</li>
-                    <li><strong>WhatsApp:</strong> {{ whatsapp_number() }}</li>
+                    <li><strong>WhatsApp:</strong> {{ whatsapp_bottom_number() }}</li>
                     <li><strong>Address:</strong> {{ $ppAddress }}</li>
                 </ul>
             </section>
@@ -181,7 +181,7 @@
                 <ul class="list-none space-y-1 mt-2">
                     <li><strong>ইমেইল:</strong> <a href="mailto:{{ $ppEmail }}" class="text-brand-600 hover:underline">{{ $ppEmail }}</a></li>
                     <li><strong>ফোন:</strong> {{ $ppPhone }}</li>
-                    <li><strong>হোয়াটসঅ্যাপ:</strong> {{ whatsapp_number() }}</li>
+                    <li><strong>হোয়াটসঅ্যাপ:</strong> {{ whatsapp_bottom_number() }}</li>
                     <li><strong>ঠিকানা:</strong> {{ $ppAddress }}</li>
                 </ul>
             </section>

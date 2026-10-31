@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\DeliveryChargeController;
 use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\AbandonedOrderController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\MediaController;
@@ -33,7 +34,9 @@ Route::get('/shop', [StoreController::class, 'shop'])->name('shop');
 Route::get('/product/{slug}', [StoreController::class, 'product'])->name('product.detail');
 Route::get('/privacy-policy', [StoreController::class, 'privacyPolicy'])->name('privacy.policy');
 Route::get('/contact', [StoreController::class, 'contact'])->name('contact.page');
+Route::post('/contact', [StoreController::class, 'submitContact'])->name('contact.submit')->middleware('throttle:10,1');
 Route::get('/order-tracking', [StoreController::class, 'trackOrder'])->middleware('throttle:30,1')->name('order.tracking');
+Route::get('/sitemap.xml', [StoreController::class, 'sitemap'])->name('sitemap');
 
 // Cart Routes
 Route::get('/cart', [StoreController::class, 'cart'])->name('cart');
@@ -44,6 +47,7 @@ Route::post('/cart/remove', [StoreController::class, 'removeFromCart'])->name('c
 // Checkout & Order Placement
 Route::get('/checkout', [StoreController::class, 'checkout'])->name('checkout');
 Route::post('/checkout/order', [StoreController::class, 'placeOrder'])->name('checkout.place');
+Route::post('/checkout/abandoned', [StoreController::class, 'saveAbandoned'])->name('checkout.abandoned');
 Route::get('/order-success/{order}', [StoreController::class, 'orderSuccess'])->name('order.success');
 
 // Customer Authentication & Account
@@ -93,6 +97,7 @@ Route::prefix('admin')->group(function () {
         Route::post('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('admin.orders.status');
         Route::post('/orders/{order}/send-to-steadfast', [OrderController::class, 'sendToSteadfast'])->name('admin.orders.send-to-steadfast');
         Route::get('/orders/{order}/fraud-check', [OrderController::class, 'fraudCheck'])->name('admin.orders.fraud-check');
+Route::get('/abandoned-orders', [AbandonedOrderController::class, 'index'])->name('admin.abandoned-orders.index');
 
         // Deleting an order is a super admin only action
         Route::delete('/orders/{order}', [OrderController::class, 'destroy'])
@@ -140,6 +145,7 @@ Route::prefix('admin')->group(function () {
 
             // Delivery Charges CRUD
             Route::get('/delivery-charges', [DeliveryChargeController::class, 'index'])->name('admin.delivery-charges.index');
+Route::post('/delivery-charges/free-delivery', [DeliveryChargeController::class, 'updateFreeDelivery'])->name('admin.delivery-charges.free-delivery');
             Route::get('/delivery-charges/create', [DeliveryChargeController::class, 'create'])->name('admin.delivery-charges.create');
             Route::post('/delivery-charges', [DeliveryChargeController::class, 'store'])->name('admin.delivery-charges.store');
             Route::get('/delivery-charges/{deliveryCharge}/edit', [DeliveryChargeController::class, 'edit'])->name('admin.delivery-charges.edit');
@@ -201,6 +207,12 @@ Route::prefix('admin')->group(function () {
             Route::get('/media/list', [MediaController::class, 'list'])->name('admin.media.list');
             Route::post('/media', [MediaController::class, 'store'])->name('admin.media.store');
             Route::delete('/media/{media}', [MediaController::class, 'destroy'])->name('admin.media.destroy');
+
+            // Contact Messages
+            Route::get('/contact-messages', [\App\Http\Controllers\Admin\ContactMessageController::class, 'index'])->name('admin.contact-messages.index');
+            Route::get('/contact-messages/{contactMessage}', [\App\Http\Controllers\Admin\ContactMessageController::class, 'show'])->name('admin.contact-messages.show');
+            Route::post('/contact-messages/{contactMessage}/read', [\App\Http\Controllers\Admin\ContactMessageController::class, 'markRead'])->name('admin.contact-messages.read');
+            Route::delete('/contact-messages/{contactMessage}', [\App\Http\Controllers\Admin\ContactMessageController::class, 'destroy'])->name('admin.contact-messages.destroy');
 
             // Settings
             Route::get('/settings', [SettingController::class, 'edit'])->name('admin.settings.edit');

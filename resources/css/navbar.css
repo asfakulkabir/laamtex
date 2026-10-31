@@ -340,6 +340,20 @@ body.storefront {
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
+.btn-order-tracking {
+    display: block;
+    margin-top: 12px;
+    padding: 10px;
+    text-align: center;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
 .side-menu-content {
     flex: 1;
     overflow-y: auto;
@@ -431,7 +445,33 @@ body.storefront {
     border-bottom: 1px solid var(--nav-border);
 }
 
-.side-menu-cat.open .chevron {
+.side-menu-cat-row {
+    display: flex;
+    align-items: stretch;
+}
+
+.side-menu-cat-row .side-menu-item {
+    flex: 1;
+}
+
+.side-menu-expand {
+    background: none;
+    border: none;
+    padding: 0 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.side-menu-expand .chevron {
+    width: 14px;
+    height: 14px;
+    color: var(--nav-muted);
+    transition: transform var(--nav-transition);
+}
+
+.side-menu-cat.open .side-menu-expand .chevron {
     transform: rotate(90deg);
 }
 
@@ -516,6 +556,7 @@ body.storefront {
     position: relative;
     display: flex;
     align-items: center;
+    gap: 6px;
 }
 
 .search-input-wrapper .search-icon {
@@ -528,14 +569,34 @@ body.storefront {
 }
 
 .search-input-wrapper input {
-    width: 100%;
-    padding: 12px 40px;
+    flex: 1;
+    min-width: 0;
+    padding: 12px 12px 12px 40px;
     border: none;
     background: var(--nav-bg-2);
     border-radius: 8px;
     font-size: 16px;
     outline: none;
     color: var(--nav-text);
+}
+
+.search-submit-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: var(--nav-accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex: none;
+}
+
+.search-submit-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke: #fff;
 }
 
 .search-input-wrapper input::placeholder {
@@ -545,6 +606,8 @@ body.storefront {
 .search-clear-btn {
     position: absolute;
     right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
     width: 28px;
     height: 28px;
     border: none;
@@ -554,6 +617,13 @@ body.storefront {
     align-items: center;
     justify-content: center;
     cursor: pointer;
+}
+
+.mobile-search-modal .search-clear-btn {
+    position: static;
+    top: auto;
+    transform: none;
+    flex: none;
 }
 
 .search-clear-btn svg {

@@ -7,6 +7,9 @@ use App\Models\AttributeValue;
 use App\Models\DeliveryCharge;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Setting;
+use App\Models\ContactMessage;
+use App\Models\AbandonedOrder;
 use App\Models\Product;
 use App\Models\ProductAttribute;
 use App\Models\ProductVariation;
@@ -63,6 +66,22 @@ class StoreController extends Controller
     public function contact()
     {
         return view('store.contact');
+    }
+
+    public function submitContact(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:30',
+            'subject' => 'nullable|string|max:255',
+            'message' => 'required|string|max:5000',
+        ]);
+
+        ContactMessage::create($validated);
+
+        return redirect()->route('contact.page')
+            ->with('success', 'Your message has been sent successfully. We will get back to you soon.');
     }
 
     /**
@@ -224,6 +243,8 @@ class StoreController extends Controller
                     'id' => $variation->id,
                     'values' => $values,
                     'price' => $variation->active_price,
+                    'regular_price' => $variation->regular_price,
+                    'sale_price' => $variation->sale_price,
                     'stock' => $variation->isStockTracked() ? (int) $variation->effectiveStockQuantity() : null,
                     'in_stock' => $variation->isInStock(),
                     'purchasable' => $variation->isPurchasable(),
@@ -261,6 +282,68 @@ class StoreController extends Controller
         ]);
 
         return view('store.product', compact('product', 'relatedProducts', 'variationsJson', 'attributesJson'));
+    }
+
+    public function sitemap()
+    {
+        $urls = [];
+
+        $urls[] = url('/');
+        $urls[] = route('shop');
+        $urls[] = route('categories');
+        $urls[] = route('contact.page');
+        $urls[] = route('privacy.policy');
+        $urls[] = route('order.tracking');
+
+        foreach (Category::all() as $category) {
+            $urls[] = route('shop', ['category' => $category->slug ?? $category->id]);
+        }
+
+        foreach (Product::where('is_active', true)->get() as $product) {
+            if ($product->slug) {
+                $urls[] = route('product.detail', $product->slug);
+            }
+        }
+
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+        foreach ($urls as $u) {
+            $xml .= "  <url>\n    <loc>" . htmlspecialchars($u, ENT_XML1 | ENT_QUOTES, 'UTF-8') . "</loc>\n  </url>\n";
+        }
+        $xml .= '</urlset>';
+
+        return response($xml, 200, ['Content-Type' => 'application/xml']);
+    }
+
+    public function saveAbandoned(Request $request)
+    {
+        $cart = session()->get('cart', []);
+        if (empty($cart)) {
+            return response()->json(['success' => false]);
+        }
+
+        $name = $request->input('customer_name');
+        $phone = $request->input('customer_phone');
+        $address = $request->input('customer_address');
+
+        if (empty($name) && empty($phone) && empty($address)) {
+            return response()->json(['success' => false]);
+        }
+
+        $subtotal = array_sum(array_map(fn ($item) => $item['price'] * $item['quantity'], $cart));
+
+        $abandoned = AbandonedOrder::updateOrCreate(
+            ['session_id' => session()->getId()],
+            [
+                'customer_name' => $name,
+                'customer_phone' => $phone,
+                'customer_address' => $address,
+                'cart_json' => json_encode(array_values($cart)),
+                'subtotal' => $subtotal,
+            ]
+        );
+
+        return response()->json(['success' => true, 'id' => $abandoned->id]);
     }
 
     public function cart()
@@ -464,6 +547,13 @@ class StoreController extends Controller
         $deliveryZones = DeliveryCharge::orderBy('zone')->get();
         $customer = auth()->user();
 
+        $cartProducts = Product::whereIn('id', array_column($cart, 'product_id'))->get()->keyBy('id');
+        $takeAdvance = $cartProducts->contains(fn ($p) => (bool) $p->take_advance);
+        $productFreeDelivery = $cartProducts->contains(fn ($p) => (bool) $p->free_delivery);
+
+        $freeDeliveryThreshold = $this->freeDeliveryThreshold();
+        $freeDelivery = $productFreeDelivery || ($freeDeliveryThreshold !== null && $subtotal >= $freeDeliveryThreshold);
+
         session()->forget('checkout_coupon_code');
 
         // Send InitiateCheckout + AddPaymentInfo to Conversion API. These are
@@ -488,7 +578,7 @@ class StoreController extends Controller
             ]);
         })->afterResponse();
 
-        return view('store.checkout', compact('cart', 'deliveryZones', 'subtotal', 'customer'));
+        return view('store.checkout', compact('cart', 'deliveryZones', 'subtotal', 'customer', 'freeDelivery', 'freeDeliveryThreshold', 'takeAdvance'));
     }
 
     public function placeOrder(Request $request)
@@ -498,7 +588,7 @@ class StoreController extends Controller
             'customer_phone'   => ['required', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
             'customer_address' => 'required|string',
             'customer_note'    => 'nullable|string|max:500',
-            'delivery_zone'    => 'required|exists:delivery_charges,zone',
+            'delivery_zone'    => 'nullable|exists:delivery_charges,zone',
             'payment_method'   => 'required|in:cod,bkash',
             'bkash_sender_last4' => Rule::when(
                 $request->input('payment_method') === 'bkash',
@@ -512,15 +602,32 @@ class StoreController extends Controller
             return redirect()->route('cart')->with('error', 'Your cart is empty.');
         }
 
-        $delivery = DeliveryCharge::where('zone', $request->delivery_zone)->firstOrFail();
-
         $subtotal = 0;
         foreach ($cart as $item) {
             $subtotal += $item['price'] * $item['quantity'];
         }
         $subtotal = (float) $subtotal;
 
-        $totalAmount = (int) round(max(0, $subtotal + $delivery->charge));
+        $cartProducts = Product::whereIn('id', array_column($cart, 'product_id'))->get()->keyBy('id');
+        $takeAdvance = $cartProducts->contains(fn ($p) => (bool) $p->take_advance);
+        $productFreeDelivery = $cartProducts->contains(fn ($p) => (bool) $p->free_delivery);
+
+        if ($takeAdvance && $request->input('payment_method') !== 'bkash') {
+            return redirect()->back()->withErrors(['payment_method' => 'This order requires an advance payment via bKash.'])->withInput();
+        }
+
+        $freeDelivery = $productFreeDelivery || $this->isFreeDelivery($subtotal);
+
+        if ($freeDelivery) {
+            $delivery = null;
+            $totalAmount = (int) round(max(0, $subtotal));
+        } else {
+            if (! $request->filled('delivery_zone')) {
+                return redirect()->back()->withErrors(['delivery_zone' => 'Please select a delivery zone.'])->withInput();
+            }
+            $delivery = DeliveryCharge::where('zone', $request->delivery_zone)->firstOrFail();
+            $totalAmount = (int) round(max(0, $subtotal + $delivery->charge));
+        }
 
         $itemsArray = [];
         foreach ($cart as $item) {
@@ -580,7 +687,7 @@ class StoreController extends Controller
                 'customer_phone'      => $request->customer_phone,
                 'customer_address'    => $request->customer_address,
                 'customer_note'       => $request->filled('customer_note') ? trim($request->customer_note) : null,
-                'delivery_charge_id'  => $delivery->id,
+                'delivery_charge_id'  => $delivery?->id,
                 'coupon_id'           => null,
                 'coupon_code'         => null,
                 'discount_amount'     => 0,
@@ -632,6 +739,8 @@ class StoreController extends Controller
             // instead of waiting on an SMTP round trip per recipient.
             SendOrderNotification::dispatch($order->id)->afterResponse();
 
+            AbandonedOrder::where('session_id', session()->getId())->delete();
+
             return redirect()->route('order.success', $order->id)
                 ->with('success', 'Order placed successfully.');
 
@@ -657,6 +766,25 @@ class StoreController extends Controller
         }
 
         return view('store.order-success', compact('order'));
+    }
+
+    private function freeDeliveryThreshold(): ?float
+    {
+        foreach (['free_delivery_threshold', 'free_delivery_amount', 'free_delivery_min_order', 'free_delivery_price'] as $key) {
+            $value = Setting::getValue($key);
+            if ($value !== null && $value !== '' && is_numeric($value)) {
+                return (float) $value;
+            }
+        }
+
+        return null;
+    }
+
+    private function isFreeDelivery(float $subtotal): bool
+    {
+        $threshold = $this->freeDeliveryThreshold();
+
+        return $threshold !== null && $subtotal >= $threshold;
     }
 
     // Helpers

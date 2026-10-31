@@ -23,7 +23,9 @@ class SettingController extends Controller
         $metaTestEventCode = Setting::getValue('meta_test_event_code', '');
         $contactPhone = Setting::getValue('contact_phone', '');
         $whatsappNumber = Setting::getValue('whatsapp_number', '');
+        $whatsappNumberBottom = Setting::getValue('whatsapp_number_bottom', '');
         $officeAddress = Setting::getValue('office_address', '');
+        $factoryAddress = Setting::getValue('factory_address', '');
         $contactEmail = Setting::getValue('contact_email', '');
         $bkashNumber = Setting::getValue('bkash_number', '');
         $facebookUrl = Setting::getValue('facebook_url', '');
@@ -44,7 +46,9 @@ class SettingController extends Controller
             'metaTestEventCode',
             'contactPhone',
             'whatsappNumber',
+            'whatsappNumberBottom',
             'officeAddress',
+            'factoryAddress',
             'contactEmail',
             'bkashNumber',
             'facebookUrl',
@@ -71,7 +75,9 @@ class SettingController extends Controller
             'meta_test_event_code' => 'nullable|string|max:100',
             'contact_phone' => 'nullable|string|max:30',
             'whatsapp_number' => 'nullable|string|max:30',
+            'whatsapp_number_bottom' => 'nullable|string|max:30',
             'office_address' => 'nullable|string|max:500',
+            'factory_address' => 'nullable|string|max:500',
             'contact_email' => 'nullable|email|max:255',
             'bkash_number' => 'nullable|string|max:30',
             'facebook_url' => 'nullable|url|max:500',
@@ -115,7 +121,9 @@ class SettingController extends Controller
         Setting::setValue('meta_test_event_code', $request->input('meta_test_event_code', ''));
         Setting::setValue('contact_phone', $request->input('contact_phone', ''));
         Setting::setValue('whatsapp_number', $request->input('whatsapp_number', ''));
+        Setting::setValue('whatsapp_number_bottom', $request->input('whatsapp_number_bottom', ''));
         Setting::setValue('office_address', $request->input('office_address', ''));
+        Setting::setValue('factory_address', $request->input('factory_address', ''));
         Setting::setValue('contact_email', $request->input('contact_email', ''));
         Setting::setValue('bkash_number', $request->input('bkash_number', ''));
         Setting::setValue('facebook_url', $request->input('facebook_url', ''));

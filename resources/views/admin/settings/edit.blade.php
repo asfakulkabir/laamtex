@@ -119,14 +119,27 @@
                 </div>
                 <div>
                     <label for="whatsapp_number" class="block text-base font-bold uppercase tracking-wider text-emerald-300 mb-2">
-                        WhatsApp Number
+                        WhatsApp Number (Product Details)
                     </label>
                     <input type="text" id="whatsapp_number" name="whatsapp_number"
                            value="{{ old('whatsapp_number', $whatsappNumber) }}"
                            class="w-full bg-slate-800/60 border border-emerald-700/40 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600"
                            placeholder="+8801XXXXXXXXX">
-                    <p class="text-base text-emerald-300/50 mt-1">Used for the WhatsApp chat buttons in the navbar, product pages and footer.</p>
+                    <p class="text-base text-emerald-300/50 mt-1">Used for the WhatsApp button on product detail pages.</p>
                     @error('whatsapp_number')
+                        <span class="text-base text-red-500 mt-1 block">{{ $message }}</span>
+                    @enderror
+                </div>
+                <div>
+                    <label for="whatsapp_number_bottom" class="block text-base font-bold uppercase tracking-wider text-emerald-300 mb-2">
+                        WhatsApp Number (Bottom Icons)
+                    </label>
+                    <input type="text" id="whatsapp_number_bottom" name="whatsapp_number_bottom"
+                           value="{{ old('whatsapp_number_bottom', $whatsappNumberBottom) }}"
+                           class="w-full bg-slate-800/60 border border-emerald-700/40 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600"
+                           placeholder="+8801XXXXXXXXX">
+                    <p class="text-base text-emerald-300/50 mt-1">Used for the floating/bottom WhatsApp button and general site WhatsApp links.</p>
+                    @error('whatsapp_number_bottom')
                         <span class="text-base text-red-500 mt-1 block">{{ $message }}</span>
                     @enderror
                 </div>
@@ -139,6 +152,18 @@
                               placeholder="House 12, Road 5, Dhanmondi, Dhaka 1205, Bangladesh">{{ old('office_address', $officeAddress) }}</textarea>
                     <p class="text-base text-emerald-300/50 mt-1">Shown in the footer Contact section, the Contact Us page and the Privacy Policy.</p>
                     @error('office_address')
+                        <span class="text-base text-red-500 mt-1 block">{{ $message }}</span>
+                    @enderror
+                </div>
+                <div class="md:col-span-2">
+                    <label for="factory_address" class="block text-base font-bold uppercase tracking-wider text-emerald-300 mb-2">
+                        Factory Address
+                    </label>
+                    <textarea id="factory_address" name="factory_address" rows="3"
+                              class="w-full bg-slate-800/60 border border-emerald-700/40 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-slate-200 placeholder-slate-600"
+                              placeholder="Factory address...">{{ old('factory_address', $factoryAddress) }}</textarea>
+                    <p class="text-base text-emerald-300/50 mt-1">Shown on the Contact Us page.</p>
+                    @error('factory_address')
                         <span class="text-base text-red-500 mt-1 block">{{ $message }}</span>
                     @enderror
                 </div>

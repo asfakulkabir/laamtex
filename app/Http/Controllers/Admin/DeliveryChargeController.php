@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\DeliveryCharge;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 
 class DeliveryChargeController extends Controller
@@ -12,6 +13,21 @@ class DeliveryChargeController extends Controller
     {
         $charges = DeliveryCharge::orderBy('zone')->get();
         return view('admin.delivery-charges.index', compact('charges'));
+    }
+
+    public function updateFreeDelivery(Request $request)
+    {
+        $request->validate([
+            'free_delivery_threshold' => 'nullable|numeric|min:0',
+        ]);
+
+        if ($request->filled('free_delivery_threshold')) {
+            Setting::setValue('free_delivery_threshold', $request->input('free_delivery_threshold'));
+        } else {
+            \App\Models\Setting::where('key', 'free_delivery_threshold')->delete();
+        }
+
+        return redirect()->route('admin.delivery-charges.index')->with('success', 'Free delivery threshold updated successfully.');
     }
 
     public function create()

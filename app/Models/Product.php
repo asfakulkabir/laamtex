@@ -29,6 +29,8 @@ class Product extends Model
         'status',
         'is_active',
         'is_featured',
+        'free_delivery',
+        'take_advance',
         'size_chart_id',
         'sort_order',
         'seo_title',
@@ -45,6 +47,8 @@ class Product extends Model
         'manage_stock' => 'boolean',
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
+        'free_delivery' => 'boolean',
+        'take_advance' => 'boolean',
         'sort_order' => 'integer',
     ];
 

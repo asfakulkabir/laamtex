@@ -12,7 +12,7 @@
     $steps = ['processing' => 'Processing', 'shipped' => 'Shipped', 'delivered' => 'Delivered'];
     $stepOrder = ['processing' => 0, 'shipped' => 1, 'delivered' => 2];
 
-    $waDigits = whatsapp_number_digits();
+    $waDigits = whatsapp_bottom_number_digits();
     $waBase = $waDigits !== '' ? 'https://wa.me/' . $waDigits : '';
 @endphp
 

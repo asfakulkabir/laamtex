@@ -408,6 +408,8 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
+            'free_delivery' => 'nullable|boolean',
+            'take_advance' => 'nullable|boolean',
             'seo_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
 
@@ -453,6 +455,8 @@ class ProductController extends Controller
         $productData['user_id'] = auth()->id();
         $productData['is_active'] = $request->boolean('is_active', true);
         $productData['is_featured'] = $request->boolean('is_featured', false);
+        $productData['free_delivery'] = $request->boolean('free_delivery', false);
+        $productData['take_advance'] = $request->boolean('take_advance', false);
         $productData['manage_stock'] = $request->boolean('manage_stock', false);
         $productData['stock_status'] = $request->input('stock_status', 'instock');
 
@@ -576,6 +580,8 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'is_active' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
+            'free_delivery' => 'nullable|boolean',
+            'take_advance' => 'nullable|boolean',
             'seo_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
 
@@ -635,6 +641,8 @@ class ProductController extends Controller
         
         $productData['is_active'] = $request->boolean('is_active', true);
         $productData['is_featured'] = $request->boolean('is_featured', false);
+        $productData['free_delivery'] = $request->boolean('free_delivery', false);
+        $productData['take_advance'] = $request->boolean('take_advance', false);
         $productData['manage_stock'] = $request->boolean('manage_stock', false);
         $productData['stock_status'] = $request->input('stock_status', 'instock');
         $productData['regular_price'] = $request->input('regular_price');

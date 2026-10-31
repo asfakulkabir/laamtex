@@ -58,11 +58,14 @@
         <button class="search-modal-back" id="closeSearchModal" type="button" aria-label="Close search">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
         </button>
-        <form class="search-input-wrapper" action="{{ route('shop') }}" method="get" style="display:flex; flex:1;">
+        <form class="search-input-wrapper" action="{{ route('shop') }}" method="get" style="display:flex; flex:1; align-items:center; gap:6px;">
             <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
             <input type="search" id="mobileSearchInput" name="search" placeholder="Search products..." autocomplete="off">
             <button class="search-clear-btn" id="clearSearch" type="button" aria-label="Clear search">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            </button>
+            <button class="search-submit-btn" type="submit" aria-label="Submit search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
             </button>
         </form>
     </div>
@@ -96,6 +99,7 @@
                     <a href="{{ route('customer.login') }}" class="btn-login">Login</a>
                     <a href="{{ route('customer.register') }}" class="btn-register">Register</a>
                 </div>
+                <a href="{{ route('order.tracking') }}" class="btn-order-tracking">Order Tracking</a>
             @endif
         </div>
         <button class="side-menu-close" id="closeSideMenu" type="button" aria-label="Close menu">
@@ -124,13 +128,17 @@
             <div class="side-menu-section-title">Categories</div>
             @foreach($navCats as $cat)
                 <div class="side-menu-cat">
-                    <button type="button" class="side-menu-item" @if($cat['children'])data-expand @endif>
-                        <span style="width:8px; height:8px; border-radius:50%; background:{{ $cat['color'] }}; flex:none;"></span>
-                        <span>{{ $cat['name'] }}</span>
+                    <div class="side-menu-cat-row">
+                        <a href="{{ $navCatUrl($cat['slug']) }}" class="side-menu-item">
+                            <span style="width:8px; height:8px; border-radius:50%; background:{{ $cat['color'] }}; flex:none;"></span>
+                            <span>{{ $cat['name'] }}</span>
+                        </a>
                         @if($cat['children'])
-                            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+                            <button type="button" class="side-menu-expand" data-expand aria-label="Toggle {{ $cat['name'] }} subcategories">
+                                <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+                            </button>
                         @endif
-                    </button>
+                    </div>
                     @if($cat['children'])
                         <div class="side-menu-sub">
                             @foreach($cat['children'] as $child)

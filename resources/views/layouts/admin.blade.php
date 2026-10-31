@@ -89,6 +89,11 @@
                 <span>Orders</span>
             </a>
 
+            <a href="{{ route('admin.abandoned-orders.index') }}" class="flex items-center space-x-3 px-3 md:px-4 py-3 md:py-3.5 rounded-xl text-base md:text-base font-semibold transition-all duration-200 {{ request()->routeIs('admin.abandoned-orders.*') ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 border border-purple-500/30 text-purple-300 shadow-sm shadow-purple-500/5' : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-pink-500/10 hover:border hover:border-purple-500/30 hover:text-purple-300 border border-transparent' }}">
+                <span class="text-lg">🛒</span>
+                <span>Abandoned</span>
+            </a>
+
             @if($isSuperAdmin)
                 @php
                     $productMenuActive = request()->routeIs('admin.products.*')
@@ -159,6 +164,11 @@
                     <span>Testimonials</span>
                 </a>
 
+                <a href="{{ route('admin.contact-messages.index') }}" class="flex items-center space-x-3 px-3 md:px-4 py-3 md:py-3.5 rounded-xl text-base md:text-base font-semibold transition-all duration-200 {{ request()->routeIs('admin.contact-messages.*') ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 border border-purple-500/30 text-purple-300 shadow-sm shadow-purple-500/5' : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-pink-500/10 hover:border hover:border-purple-500/30 hover:text-purple-300 border border-transparent' }}">
+                    <span class="text-lg">✉️</span>
+                    <span>Contact Messages</span>
+                </a>
+
                 <a href="{{ route('admin.staff.index') }}" class="flex items-center space-x-3 px-3 md:px-4 py-3 md:py-3.5 rounded-xl text-base md:text-base font-semibold transition-all duration-200 {{ request()->routeIs('admin.staff.*') ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 border border-purple-500/30 text-purple-300 shadow-sm shadow-purple-500/5' : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-pink-500/10 hover:border hover:border-purple-500/30 hover:text-purple-300 border border-transparent' }}">
                     <span class="text-lg">🛡️</span>
                     <span>Staff &amp; Roles</span>
@@ -181,6 +191,11 @@
                 </div>
             </div>
             
+            @if($isSuperAdmin)
+                <a href="{{ route('admin.settings.edit') }}" class="w-full text-center px-3 py-2 bg-slate-800/50 border border-slate-700/50 text-slate-400 rounded-lg text-sm hover:bg-slate-700/50 hover:text-white transition-all duration-200">
+                    Settings
+                </a>
+            @endif
             <a href="{{ route('home') }}" target="_blank" class="w-full text-center px-3 py-2 bg-slate-800/50 border border-slate-700/50 text-slate-400 rounded-lg text-sm hover:bg-slate-700/50 hover:text-white transition-all duration-200">
                 Visit Site
             </a>
@@ -250,18 +265,18 @@
                         <div x-show="unseen.length" x-cloak class="p-2">
                             <p class="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">New</p>
                             <template x-for="order in unseen" :key="'new-' + order.id">
-                                <a :href="order.url" @click="open = false"
-                                   class="flex items-start gap-3 px-2 py-2.5 rounded-xl hover:bg-slate-800/70 transition">
+                                <a :href="order.url" @click="open = false; markRead();"
+                                   class="flex items-start gap-3 px-2 py-2.5 rounded-xl bg-red-500/5 hover:bg-red-500/10 transition border border-red-500/20">
                                     <span class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-pink-500/10 text-pink-400 text-xs font-bold">
                                         #<span x-text="order.id"></span>
                                     </span>
                                     <span class="min-w-0 flex-1">
-                                        <span class="block text-sm font-semibold text-white truncate" x-text="order.name"></span>
+                                        <span class="block text-sm font-bold text-red-300 truncate" x-text="order.name"></span>
                                         <span class="block text-xs text-slate-400 font-mono" x-text="order.phone"></span>
                                         <span class="block text-xs text-slate-500" x-text="order.created_at"></span>
                                     </span>
                                     <span class="shrink-0 text-right">
-                                        <span class="block text-sm font-bold text-white" x-text="'৳' + Math.round(order.total)"></span>
+                                        <span class="block text-sm font-bold text-red-300" x-text="'৳' + Math.round(order.total)"></span>
                                         <span class="block text-[10px] text-slate-400" x-text="order.status_label"></span>
                                     </span>
                                 </a>
@@ -295,14 +310,6 @@
                     </div>
                 </div>
 
-                @if($isSuperAdmin)
-                    <a href="{{ route('admin.settings.edit') }}" class="text-slate-400 hover:text-white transition-all p-1.5 rounded-lg hover:bg-slate-800/50" title="Settings">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                    </a>
-                @endif
                 <div class="flex items-center space-x-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
                     <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
                     <span class="text-[10px] md:text-sm font-semibold text-emerald-400 hidden sm:inline">Live</span>

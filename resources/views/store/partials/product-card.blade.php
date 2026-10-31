@@ -26,9 +26,20 @@
         @endif
     </div>
 
-    <div class="absolute top-3 left-3 z-10 flex flex-col space-y-1">
-        @if($product->sale_price !== null)
-            <span class="bg-gradient-to-r from-pink-500 to-rose-500 text-white font-extrabold text-[9px] uppercase tracking-wider px-2.5 py-1 rounded-full border border-pink-400/20">Sale</span>
+    @php
+    $cardDiscountPercent = null;
+    if ($product->sale_price !== null && (float) $product->regular_price > 0 && (float) $product->sale_price < (float) $product->regular_price) {
+        $cardDiscountPercent = round(((float) $product->regular_price - (float) $product->sale_price) / (float) $product->regular_price * 100);
+    } elseif ($product->isVariable()) {
+        $saleVariation = $product->variations->first(fn ($v) => $v->isOnSale() && (float) ($v->regular_price ?? 0) > 0);
+        if ($saleVariation) {
+            $cardDiscountPercent = round(((float) $saleVariation->regular_price - (float) $saleVariation->sale_price) / (float) $saleVariation->regular_price * 100);
+        }
+    }
+@endphp
+<div class="absolute top-3 left-3 z-10 flex flex-col space-y-1">
+        @if($cardDiscountPercent !== null)
+            <span class="bg-gradient-to-r from-pink-500 to-rose-500 text-white font-extrabold text-[9px] uppercase tracking-wider px-2.5 py-1 rounded-full border border-pink-400/20">Save {{ $cardDiscountPercent }}%</span>
         @endif
     </div>
 
