@@ -190,7 +190,10 @@ class Product extends Model
 
     public function getDisplayPrice()
     {
-        if ($this->sale_price !== null) {
+        // A sale price only counts when it is above zero and below the regular price.
+        if ($this->sale_price !== null
+            && (float) $this->sale_price > 0
+            && ($this->regular_price === null || (float) $this->sale_price < (float) $this->regular_price)) {
             return $this->sale_price;
         }
         return $this->regular_price;

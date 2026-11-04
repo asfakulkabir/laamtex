@@ -196,6 +196,7 @@
                                     <div>
                                         <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Attribute</label>
                                         <select :name="`attributes[${index}][attribute_id]`" x-model="a.attribute_id"
+                                                x-effect="allAttributes.length; $nextTick(() => { if (a.attribute_id) $el.value = String(a.attribute_id); })"
                                                 @change="onAttributeChange(index)"
                                                 class="w-full bg-slate-800/50 border border-slate-700/50 rounded px-2 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500">
                                             <option value="">— Select attribute —</option>
@@ -1079,6 +1080,17 @@
             syncVariationRows() {
                 const slots = this.variationSlots();
                 if (!slots.length) return;
+
+                // Remove rows that use an option which is no longer ticked
+                // (they are deleted from the database when you click Save).
+                this.variations = this.variations.filter(v => slots.every(slot => {
+                    if (!slot.attribute_id) return true;
+                    const val = String((v.values && v.values[slot.key]) ?? '');
+                    if (val === '' || Number(val) <= 0) return true;
+                    const row = this.attributes.find(a => String(a.attribute_id) === String(slot.attribute_id));
+                    if (!row) return true;
+                    return (row.value_ids || []).map(String).includes(val);
+                }));
 
                 const combinations = slots.map(slot => {
                     const row = this.attributes.find(a => slot.attribute_id

@@ -263,12 +263,31 @@ class StoreController extends Controller
                     'name' => $attribute->display_name,
                     'type' => $attribute->type,
                     'is_variation' => (bool) $attribute->is_variation,
-                    'values' => $attribute->values->map(fn (AttributeValue $value) => [
-                        'id' => $value->id,
-                        'name' => $value->name,
-                        'color' => $value->swatch_color,
-                        'image' => $value->image_url,
-                    ])->values(),
+                    'values' => $attribute->values
+                        // Only offer options that a published variation really
+                        // uses, so a removed variation never shows on the page.
+                        ->filter(function (AttributeValue $value) use ($attribute, $variationsJson) {
+                            if (! $attribute->is_variation || $variationsJson->isEmpty()) {
+                                return true;
+                            }
+
+                            foreach ($variationsJson as $row) {
+                                $used = $row['values'][$attribute->id] ?? null;
+
+                                // "Any" (no value) accepts every option.
+                                if ($used === null || (int) $used === (int) $value->id) {
+                                    return true;
+                                }
+                            }
+
+                            return false;
+                        })
+                        ->map(fn (AttributeValue $value) => [
+                            'id' => $value->id,
+                            'name' => $value->name,
+                            'color' => $value->swatch_color,
+                            'image' => $value->image_url,
+                        ])->values(),
                 ])->values();
         }
 

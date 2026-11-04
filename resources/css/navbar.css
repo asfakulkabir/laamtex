@@ -1551,25 +1551,59 @@ body.storefront {
 }
 
 .profile-dropdown-header .welcome-text {
-    font-size: 14px;
+    font-size: 15px;
     color: var(--nav-text);
-    font-weight: 600;
-    margin-bottom: 8px;
+    font-weight: 700;
+    margin-bottom: 0;
 }
 
 .profile-dropdown-header .login-signup {
-    display: flex;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
 }
 
+/* Login / Signup (and My Account / Logout) as two equal buttons */
 .profile-dropdown-header .login-signup a {
-    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
     font-weight: 700;
-    color: var(--nav-hover);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-align: center;
+    border: 1.5px solid var(--nav-hover);
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.profile-dropdown-header .login-signup a:first-of-type {
+    background: var(--nav-hover);
+    color: #fff !important;
+}
+
+.profile-dropdown-header .login-signup a:first-of-type:hover {
+    background: #e62e5c;
+    border-color: #e62e5c;
+    box-shadow: 0 6px 14px -6px rgba(255, 63, 108, 0.7);
+}
+
+.profile-dropdown-header .login-signup a:last-of-type {
+    background: #fff;
+    color: var(--nav-hover) !important;
+}
+
+.profile-dropdown-header .login-signup a:last-of-type:hover {
+    background: var(--nav-hover);
+    color: #fff !important;
+}
+
+/* The "/" divider is no longer needed between buttons */
 .profile-dropdown-header .login-signup span {
-    color: var(--nav-muted);
+    display: none;
 }
 
 /* Links sit in a 2-column grid so the four shortcuts read as one compact

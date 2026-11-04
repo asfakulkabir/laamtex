@@ -18,27 +18,27 @@
     ]);
 @endphp
 
-<footer class="mt-auto relative border-t border-gray-200 bg-gray-50 text-gray-600">
+<footer class="mt-auto border-t border-gray-200 bg-gray-50 text-gray-600">
 
     <!-- Footer links -->
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-        <div class="grid grid-cols-2 gap-6 sm:grid-cols-2 lg:grid-cols-12 lg:gap-8">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-10 pb-8 sm:pt-12 lg:pt-16 lg:pb-12">
+        <div class="grid grid-cols-2 gap-x-6 gap-y-9 md:grid-cols-3 lg:grid-cols-12 lg:gap-x-8">
 
             <!-- Brand -->
-            <div class="col-span-2 lg:col-span-3">
+            <div class="col-span-2 md:col-span-3 lg:col-span-3">
                 <a href="{{ route('home') }}" class="inline-block">
-                    <img src="{{ site_logo() }}" alt="{{ site_name() }}" class="h-12 w-auto max-w-[220px] object-contain">
+                    <img src="{{ site_logo() }}" alt="{{ site_name() }}" class="h-11 w-auto max-w-[200px] object-contain sm:h-12 sm:max-w-[220px]">
                 </a>
-                <p class="mt-5 max-w-sm text-sm leading-relaxed text-gray-500">
+                <p class="mt-4 max-w-md text-sm leading-relaxed text-gray-600">
                     {{ site_description() ?: site_name() . ' - Premium products curated for modern lifestyles.' }}
                 </p>
 
                 @if($socials)
-                    <div class="mt-6 flex flex-wrap items-center gap-2.5">
+                    <div class="mt-5 flex flex-wrap items-center gap-2.5">
                         @foreach($socials as $social)
                             <a href="{{ $social['url'] }}" target="_blank" rel="noopener noreferrer"
                                aria-label="{{ $social['label'] }}" title="{{ $social['label'] }}"
-                               class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gray-50 text-gray-500 ring-1 ring-gray-200 hover:bg-gray-900 hover:text-white hover:ring-gray-900 transition">
+                               class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-600 ring-1 ring-gray-200 transition hover:bg-gray-900 hover:text-white hover:ring-gray-900">
                                 <svg viewBox="0 0 24 24" fill="currentColor" class="h-[18px] w-[18px]"><path d="{{ $social['path'] }}"></path></svg>
                             </a>
                         @endforeach
@@ -47,62 +47,77 @@
             </div>
 
             <!-- Shop -->
-            <div class="lg:col-span-2">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-gray-900">Shop</h3>
-                <ul class="mt-4 space-y-2.5 text-sm">
-                    <li><a href="{{ route('shop') }}" class="text-gray-500 hover:text-gray-900 transition">Shop All</a></li>
-                    <li><a href="{{ route('categories') }}" class="text-gray-500 hover:text-gray-900 transition">All Categories</a></li>
-                    <li><a href="{{ route('shop', ['sort' => 'latest']) }}" class="text-gray-500 hover:text-gray-900 transition">New Arrivals</a></li>
-                    <li><a href="{{ route('shop', ['sort' => 'price_asc']) }}" class="text-gray-500 hover:text-gray-900 transition">Price: Low to High</a></li>
-                    <li><a href="{{ route('cart') }}" class="text-gray-500 hover:text-gray-900 transition">My Cart</a></li>
+            <nav class="min-w-0 lg:col-span-2" aria-label="Shop">
+                <h3 class="text-xs font-bold uppercase tracking-[0.14em] text-gray-900">Shop<span class="mt-2 block h-0.5 w-6 rounded-full bg-rose-500"></span></h3>
+                <ul class="mt-4 space-y-1.5 text-sm">
+                    <li><a href="{{ route('shop') }}" class="inline-block py-0.5 text-gray-600 transition-colors hover:text-gray-900">Shop All</a></li>
+                    <li><a href="{{ route('categories') }}" class="inline-block py-0.5 text-gray-600 transition-colors hover:text-gray-900">All Categories</a></li>
+                    <li><a href="{{ route('shop', ['sort' => 'latest']) }}" class="inline-block py-0.5 text-gray-600 transition-colors hover:text-gray-900">New Arrivals</a></li>
+                    <li><a href="{{ route('shop', ['sort' => 'price_asc']) }}" class="inline-block py-0.5 text-gray-600 transition-colors hover:text-gray-900">Price: Low to High</a></li>
+                    <li><a href="{{ route('cart') }}" class="inline-block py-0.5 text-gray-600 transition-colors hover:text-gray-900">My Cart</a></li>
                 </ul>
-            </div>
+            </nav>
 
             <!-- Categories -->
-            <div class="lg:col-span-2">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-gray-900">Categories</h3>
-                <ul class="mt-4 space-y-2.5 text-sm">
+            <nav class="min-w-0 lg:col-span-2" aria-label="Categories">
+                <h3 class="text-xs font-bold uppercase tracking-[0.14em] text-gray-900">Categories<span class="mt-2 block h-0.5 w-6 rounded-full bg-rose-500"></span></h3>
+                <ul class="mt-4 space-y-1.5 text-sm">
                     @foreach(($parentCats ?? collect())->take(8) as $cat)
-                        <li><a href="{{ route('shop', ['category' => $cat->slug]) }}" class="text-gray-500 hover:text-gray-900 transition">{{ $cat->name }}</a></li>
+                        <li><a href="{{ route('shop', ['category' => $cat->slug]) }}" class="inline-block py-0.5 text-gray-600 transition-colors hover:text-gray-900">{{ $cat->name }}</a></li>
                     @endforeach
                 </ul>
-            </div>
+            </nav>
 
             <!-- Customer care -->
-            <div class="lg:col-span-2">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-gray-900">Customer Care</h3>
-                <ul class="mt-4 space-y-2.5 text-sm">
+            <nav class="min-w-0 lg:col-span-2" aria-label="Customer care">
+                <h3 class="text-xs font-bold uppercase tracking-[0.14em] text-gray-900">Customer Care<span class="mt-2 block h-0.5 w-6 rounded-full bg-rose-500"></span></h3>
+                <ul class="mt-4 space-y-1.5 text-sm">
                     @if(auth()->check() && auth()->user()->isCustomer())
-                        <li><a href="{{ route('customer.dashboard') }}" class="text-gray-500 hover:text-gray-900 transition">My Orders</a></li>
+                        <li><a href="{{ route('customer.dashboard') }}" class="inline-block py-0.5 text-gray-600 transition-colors hover:text-gray-900">My Orders</a></li>
                     @else
                         {{-- Guests get the public phone lookup instead of a login wall --}}
-                        <li><a href="{{ route('order.tracking') }}" class="text-gray-500 hover:text-gray-900 transition">My Orders</a></li>
+                        <li><a href="{{ route('order.tracking') }}" class="inline-block py-0.5 text-gray-600 transition-colors hover:text-gray-900">My Orders</a></li>
                     @endif
-                    <li><a href="{{ route('checkout') }}" class="text-gray-500 hover:text-gray-900 transition">Checkout</a></li>
-                    <li><a href="{{ route('contact.page') }}" class="text-gray-500 hover:text-gray-900 transition">Contact Us</a></li>
-                    <li><a href="{{ route('order.tracking') }}" class="text-gray-500 hover:text-gray-900 transition">Track Your Order</a></li>
-                    <li><a href="{{ route('privacy.policy') }}" class="text-gray-500 hover:text-gray-900 transition">Privacy Policy</a></li>
+                    <li><a href="{{ route('checkout') }}" class="inline-block py-0.5 text-gray-600 transition-colors hover:text-gray-900">Checkout</a></li>
+                    <li><a href="{{ route('contact.page') }}" class="inline-block py-0.5 text-gray-600 transition-colors hover:text-gray-900">Contact Us</a></li>
+                    <li><a href="{{ route('order.tracking') }}" class="inline-block py-0.5 text-gray-600 transition-colors hover:text-gray-900">Track Your Order</a></li>
+                    <li><a href="{{ route('privacy.policy') }}" class="inline-block py-0.5 text-gray-600 transition-colors hover:text-gray-900">Privacy Policy</a></li>
                 </ul>
-            </div>
+            </nav>
 
             <!-- Contact -->
-            <div class="lg:col-span-3">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-gray-900">Contact</h3>
-                <ul class="mt-4 space-y-2.5 text-sm">
+            <div class="min-w-0 lg:col-span-3">
+                <h3 class="text-xs font-bold uppercase tracking-[0.14em] text-gray-900">Contact<span class="mt-2 block h-0.5 w-6 rounded-full bg-rose-500"></span></h3>
+                <ul class="mt-4 space-y-3 text-sm">
                     @if($contactEmail)
-                        <li><a href="mailto:{{ $contactEmail }}" class="text-gray-500 hover:text-gray-900 transition">{{ $contactEmail }}</a></li>
+                        <li class="flex items-start gap-3">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg>
+                            <a href="mailto:{{ $contactEmail }}" class="min-w-0 break-words text-gray-600 transition-colors hover:text-gray-900">{{ $contactEmail }}</a>
+                        </li>
                     @endif
                     @if($storePhone)
-                        <li><a href="tel:{{ $storePhoneDigits }}" class="text-gray-500 hover:text-gray-900 transition">{{ $storePhone }}</a></li>
+                        <li class="flex items-start gap-3">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                            <a href="tel:{{ $storePhoneDigits }}" class="text-gray-600 transition-colors hover:text-gray-900">{{ $storePhone }}</a>
+                        </li>
                     @endif
                     @if($storeAddress)
-                        <li class="text-gray-500 leading-relaxed"><span class="font-semibold text-gray-700">Office:</span> {{ $storeAddress }}</li>
+                        <li class="flex items-start gap-3">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                            <span class="min-w-0 leading-relaxed text-gray-600"><span class="font-semibold text-gray-800">Office:</span> {{ $storeAddress }}</span>
+                        </li>
                     @endif
                     @if($factoryAddress)
-                        <li class="text-gray-500 leading-relaxed"><span class="font-semibold text-gray-700">Factory:</span> {{ $factoryAddress }}</li>
+                        <li class="flex items-start gap-3">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                            <span class="min-w-0 leading-relaxed text-gray-600"><span class="font-semibold text-gray-800">Factory:</span> {{ $factoryAddress }}</span>
+                        </li>
                     @endif
                     @if($waLink !== '#')
-                        <li><a href="{{ $waLink }}" target="_blank" rel="noopener" class="text-gray-500 hover:text-gray-900 transition">WhatsApp</a></li>
+                        <li class="flex items-start gap-3">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.6-5.4A8.4 8.4 0 1 1 21 11.5z"></path></svg>
+                            <a href="{{ $waLink }}" target="_blank" rel="noopener" class="text-gray-600 transition-colors hover:text-gray-900">WhatsApp</a>
+                        </li>
                     @endif
                 </ul>
             </div>
@@ -110,19 +125,19 @@
     </div>
 
     <!-- Bottom bar -->
-    <div class="border-t border-gray-200 bg-gray-50">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p class="text-xs text-gray-500 order-2 sm:order-1">
+    <div class="border-t border-gray-200 bg-white">
+        <div class="mx-auto flex max-w-7xl flex-col-reverse items-center justify-between gap-3 px-4 py-4 text-center sm:flex-row sm:px-6 sm:py-5 sm:text-left lg:px-8">
+            <p class="text-xs text-gray-500">
                 &copy; {{ date('Y') }} {{ site_name() }}. All rights reserved.
             </p>
 
-            <div class="order-1 sm:order-2 flex items-center gap-3">
+            <div class="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
                 <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">We accept</span>
-                <span class="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-pink-600 ring-1 ring-gray-200">
+                <span class="inline-flex items-center gap-1.5 rounded-md bg-gray-50 px-3 py-1.5 text-xs font-bold text-pink-600 ring-1 ring-gray-200">
                     <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4"><path d="M12 2l10 5.5v9L12 22 2 16.5v-9L12 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path></svg>
                     bKash
                 </span>
-                <span class="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-gray-700 ring-1 ring-gray-200">
+                <span class="inline-flex items-center gap-1.5 rounded-md bg-gray-50 px-3 py-1.5 text-xs font-bold text-gray-700 ring-1 ring-gray-200">
                     <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4"><rect x="2" y="6" width="20" height="12" rx="2" stroke="currentColor" stroke-width="1.5"></rect><circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.5"></circle></svg>
                     Cash on Delivery
                 </span>

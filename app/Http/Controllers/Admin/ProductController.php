@@ -14,6 +14,7 @@ use App\Models\SizeChart;
 use App\Services\VariationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -260,38 +261,85 @@ class ProductController extends Controller
     }
 
     /**
-     * Backwards compatible update of variations from the old size/color form.
+     * Update variations that have no attribute options (rows created before
+     * attributes existed, or by the old size/color form).
+     *
+     * Two kinds of rows arrive here:
+     *  - rows from the old form: size / color / weight / price / stock;
+     *  - rows from the current form for a product with no variation
+     *    attributes: only an id plus regular_price, sale_price, stock_quantity...
+     *    These used to be skipped without a word, so price edits were lost.
      */
     private function updateLegacyVariations(Product $product, Request $request): void
     {
         $submittedVariationIds = [];
 
         foreach ((array) $request->input('variations', []) as $variationData) {
-            if (empty($variationData['size']) && empty($variationData['color']) && empty($variationData['weight'])) {
+            $usesOldFields = ! empty($variationData['size']) || ! empty($variationData['color']) || ! empty($variationData['weight']);
+            $hasId = ! empty($variationData['id']);
+
+            if (! $hasId && ! $usesOldFields) {
                 continue; // Skip blanks
             }
 
-            $stock = (int) ($variationData['stock'] ?? 0);
-            $fields = [
-                'size' => $variationData['size'] ?? null,
-                'weight' => $variationData['weight'] ?? null,
-                'color' => $variationData['color'] ?? null,
-                'price' => $variationData['price'] ?: null,
-                'regular_price' => $variationData['price'] ?: null,
-                'stock' => $stock,
-                'stock_quantity' => $stock,
-                'manage_stock' => true,
-                'stock_status' => $stock > 0 ? 'instock' : 'outofstock',
-            ];
+            $variation = null;
 
-            if (!empty($variationData['id'])) {
+            if ($hasId) {
                 // Only touch variations that actually belong to this product.
                 $variation = $product->variations()->where('id', $variationData['id'])->first();
 
                 if ($variation === null) {
                     continue;
                 }
+            }
 
+            $currentForm = array_key_exists('regular_price', $variationData)
+                || array_key_exists('sale_price', $variationData)
+                || array_key_exists('stock_quantity', $variationData);
+
+            if ($currentForm) {
+                [$regular, $sale] = $this->variationService->resolvePrices(
+                    $product,
+                    $variationData['regular_price'] ?? null,
+                    $variationData['sale_price'] ?? null
+                );
+
+                $manageStock = (bool) ($variationData['manage_stock'] ?? false);
+                $quantity = $manageStock ? max(0, (int) ($variationData['stock_quantity'] ?? 0)) : null;
+
+                $fields = [
+                    'regular_price' => $regular,
+                    'price' => $regular,
+                    'sale_price' => $sale,
+                    'manage_stock' => $manageStock,
+                    'stock_quantity' => $quantity,
+                    'stock' => $quantity ?? 0,
+                    'stock_status' => $variationData['stock_status'] ?? ProductVariation::STOCK_IN_STOCK,
+                    'status' => ($variationData['status'] ?? ProductVariation::STATUS_PUBLISH) === ProductVariation::STATUS_PRIVATE
+                        ? ProductVariation::STATUS_PRIVATE
+                        : ProductVariation::STATUS_PUBLISH,
+                ];
+
+                $sku = trim((string) ($variationData['sku'] ?? ''));
+                if ($sku !== '' && ! $this->variationService->skuExists($sku, $variation?->id)) {
+                    $fields['sku'] = $sku;
+                }
+            } else {
+                $stock = (int) ($variationData['stock'] ?? 0);
+                $fields = [
+                    'size' => $variationData['size'] ?? null,
+                    'weight' => $variationData['weight'] ?? null,
+                    'color' => $variationData['color'] ?? null,
+                    'price' => $variationData['price'] ?: null,
+                    'regular_price' => $variationData['price'] ?: null,
+                    'stock' => $stock,
+                    'stock_quantity' => $stock,
+                    'manage_stock' => true,
+                    'stock_status' => $stock > 0 ? 'instock' : 'outofstock',
+                ];
+            }
+
+            if ($variation !== null) {
                 $variation->update($fields);
             } else {
                 $variation = $product->variations()->create($fields);
@@ -396,7 +444,7 @@ class ProductController extends Controller
             'product_type' => 'required|in:simple,variable',
             'sku' => 'nullable|string|max:255',
             'regular_price' => 'required|numeric|min:0',
-            'sale_price' => 'nullable|numeric|min:0',
+            'sale_price' => 'nullable|numeric|min:0|lt:regular_price',
             'cost_price' => 'nullable|numeric|min:0',
             'stock_quantity' => 'nullable|required_if:product_type,simple|integer|min:0',
             'manage_stock' => 'nullable|boolean',
@@ -568,7 +616,7 @@ class ProductController extends Controller
             'product_type' => 'required|in:simple,variable',
             'sku' => 'nullable|string|max:255',
             'regular_price' => 'required|numeric|min:0',
-            'sale_price' => 'nullable|numeric|min:0',
+            'sale_price' => 'nullable|numeric|min:0|lt:regular_price',
             'cost_price' => 'nullable|numeric|min:0',
             'stock_quantity' => 'nullable|required_if:product_type,simple|integer|min:0',
             'manage_stock' => 'nullable|boolean',
@@ -652,6 +700,12 @@ class ProductController extends Controller
         // An empty select posts "", which means the admin picked "None".
         $productData['size_chart_id'] = $request->input('size_chart_id') ?: null;
 
+        // Everything below up to the image handling is saved as one unit: if the
+        // variation check fails (or anything throws) the product, its attributes
+        // and its variations go back exactly as they were.
+        DB::beginTransaction();
+
+        try {
         if ($request->input('product_type') === 'simple') {
             $productData['stock_quantity'] = $request->input('stock_quantity', 10);
             
@@ -683,6 +737,8 @@ class ProductController extends Controller
                     ->duplicateCombinationLabels($product, $request->input('variations', []));
 
                 if ($duplicates !== []) {
+                    DB::rollBack();
+
                     return back()
                         ->withInput()
                         ->withErrors(['variations' => 'Duplicate option combinations: ' . implode(', ', $duplicates) . '. Each combination can only be used once.']);
@@ -690,7 +746,11 @@ class ProductController extends Controller
             }
 
             if ($this->submittedVariationsAreAttributeBased($request)) {
-                $this->variationService->saveVariations($product, $request->input('variations', []), $this->uploadedVariationImages($request));
+                $savedRows = $this->variationService->saveVariations($product, $request->input('variations', []), $this->uploadedVariationImages($request));
+
+                if ($savedRows === 0 && count(array_filter((array) $request->input('variations', []))) > 0) {
+                    session()->flash('error', 'No variation rows were saved: the selected options did not match this product\'s attributes. Check the Variations tab and save again.');
+                }
             } elseif ($request->has('variations')) {
                 $this->updateLegacyVariations($product, $request);
             } else {
@@ -701,10 +761,17 @@ class ProductController extends Controller
             $product->updateStockFromVariations();
         }
 
+        DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            throw $e;
+        }
+
         // Handle Image Deletions
         if ($request->has('delete_images')) {
             foreach ($request->input('delete_images') as $imgId) {
-                $img = ProductImage::find($imgId);
+                $img = $product->images()->find($imgId);
                 if ($img) {
                     $img->delete(); // Model observer automatically deletes file
                 }
@@ -720,7 +787,7 @@ class ProductController extends Controller
         // Update existing images meta
         if ($request->has('existing_images')) {
             foreach ($request->input('existing_images') as $imgData) {
-                $img = ProductImage::find($imgData['id']);
+                $img = $product->images()->find($imgData['id']);
                 if ($img) {
                     $isFeatured = ($img->id == $featuredId);
                     $isSecondary = ($img->id == $secondaryId);

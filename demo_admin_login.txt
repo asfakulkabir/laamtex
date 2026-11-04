@@ -1,0 +1,4 @@
+Local DEMO admin for testing (delete this file when done)
+URL:   http://localhost/laamtex/admin/login
+Email: demo-admin@laamtex.test
+Password: 0Cnqtg58Mb5LJJM6

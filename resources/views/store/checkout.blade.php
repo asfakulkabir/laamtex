@@ -74,9 +74,9 @@ fbq('track', 'InitiateCheckout', {
                             <div class="relative">
                                 <input type="text" id="customer_name" name="customer_name"
                                        value="{{ old('customer_name', $customer->name ?? '') }}" required
-                                       class="w-full border-[3px] border-emerald-300 rounded-xl md:rounded-2xl pl-12 pr-4 py-2 md:py-3.5 text-base font-semibold text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-emerald-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-200"
+                                       class="w-full bg-white border-2 border-gray-300 rounded-lg pl-12 pr-4 py-2 md:py-3 text-base font-medium text-gray-900 outline-none transition-colors placeholder:text-gray-400 hover:border-gray-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
                                        placeholder="Enter your full name">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                             </div>
                             @error('customer_name')
                                 <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
@@ -93,9 +93,9 @@ fbq('track', 'InitiateCheckout', {
                                 <input type="tel" id="customer_phone" name="customer_phone"
                                        value="{{ old('customer_phone', $customer->phone ?? '') }}" required
                                        pattern="^(\+?88)?01[3-9]\d{8}$"
-                                       class="w-full border-[3px] border-emerald-300 rounded-xl md:rounded-2xl pl-12 pr-4 py-2 md:py-3.5 text-base font-semibold text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-emerald-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-200"
+                                       class="w-full bg-white border-2 border-gray-300 rounded-lg pl-12 pr-4 py-2 md:py-3 text-base font-medium text-gray-900 outline-none transition-colors placeholder:text-gray-400 hover:border-gray-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
                                        placeholder="01XXXXXXXXX">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                             </div>
                             @error('customer_phone')
                                 <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
@@ -111,9 +111,9 @@ fbq('track', 'InitiateCheckout', {
                             </label>
                             <div class="relative">
                                 <textarea id="customer_address" name="customer_address" rows="3" required
-                                          class="w-full border-[3px] border-emerald-300 rounded-xl md:rounded-2xl pl-12 pr-4 py-2 md:py-3.5 text-base font-semibold text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-emerald-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-200 resize-none min-h-[7rem] md:min-h-[9rem]"
+                                          class="w-full bg-white border-2 border-gray-300 rounded-lg pl-12 pr-4 py-2 md:py-3 text-base font-medium text-gray-900 outline-none transition-colors placeholder:text-gray-400 hover:border-gray-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-100 resize-none min-h-[7rem] md:min-h-[9rem]"
                                           placeholder="House, Road, Area, City">{{ old('customer_address', $customer->address ?? '') }}</textarea>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-5 text-emerald-500"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-5 text-gray-400"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
                             </div>
                             @error('customer_address')
                                 <span class="text-sm text-red-500 mt-1 block">{{ $message }}</span>
@@ -131,7 +131,7 @@ fbq('track', 'InitiateCheckout', {
                     <div x-show="noteOpen" x-cloak x-transition class="mt-2">
                         <textarea name="customer_note" id="customer_note" rows="3" maxlength="500"
                                   placeholder="e.g. Please deliver after 6 PM..."
-                                  class="w-full border-[3px] border-emerald-300 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-emerald-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-200 resize-none min-h-[7rem]">{{ old('customer_note') }}</textarea>
+                                  class="w-full bg-white border-2 border-gray-300 rounded-lg px-4 py-3 text-sm font-medium text-gray-900 outline-none transition-colors placeholder:text-gray-400 hover:border-gray-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-100 resize-none min-h-[7rem]">{{ old('customer_note') }}</textarea>
                         @error('customer_note')
                             <span class="text-sm text-red-500 mt-1 block ml-1">{{ $message }}</span>
                         @enderror
@@ -151,7 +151,7 @@ fbq('track', 'InitiateCheckout', {
                         @else
                         <div class="space-y-1">
                             @foreach($deliveryZones as $zone)
-                                <label class="flex items-center gap-3 px-2 py-1 rounded-xl border-2 border-lime-700 cursor-pointer transition-all"
+                                <label class="flex items-center gap-3 px-2 py-1 rounded-lg border-2 cursor-pointer transition-colors"
                                        :class="selectedZone === '{{ $zone->zone }}' ? 'border-rose-500 bg-rose-50/50 shadow-[0_12px_24px_-16px_rgba(225,29,72,0.6)]' : 'border-gray-200 bg-gray-50 hover:border-gray-300'">
                                     <input type="radio" name="delivery_zone" value="{{ $zone->zone }}"
                                            @change="selectZone('{{ $zone->zone }}')"
@@ -238,7 +238,7 @@ fbq('track', 'InitiateCheckout', {
                         <div class="space-y-2">
                             @if(!($takeAdvance ?? false))
                             <!-- Cash on Delivery -->
-                            <label class="flex items-center gap-3 px-2 py-1 rounded-xl border-2 cursor-pointer transition-all"
+                            <label class="flex items-center gap-3 px-2 py-1 rounded-lg border-2 cursor-pointer transition-colors"
                                    :class="selectedPayment === 'cod' ? 'border-rose-500 bg-rose-50/50' : 'border-gray-200 bg-gray-50 hover:border-gray-300'">
                                 <input type="radio" name="payment_method" value="cod" x-model="selectedPayment"
                                        class="h-4 w-4 border-gray-300 text-rose-600 focus:ring-rose-500"
@@ -252,7 +252,7 @@ fbq('track', 'InitiateCheckout', {
                             @endif
 
                             <!-- bKash -->
-                            <label class="flex items-center gap-3 px-2 py-1 rounded-xl border-2 cursor-pointer transition-all"
+                            <label class="flex items-center gap-3 px-2 py-1 rounded-lg border-2 cursor-pointer transition-colors"
                                    :class="selectedPayment === 'bkash' ? 'border-pink-500 bg-pink-50/60' : 'border-gray-200 bg-gray-50 hover:border-gray-300'">
                                 <input type="radio" name="payment_method" value="bkash" x-model="selectedPayment"
                                        class="h-4 w-4 border-gray-300 text-pink-600 focus:ring-pink-500"
@@ -290,7 +290,7 @@ fbq('track', 'InitiateCheckout', {
                                        :required="selectedPayment === 'bkash'"
                                        :disabled="selectedPayment !== 'bkash'"
                                        :pattern="selectedPayment === 'bkash' ? '[0-9]{4}' : null"
-                                       class="w-full bg-white border-2 border-gray-200 rounded-xl px-3 py-2.5 text-base text-center font-bold tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-pink-200 focus:border-pink-400 transition-all"
+                                       class="w-full bg-white border-2 border-gray-300 rounded-lg px-3 py-2.5 text-base text-center font-bold tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-pink-200 focus:border-pink-400 transition-all"
                                        placeholder="XXXX">
                                 <div x-show="bkashLast4.length > 0" x-cloak class="text-sm text-pink-600 mt-1 font-semibold">
                                     শেষ ৪ ডিজিট: <span class="font-extrabold" x-text="bkashLast4"></span>

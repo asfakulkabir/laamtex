@@ -118,31 +118,18 @@
                                 </div>
                             </td>
                             <td class="px-8 py-4">
-                                @if($product->product_type === 'simple')
-                                    @if($product->sale_price !== null)
-                                        <div>
-                                            <span class="font-bold text-slate-200">৳{{ number_format($product->sale_price, 2) }}</span>
-                                            <span class="text-sm line-through text-slate-600 ml-1">৳{{ number_format($product->regular_price, 2) }}</span>
-                                        </div>
-                                    @else
-                                        <span class="font-bold text-slate-200">৳{{ number_format($product->regular_price, 2) }}</span>
-                                    @endif
+                                {{-- Same for simple and variable products: show the product's own sale / regular price (no range) --}}
+                                @php
+                                    $hasSale = $product->sale_price !== null && (float) $product->sale_price > 0
+                                        && (float) $product->sale_price < (float) $product->regular_price;
+                                @endphp
+                                @if($hasSale)
+                                    <div class="font-bold text-slate-200">৳{{ number_format($product->sale_price, 2) }}</div>
+                                    <div class="text-sm line-through text-slate-600">৳{{ number_format($product->regular_price, 2) }}</div>
+                                @elseif($product->regular_price !== null)
+                                    <span class="font-bold text-slate-200">৳{{ number_format($product->regular_price, 2) }}</span>
                                 @else
-                                    @php
-                                        $minPrice = $product->variations->min('price');
-                                        $maxPrice = $product->variations->max('price');
-                                    @endphp
-                                    @if($minPrice !== null && $maxPrice !== null)
-                                        <span class="font-bold text-purple-400">
-                                            @if($minPrice == $maxPrice)
-                                                ৳{{ number_format($minPrice, 2) }}
-                                            @else
-                                                ৳{{ number_format($minPrice, 2) }} - ৳{{ number_format($maxPrice, 2) }}
-                                            @endif
-                                        </span>
-                                    @else
-                                        <span class="text-slate-600 text-sm italic">No variations price</span>
-                                    @endif
+                                    <span class="text-slate-600 text-sm italic">No price</span>
                                 @endif
                             </td>
                             <td class="px-8 py-4 font-semibold">

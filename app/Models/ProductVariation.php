@@ -71,7 +71,9 @@ class ProductVariation extends Model
 
     public function isOnSale(): bool
     {
-        return $this->sale_price !== null && (float) $this->sale_price < (float) ($this->regular_price ?? 0);
+        return $this->sale_price !== null
+            && (float) $this->sale_price > 0
+            && (float) $this->sale_price < (float) ($this->regular_price ?? 0);
     }
 
     /**

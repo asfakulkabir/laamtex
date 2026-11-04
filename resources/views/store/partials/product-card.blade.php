@@ -39,7 +39,7 @@
 @endphp
 <div class="absolute top-3 left-3 z-10 flex flex-col space-y-1">
         @if($cardDiscountPercent !== null)
-            <span class="bg-gradient-to-r from-pink-500 to-rose-500 text-white font-extrabold text-[9px] uppercase tracking-wider px-2.5 py-1 rounded-full border border-pink-400/20">Save {{ $cardDiscountPercent }}%</span>
+            <span class="bg-black text-white font-extrabold text-[10px] tracking-wider px-2.5 py-1 rounded-none">-{{ $cardDiscountPercent }}%</span>
         @endif
     </div>
 

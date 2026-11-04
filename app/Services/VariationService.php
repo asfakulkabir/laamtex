@@ -208,6 +208,7 @@ class VariationService
         $created = 0;
         $skipped = 0;
         $menuOrder = (int) $product->variations()->max('menu_order');
+        [$defaultRegular, $defaultSale] = $this->resolvePrices($product, null, null);
 
         foreach ($this->combinations($attributes) as $combination) {
             $comboKey = $this->comboKey($combination);
@@ -224,7 +225,8 @@ class VariationService
                 'manage_stock' => true,
                 'stock_quantity' => 0,
                 'stock_status' => ProductVariation::STOCK_OUT_OF_STOCK,
-                'regular_price' => $product->regular_price,
+                'regular_price' => $defaultRegular,
+                'sale_price' => $defaultSale,
                 'menu_order' => ++$menuOrder,
             ]);
 
@@ -427,7 +429,40 @@ class VariationService
         return implode(' / ', $parts);
     }
 
-    public function saveVariations(Product $product, array $rows, array $uploadedImages = []): void
+    /**
+     * Work out the regular and sale price to store for one variation.
+     *
+     * A row whose regular price is left blank uses the product's own regular
+     * (and sale) price, so an option never ends up "without a price" and
+     * unbuyable just because the admin only filled the product-level price.
+     * A sale price only counts when it is above zero and below the regular price.
+     *
+     * @return array{0: ?string, 1: ?string} [regular, sale]
+     */
+    public function resolvePrices(Product $product, $regular, $sale): array
+    {
+        $regular = $this->toDecimal($regular);
+        $sale = $this->toDecimal($sale);
+
+        if ($regular === null) {
+            $regular = $this->toDecimal($product->regular_price);
+
+            if ($sale === null) {
+                $sale = $this->toDecimal($product->sale_price);
+            }
+        }
+
+        if ($sale !== null && ((float) $sale <= 0 || $regular === null || (float) $sale >= (float) $regular)) {
+            $sale = null;
+        }
+
+        return [$regular, $sale];
+    }
+
+    /**
+     * @return int How many submitted rows were stored.
+     */
+    public function saveVariations(Product $product, array $rows, array $uploadedImages = []): int
     {
         $variationAttributes = $product->variationAttributes()->with('values')->get();
         $keptIds = [];
@@ -465,12 +500,7 @@ class VariationService
                 $sku = $this->uniqueSku($sku);
             }
 
-            $regularPrice = $this->toDecimal($row['regular_price'] ?? null);
-            $salePrice = $this->toDecimal($row['sale_price'] ?? null);
-
-            if ($salePrice !== null && $regularPrice !== null && $salePrice >= $regularPrice) {
-                $salePrice = null;
-            }
+            [$regularPrice, $salePrice] = $this->resolvePrices($product, $row['regular_price'] ?? null, $row['sale_price'] ?? null);
 
             $manageStock = (bool) ($row['manage_stock'] ?? false);
 
@@ -503,7 +533,7 @@ class VariationService
         if ($keptIds === []) {
             $this->refreshPriceRange($product);
 
-            return;
+            return 0;
         }
 
         // Rows removed in the UI are deleted, unless they are referenced by
@@ -517,6 +547,8 @@ class VariationService
         });
 
         $this->refreshPriceRange($product);
+
+        return count($keptIds);
     }
 
     private function handleImage(ProductVariation $variation, array $row, $uploadedImage): void
@@ -606,16 +638,12 @@ class VariationService
                 continue;
             }
 
+            // This option is no longer ticked on the attribute (the admin
+            // deselected it). The whole row belongs to a removed combination,
+            // so drop it. Re-attaching the value here would silently undo the
+            // admin's deselection on every save.
             if (! $attribute->values->contains('id', $valueId)) {
-                if ($attribute->attribute && $attribute->attribute->values->contains('id', $valueId)) {
-                    $selection[] = [
-                        'product_attribute_id' => $attribute->id,
-                        'attribute_value_id' => $valueId,
-                    ];
-                    $attribute->values()->syncWithoutDetaching([$valueId]);
-                    continue;
-                }
-                continue;
+                return [];
             }
 
             $selection[] = [
@@ -687,7 +715,16 @@ class VariationService
                     $variation->regular_price = $this->toDecimal($params['value'] ?? null);
                     break;
                 case 'set_sale_price':
-                    $variation->sale_price = $this->toDecimal($params['value'] ?? null);
+                    $sale = $this->toDecimal($params['value'] ?? null);
+
+                    // A sale price has to be lower than the regular price, the
+                    // same rule the variation form enforces. Skip rows it would break.
+                    if ($sale !== null
+                        && ($variation->regular_price === null || (float) $sale >= (float) $variation->regular_price)) {
+                        continue 2;
+                    }
+
+                    $variation->sale_price = $sale;
                     break;
                 case 'increase_price':
                     $variation->regular_price = $this->toDecimal($this->applyPriceDelta(
@@ -724,6 +761,12 @@ class VariationService
                     break;
                 default:
                     continue 2;
+            }
+
+            // Lowering the regular price can leave an old sale price at or above it.
+            if ($variation->sale_price !== null && $variation->regular_price !== null
+                && (float) $variation->sale_price >= (float) $variation->regular_price) {
+                $variation->sale_price = null;
             }
 
             $variation->save();
